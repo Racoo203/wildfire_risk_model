@@ -1,0 +1,83 @@
+base:
+  region: "Essex"
+  boundary_shapefile: "./data/silver/layers/boundary.shp"
+  output_dir: "./data/silver/layers"
+  model_data_dir: "./data/silver/model_datasets"
+  figures_dir: "./figures"
+
+processing:
+  cell_size_m: 30
+  crs: "EPSG:27700"
+
+  training_years: [2009, 2015]
+  validation_years: [2016, 2018]
+  test_years: [2019, 9999]
+
+  force_recompute: false # set true to ignore all caches and rerun everything
+
+seasons:
+  active: ["summer"] # seasons to process this run
+  seasonal_ndvi: false # if true, NDVI is recomputed per season instead of once
+  definitions:
+    spring: [3, 4, 5]
+    summer: [6, 7, 8]
+    fall: [9, 10, 11]
+    winter: [12, 1, 2]
+  
+data_sources:
+  cua:
+    data_dir: "./data/bronze/boundary"
+
+  srtm:
+    data_dir: "./data/bronze/topography"
+    tiles: [
+      "n51_e000_1arc_v3.tif", 
+      "n51_e001_1arc_v3.tif",
+      "n51_w001_1arc_v3.tif",
+      "n52_e000_1arc_v3.tif", 
+      "n52_e001_1arc_v3.tif",
+    ]
+
+  haduk:
+    data_dir: "./data/bronze/climate_haduk"
+    sources: ["tas", "tasmax", "tasmin", "rainfall", "sfcWind", "hurs"]
+
+  modis_nvdi:
+    data_dir: "./data/bronze/vegetation"
+
+  proximity:
+    data_dir: "./data/bronze/proximity"
+    sources: ["oproad_gpkg_gb", "oprvrs_gpkg_gb", "essex-260607-free."]
+    human_fclasses: [
+      "residential",
+      "farmland",
+      "farm",
+      "farm_auxiliary",
+      "industrial",
+      "commercial",
+      "retail",
+      "allotmets",
+      "orchard",
+      "greenhouse_horticulture"
+    ]
+
+  incidents:
+    data_dir: "./data/bronze/incidents"
+    date_col: "CallDateID"
+    geo_cols: ["IncidentEasting", "IncidentNorthing"]
+    severity_cols: ["NumberVehiclesDeployed"]
+
+features:
+  kde_sigma_cells: 3 # Gaussian smoothing sigma in pixels (90m at 30m res)
+
+labels:
+  random_state: 42
+  max_sample_per_class: 200_000
+  percentiles: [60, 75, 90]
+  kmeans_k: 2
+  kmeans_n_init: 10
+  kmeans_max_iter: 300
+
+logging:
+  level: "INFO"
+  log_path: "./data/logs/pipeline.log"
