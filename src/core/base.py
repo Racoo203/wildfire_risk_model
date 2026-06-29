@@ -12,8 +12,6 @@ from ..utils.checkpoint import output_exists, log_cached
 from ..core.raster import RasterManager
 
 logger = logging.getLogger(__name__)
-
-
 class VarBuilder(ABC):
     """
     Abstract base for all variable builders.
@@ -95,8 +93,8 @@ class VarBuilder(ABC):
         """
         Bring *src_path* fully into the reference grid in three steps:
 
-            1. clip to Essex boundary  (removes data outside study area)
-            2. align to reference grid (reproject + resample to 30 m BNG)
+            1. align to reference grid (reproject + resample to 30 m BNG)
+            2. clip to Essex boundary  (removes data outside study area)
 
         A temporary intermediate file is written to output_dir and deleted
         after the final alignment succeeds.
@@ -118,8 +116,8 @@ class VarBuilder(ABC):
         tmp_clip = self.output_dir / f"{stem}.tif"
 
         try:
-            self._clip_to_boundary(src_path, tmp_clip)
-            RasterManager.align_to_reference(tmp_clip, self.ref_path, dst_path)
+            RasterManager.align_to_reference(src_path, self.ref_path, tmp_clip)
+            self._clip_to_boundary(tmp_clip, dst_path)
         finally:
             if tmp_clip.exists():
                 tmp_clip.unlink()
