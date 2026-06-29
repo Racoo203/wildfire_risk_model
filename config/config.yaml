@@ -16,8 +16,8 @@ processing:
   force_recompute: false # set true to ignore all caches and rerun everything
 
 seasons:
-  active: ["summer"] # seasons to process this run
-  seasonal_ndvi: false # if true, NDVI is recomputed per season instead of once
+  active: ["spring", "summer", "fall"] # seasons to process this run
+  seasonal_ndvi: True # if true, NDVI is recomputed per season instead of once
   definitions:
     spring: [3, 4, 5]
     summer: [6, 7, 8]
