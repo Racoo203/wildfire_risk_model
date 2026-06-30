@@ -16,8 +16,6 @@ from rasterio.enums import MergeAlg
 from ..core.base import VarBuilder
 from ..core.raster import RasterManager
 
-logger = logging.getLogger(__name__)
-
 class FireBuilder(VarBuilder):
 
     def process(
@@ -43,7 +41,7 @@ class FireBuilder(VarBuilder):
 
         gdf_season = gdf_all[gdf_all["month"].isin(clean_months)].copy()
 
-        print(f"Rows remaining after month filter: {len(gdf_season)}")
+        self.logger.info(f"Rows remaining after month filter: {len(gdf_season)}")
         train, val, test = self._split(gdf_season, output_paths)
 
         return train, val, test

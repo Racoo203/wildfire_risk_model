@@ -9,9 +9,9 @@ import rasterio
 import geopandas as gpd
 
 from ..utils.checkpoint import output_exists, log_cached
+from ..utils.logger import setup_logger
 from ..core.raster import RasterManager
 
-logger = logging.getLogger(__name__)
 class VarBuilder(ABC):
     """
     Abstract base for all variable builders.
@@ -46,6 +46,11 @@ class VarBuilder(ABC):
         self.force_recompute = config["processing"]["force_recompute"]
 
         self._boundary_cache: Optional[gpd.GeoDataFrame] = None
+
+        self.logger = setup_logger(
+            log_file = self.config["logging"]["log_path"],
+            level = self.config["logging"]["level"]
+        )
 
     @abstractmethod
     def process(self, **kwargs) -> Dict[str, Path]:

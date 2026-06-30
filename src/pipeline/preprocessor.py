@@ -19,8 +19,6 @@ from ..labels.classification import LabelCleaner
 from ..core.raster import RasterManager
 from ..utils.logger import setup_logger
 
-logger = logging.getLogger(__name__)
-
 class WildfirePreprocessor:
     """
     Orchestrates the complete preprocessing pipeline:
@@ -56,7 +54,7 @@ class WildfirePreprocessor:
         3. Compute fire density labels from training fires only.
         """
 
-        logger.info("Starting wildfire preprocessing pipeline (seasonal)...")
+        self.logger.info("Starting wildfire preprocessing pipeline (seasonal)...")
 
         static_features = self._build_static_features()
         ref_path = static_features["elevation"]
@@ -84,11 +82,11 @@ class WildfirePreprocessor:
                 season, all_features, train_labels, ref_path
             )
 
-        logger.info("Pipeline complete for all active seasons.")
+        self.logger.info("Pipeline complete for all active seasons.")
         return dataset_paths
 
     def _build_static_features(self) -> Dict[str, Path]:
-        logger.info("Building static features...")
+        self.logger.info("Building static features...")
 
         bound_builder = BoundaryBuilder(self.config)
         bound_builder.process()
@@ -171,7 +169,7 @@ class WildfirePreprocessor:
         out_csv = model_data_path / f"dataset_clean_{season}.csv"
 
         if not self.force_recompute and out_csv.exists():
-            logger.info(f"[CACHED] Dataset for {season} already exists: {out_csv}")
+            self.logger.info(f"[CACHED] Dataset for {season} already exists: {out_csv}")
             return out_csv
         
         label_path = self.output_dir / f"_labels_temp_{season}.tif"

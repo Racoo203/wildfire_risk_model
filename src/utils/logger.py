@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Union, Optional
 
 def setup_logger(
-    name: str = "wildfire_susceptibility",
+    name: str = "wildfire_risk_model",
     log_file: Union[str, Path] = "pipeline.log",
     level: str = "INFO",
 ) -> logging.Logger:

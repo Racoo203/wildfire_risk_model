@@ -9,10 +9,6 @@ from rasterio.merge import merge
 
 from ..core.base import VarBuilder
 from ..core.raster import RasterManager
-import logging
-
-logger = logging.getLogger(__name__)
-
 
 class TopographyBuilder(VarBuilder):
     """
@@ -70,7 +66,7 @@ class TopographyBuilder(VarBuilder):
         aspect_tmp_path.unlink()
         slope_tmp_path.unlink()
 
-        logger.info("Topography features complete.")
+        self.logger.info("Topography features complete.")
         return output_paths
 
     def _merge_tiles(self, tile_paths: List[Path], out_path: Path) -> None:
@@ -90,7 +86,7 @@ class TopographyBuilder(VarBuilder):
             for ds in datasets:
                 ds.close()
 
-        logger.info(f"Merged {len(tile_paths)} SRTM tiles → {out_path.name}")
+        self.logger.info(f"Merged {len(tile_paths)} SRTM tiles → {out_path.name}")
 
     def _derive_slope_and_aspect(
         self,
@@ -122,4 +118,4 @@ class TopographyBuilder(VarBuilder):
         RasterManager.write(slope,  slope_path,  meta)
         RasterManager.write(aspect, aspect_path, meta)
 
-        logger.info("Slope and aspect derived from clipped DEM.")
+        self.logger.info("Slope and aspect derived from clipped DEM.")

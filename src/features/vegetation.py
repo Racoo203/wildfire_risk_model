@@ -10,11 +10,6 @@ import rasterio
 
 from ..core.base import VarBuilder
 from ..core.raster import RasterManager
-import logging
-
-logger = logging.getLogger(__name__)
-
-
 class VegetationBuilder(VarBuilder):
     """
     Build a mean NDVI surface from MODIS MOD13Q1 250 m composites.
@@ -57,7 +52,7 @@ class VegetationBuilder(VarBuilder):
         self._to_reference(native_path, output_paths["ndvi"], tmp_stem=f"_tmp_clip_ndvi_{season}")
         native_path.unlink()
 
-        logger.info(f"[{season}] NDVI ready → {output_paths['ndvi'].name}")
+        self.logger.info(f"[{season}] NDVI ready → {output_paths['ndvi'].name}")
         return output_paths
 
     def _find_files(
@@ -141,7 +136,7 @@ class VegetationBuilder(VarBuilder):
             return ndvi, meta
 
         except Exception as exc:
-            logger.warning(f"Skipping {fpath.name}: {exc}")
+            self.logger.warning(f"Skipping {fpath.name}: {exc}")
             return None, None
         
     @staticmethod

@@ -9,11 +9,12 @@ processing:
   cell_size_m: 30
   crs: "EPSG:27700"
 
-  training_years: [2009, 2015]
-  validation_years: [2016, 2018]
-  test_years: [2019, 9999]
+  # [start, end)
+  training_years: [2009, 2020]
+  validation_years: [2020, 2022]
+  test_years: [2022, 9999]
 
-  force_recompute: false # set true to ignore all caches and rerun everything
+  force_recompute: true # set true to ignore all caches and rerun everything
 
 seasons:
   active: ["spring", "summer", "fall"] # seasons to process this run

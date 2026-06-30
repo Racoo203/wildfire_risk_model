@@ -11,9 +11,6 @@ from rasterio.transform import Affine
 from ..core.base import VarBuilder
 import logging
 
-logger = logging.getLogger(__name__)
-
-
 class ClimateBuilder(VarBuilder):
     """
     Build seasonal climate averages from HadUK-Grid monthly NetCDF files.
@@ -61,7 +58,7 @@ class ClimateBuilder(VarBuilder):
             native_bng = self._write_native_bng(mean_grid, lons, lats, var_name, season)
             self._to_reference(native_bng, out_path, tmp_stem=f"_tmp_clip_{var_name}_{season}")
             native_bng.unlink()
-            logger.info(f"[{season}] Climate feature ready: {var_name} → {out_path.name}")
+            self.logger.info(f"[{season}] Climate feature ready: {var_name} → {out_path.name}")
 
         return output_paths
     
@@ -83,7 +80,7 @@ class ClimateBuilder(VarBuilder):
         files = sorted((haduk_dir / var_name).glob("*.nc"))
         files = [
             f for f in files
-            if any(str(y) in f.name for y in range(year_start, year_end + 1))
+            if any(str(y) in f.name for y in range(year_start, year_end))
         ]
         if not files:
             raise FileNotFoundError(

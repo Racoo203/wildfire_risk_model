@@ -11,8 +11,6 @@ import rasterio
 
 from ..core.base import VarBuilder
 
-logger = logging.getLogger(__name__)
-
 class LabelCleaner(VarBuilder):
 
     def process(self):
@@ -29,7 +27,7 @@ class LabelCleaner(VarBuilder):
         }
 
         if self._check_cache(f"LabelCleaner[{season}]", out_paths):
-            logger.info(f"[CACHED] Cleaned labels ({season}) already exist")
+            self.logger.info(f"[CACHED] Cleaned labels ({season}) already exist")
             with rasterio.open(out_paths["risk_labels_clean"]) as src:
                 return src.read(1)
 

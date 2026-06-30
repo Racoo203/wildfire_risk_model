@@ -21,8 +21,6 @@ import logging
 
 from ..core.base import VarBuilder
 
-logger = logging.getLogger(__name__)
-
 class KernelDensityClassifier(VarBuilder):
 
     def process(self):
@@ -138,14 +136,14 @@ class KernelDensityClassifier(VarBuilder):
         counts = {int(c): int(np.sum(labels == c)) for c in [0, 1, 2, 3]}
         n_nan_domain = int(np.isnan(density).sum())
 
-        logger.info(
+        self.logger.info(
             f"[{season}][{method}] class counts: {counts} | "
             f"zero-density (unlabelled) cells: {n_total - sum(counts.values())} | "
             f"out-of-domain NaN cells: {n_nan_domain}"
         )
         for c, n in counts.items():
             if n == 0:
-                logger.warning(f"[{season}][{method}] class {c} has 0 samples!")
+                self.logger.warning(f"[{season}][{method}] class {c} has 0 samples!")
 
         self._plot_diagnostics(valid, p_low, p_mid, p_high, season, method)
 
@@ -173,4 +171,4 @@ class KernelDensityClassifier(VarBuilder):
         out_path = figures_dir / f"density_dist_{season}_{method}.png"
         fig.savefig(out_path, dpi=150)
         plt.close(fig)
-        logger.info(f"[{season}][{method}] diagnostic plot -> {out_path}")
+        self.logger.info(f"[{season}][{method}] diagnostic plot -> {out_path}")

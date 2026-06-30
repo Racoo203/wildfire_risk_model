@@ -9,11 +9,6 @@ import pandas as pd
 from ..core.base import VarBuilder
 from ..core.raster import RasterManager
 
-import logging
-
-logger = logging.getLogger(__name__)
-
-
 class ProximityBuilder(VarBuilder):
     """
     Compute Euclidean distance (km) from every 30 m grid cell to the
@@ -120,7 +115,7 @@ class ProximityBuilder(VarBuilder):
             if geom is not None and not geom.is_empty
         ]
         RasterManager.distance_to_features(shapes, self.ref_path, out_path)
-        logger.info(f"{label}: distance raster written -> {out_path.name}")
+        self.logger.info(f"{label}: distance raster written -> {out_path.name}")
 class FireProximityBuilder(VarBuilder):
     """
     Distance (km) from every grid cell to the nearest *training-set* fire
@@ -145,5 +140,5 @@ class FireProximityBuilder(VarBuilder):
         ]
         RasterManager.distance_to_features(shapes, self.ref_path, output_paths["d_fires"])
 
-        logger.info(f"[{season}] d_fires built from {len(fire_train_gdf)} training fires")
+        self.logger.info(f"[{season}] d_fires built from {len(fire_train_gdf)} training fires")
         return output_paths
