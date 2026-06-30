@@ -88,10 +88,10 @@ class ClimateBuilder(VarBuilder):
         if not files:
             raise FileNotFoundError(
                 f"No HadUK files for '{var_name}' in {haduk_dir / var_name} "
-                f"covering {year_start}–{year_end}."
+                f"covering {year_start} - {year_end}."
             )
 
-        ds = xr.open_mfdataset(files, combine="by_coords")
+        ds = xr.open_mfdataset(files, combine="by_coords", data_vars="all")
         data = ds[var_name]
 
         time_month = data.time.dt.month.values
