@@ -10,7 +10,7 @@ from ..features.boundary import BoundaryBuilder
 from ..features.topography import TopographyBuilder
 from ..features.climate import ClimateBuilder
 from ..features.vegetation import VegetationBuilder
-from ..features.proximity import ProximityBuilder
+from ..features.proximity import ProximityBuilder, FireProximityBuilder
 
 from ..labels.fire_incidents import FireBuilder
 from ..labels.kernel_density import KernelDensityClassifier
@@ -74,12 +74,14 @@ class WildfirePreprocessor:
 
             all_features = {**static_features, **seasonal_features}
 
-            labels_clean, fire_val, fire_test = self._build_seasonal_labels(
-                months, season, all_features, ref_path
+            train_labels, fires, fire_prox_features = self._build_seasonal_labels(
+                months, season, ref_path
             )
 
+            all_features.update(fire_prox_features)
+
             dataset_paths[season] = self._assemble_seasonal_dataset(
-                season, all_features, labels_clean, ref_path
+                season, all_features, train_labels, ref_path
             )
 
         logger.info("Pipeline complete for all active seasons.")
@@ -128,45 +130,23 @@ class WildfirePreprocessor:
         
         return seasonal_features
 
-    def _build_seasonal_labels(
-        self,
-        months,
-        season: str, 
-        all_features: Dict[str, Path],
-        ref_path,
-    ) -> np.ndarray:
+    def _build_seasonal_labels(self, months, season, ref_path):
         # 1. Split first
         fire_builder = FireBuilder(self.config)
-        fire_train, fire_val, fire_test = fire_builder.process(
-            months = months,
-            season = season,
-        )
+        fires = fire_builder.process(months=months, season=season)
+        fire_train = fires[0]
 
-        # 2. Density and labels from training fires only
+        # 2. d_fires — training fires only, built strictly after the split
+        fire_prox_builder = FireProximityBuilder(self.config, ref_path)
+        fire_prox_features = fire_prox_builder.process(fire_train, season=season)
+
+        # 3. Density + labels from training fires only
+        method = self.config["labels"].get("density_method", "convolution")
         kde = KernelDensityClassifier(self.config, ref_path)
-        # print(fire_train.type)
-        density = kde.compute_kde(
-            fire_train,
-            season = season,
-        )
+        density = kde.compute_density(fire_train, season=season, method=method)
+        train_labels = kde.classify(density, season=season, method=method)
 
-        labels = kde.classify(
-            density,
-            season = season,
-        )
-
-        # 3. K-means cleaning (only training)
-        # feature_arrays = self._load_feature_arrays(all_features)
-        # cleaner = LabelCleaner(self.config, ref_path)
-        # labels_clean = cleaner.clean(
-        #     labels,
-        #     feature_arrays,
-        #     season = season
-        # )
-
-        # return labels_clean, fire_val, fire_test
-        return labels, fire_val, fire_test
-
+        return train_labels, fires, fire_prox_features
 
     @staticmethod
     def _load_feature_arrays(

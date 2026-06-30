@@ -25,8 +25,6 @@ class FireBuilder(VarBuilder):
         months: Tuple[int, ...], 
         season: Optional[str] = None,
     ):
-        data_config = self.config["data_sources"]["incidents"]
-
         output_paths = {
             "train": self.output_dir / f"{self._seasonal_name('fire_points_train', season)}.gpkg",
             "val": self.output_dir / f"{self._seasonal_name('fire_points_val', season)}.gpkg",
@@ -39,9 +37,6 @@ class FireBuilder(VarBuilder):
             test = gpd.read_file(output_paths["test"])
             return train, val, test
 
-        force_recompute = self.config["processing"]["force_recompute"]
-
-        data_dir = Path(data_config["data_dir"]) / "OutdoorFIres_2009_2025.csv"
         gdf_all = self._load()
         
         clean_months = tuple(int(m) for m in months)

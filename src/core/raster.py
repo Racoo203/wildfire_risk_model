@@ -1,10 +1,13 @@
 import numpy as np
 import rasterio
 from rasterio.warp import reproject, Resampling, calculate_default_transform
+from rasterio.features import rasterize
 from rasterio.mask import mask
 from pathlib import Path
 from typing import Union, Tuple, Optional
 import logging
+
+from scipy.ndimage import distance_transform_edt
 
 logger = logging.getLogger(__name__)
 
@@ -207,3 +210,43 @@ class RasterManager:
         logger.info(f"Dataset saved to {output_csv}")
 
         return df
+    
+    @staticmethod
+    def distance_to_features(
+        shapes,
+        ref_path: Union[str, Path],
+        out_path: Union[str, Path],
+        all_touched: bool = True,
+    ) -> None:
+        """
+        Rasterise `shapes` (list of (geometry, value) tuples, or raw geometries)
+        onto the reference grid, run a Euclidean distance transform, convert to
+        km, mask to the land mask embedded in ref_path, and write to out_path.
+
+        Shared by ProximityBuilder (roads/rivers/activity) and FireProximityBuilder.
+        """
+        out_path = Path(out_path)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+
+        with rasterio.open(ref_path) as ref:
+            height, width = ref.height, ref.width
+            transform = ref.transform
+            meta = ref.meta.copy()
+            land_mask = ref.read(1)
+
+        cell_size_m = abs(transform.a)
+        norm_shapes = [s if isinstance(s, tuple) else (s, 1) for s in shapes]
+
+        presence = rasterize(
+            norm_shapes, out_shape=(height, width), transform=transform,
+            fill=0, dtype="uint8", all_touched=all_touched,
+        )
+        absence = (presence == 0).astype("uint8")
+        dist_km = distance_transform_edt(absence).astype("float32") * cell_size_m / 1000.0
+        dist_km[np.isnan(land_mask)] = np.nan
+
+        meta.update({"dtype": "float32", "nodata": np.nan, "count": 1})
+        with rasterio.open(out_path, "w", **meta) as dst:
+            dst.write(dist_km[np.newaxis, :, :])
+
+        logger.info(f"Distance raster -> {out_path.name} ({int((presence>0).sum()):,} feature px)")

@@ -66,14 +66,19 @@ data_sources:
     date_col: "CallDateID"
     geo_cols: ["IncidentEasting", "IncidentNorthing"]
     severity_cols: ["NumberVehiclesDeployed"]
-
-features:
-  kde_sigma_cells: 3 # Gaussian smoothing sigma in pixels (90m at 30m res)
+    
+# features:
+#   kde_sigma_cells: 3 # Gaussian smoothing sigma in pixels (90m at 30m res)
 
 labels:
   random_state: 42
   max_sample_per_class: 200_000
   percentiles: [60, 75, 90]
+  density_method: "convolution"   # "convolution" | "kde" — run both for comparison
+  conv_sigma_cells: 3
+  kde_bandwidth_m: 500            # tune; start near conv's 90m smoothing radius
+  kde_zero_threshold: 1.0e-12     # KDE density is never exactly 0, unlike binned counts
+  include_d_fires_as_feature: true   # set False to test the no-leakage variant
   kmeans_k: 2
   kmeans_n_init: 10
   kmeans_max_iter: 300
