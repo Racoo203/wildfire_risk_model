@@ -43,27 +43,32 @@ class TopographyBuilder(VarBuilder):
         tile_paths = [data_dir / tile for tile in data_config["tiles"]]
 
         merged_path = self.output_dir / "_tmp_srtm_merged.tif"
-        bng_30m_path = self.output_dir / "_tmp_srtm_bng30m.tif"
-
-        try:
-            self._merge_tiles(tile_paths, merged_path)
-            RasterManager.reproject_and_resample(
-                merged_path,
-                bng_30m_path,
-                target_crs="EPSG:27700",
-                target_res=30.0,
-            )
-            self._clip_to_boundary(bng_30m_path, output_paths["elevation"])
-        finally:
-            for tmp in (merged_path, bng_30m_path):
-                if tmp.exists():
-                    tmp.unlink()
+        elev_tmp_path = self.output_dir / "_tmp_elev.tif"
+        aspect_tmp_path = self.output_dir / "_tmp_aspect.tif"
+        slope_tmp_path = self.output_dir / "_tmp_slope.tif"
+        
+        self._merge_tiles(tile_paths, merged_path)
+        RasterManager.reproject_and_resample(
+            merged_path,
+            elev_tmp_path,
+            target_crs="EPSG:27700",
+            target_res=30.0,
+        )
 
         self._derive_slope_and_aspect(
-            output_paths["elevation"],
-            output_paths["slope"],
-            output_paths["aspect"],
+            dem_path = elev_tmp_path,
+            slope_path = slope_tmp_path,
+            aspect_path = aspect_tmp_path,
         )
+
+        self._clip_to_boundary(elev_tmp_path, output_paths["elevation"])
+        self._clip_to_boundary(aspect_tmp_path, output_paths["aspect"])
+        self._clip_to_boundary(slope_tmp_path, output_paths["slope"])
+
+        merged_path.unlink()
+        elev_tmp_path.unlink()
+        aspect_tmp_path.unlink()
+        slope_tmp_path.unlink()
 
         logger.info("Topography features complete.")
         return output_paths
