@@ -145,6 +145,36 @@ class WildfirePreprocessor:
         train_labels = kde.classify(density, season=season, method=method)
 
         return train_labels, fires, fire_prox_features
+    
+    def _build_seasonal_labels(self, months, season, ref_path):
+        # 1. Split first
+        fire_builder = FireBuilder(self.config)
+        fires = fire_builder.process(months=months, season=season)
+        fire_train = fires[0]
+
+        # 2. d_fires — training fires only, built strictly after the split
+        fire_prox_builder = FireProximityBuilder(self.config, ref_path)
+        fire_prox_features = fire_prox_builder.process(fire_train, season=season)
+
+        # 3. Density surface (shared across all classify_methods below)
+        density_method = self.config["labels"].get("density_method", "convolution")
+        classify_method = self.config["labels"].get("classify_method", "percentile")
+
+        kde = KernelDensityClassifier(self.config, ref_path)
+        density = kde.compute_density(fire_train, season=season, method=density_method)
+
+        # 4. Optionally render every classify_method for side-by-side comparison
+        #    (figures + label rasters), without changing which one feeds the dataset.
+        for compare_method in self.config["labels"].get("compare_classify_methods", []):
+            if compare_method != classify_method:
+                kde.classify(density, season=season, method=density_method, classify_method=compare_method)
+
+        # 5. The method that actually feeds the model dataset
+        train_labels = kde.classify(
+            density, season=season, method=density_method, classify_method=classify_method
+        )
+
+        return train_labels, fires, fire_prox_features
 
     @staticmethod
     def _load_feature_arrays(
