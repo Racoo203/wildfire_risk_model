@@ -67,10 +67,7 @@ data_sources:
     date_col: "CallDateID"
     geo_cols: ["IncidentEasting", "IncidentNorthing"]
     severity_cols: ["NumberVehiclesDeployed"]
-    
-# features:
-#   kde_sigma_cells: 3 # Gaussian smoothing sigma in pixels (90m at 30m res)
-
+  
 labels:
   random_state: 42
   max_sample_per_class: 200_000
@@ -92,6 +89,13 @@ labels:
   kmeans_k: 2
   kmeans_n_init: 10
   kmeans_max_iter: 300
+
+  clean_labels: true              # run LabelCleaner after classify()
+  run_sensitivity: true           # run the k-means sensitivity analysis alongside cleaning
+  sensitivity_n_inits: [10, 20]
+  sensitivity_seeds: [7, 123]
+  sensitivity_n_reweight_trials: 3
+  sensitivity_feature_noise_std: 0.05
 
 logging:
   level: "INFO"
