@@ -14,7 +14,7 @@ processing:
   validation_years: [2020, 2022]
   test_years: [2022, 9999]
 
-  force_recompute: true # set true to ignore all caches and rerun everything
+  force_recompute: false # set true to ignore all caches and rerun everything
 
 seasons:
   active: ["spring", "summer", "fall"] # seasons to process this run
@@ -75,11 +75,20 @@ labels:
   random_state: 42
   max_sample_per_class: 200_000
   percentiles: [60, 75, 90]
-  density_method: "convolution"   # "convolution" | "kde" — run both for comparison
+  density_method: "convolution"        # "convolution" | "kde"
   conv_sigma_cells: 3
-  kde_bandwidth_m: 500            # tune; start near conv's 90m smoothing radius
-  kde_zero_threshold: 1.0e-12     # KDE density is never exactly 0, unlike binned counts
-  include_d_fires_as_feature: true   # set False to test the no-leakage variant
+  kde_bandwidth_m: 500
+  kde_zero_threshold: 1.0e-12
+  include_d_fires_as_feature: true
+
+  classify_method: "gmm"        # "percentile" | "jenks" | "gmm" — feeds the model dataset
+  compare_classify_methods: ["percentile", "jenks", "gmm"]  # also render these for side-by-side comparison
+  jenks_n_classes: 4
+  jenks_max_sample: 200_000
+  gmm_n_components: 4
+  gmm_max_sample: 200_000
+  gmm_random_state: 42
+
   kmeans_k: 2
   kmeans_n_init: 10
   kmeans_max_iter: 300

@@ -17,7 +17,11 @@ from sklearn.neighbors import KernelDensity
 
 from pathlib import Path
 from typing import Union, Optional, Tuple
-import logging
+
+from sklearn.neighbors import KernelDensity
+from sklearn.mixture import GaussianMixture
+
+import jenkspy
 
 from ..core.base import VarBuilder
 
@@ -107,11 +111,48 @@ class KernelDensityClassifier(VarBuilder):
             dst.write(density[np.newaxis, :, :])
         return density
 
-    def classify(self, density: np.ndarray, season=None, method: Optional[str] = None) -> np.ndarray:
-        method = method or self.config["labels"].get("density_method", "convolution")
-        out_paths = {"risk_labels": self.output_dir / f"{self._seasonal_name(f'risk_labels_{method}', season)}.tif"}
+    def classify(
+        self,
+        density: np.ndarray,
+        season=None,
+        method: Optional[str] = None,
+        classify_method: Optional[str] = None,
+    ) -> np.ndarray:
+        """
+        Bin continuous fire density into 4 ordinal susceptibility classes.
 
-        if self._check_cache(f"KDClassifier[{method}][{season}]", out_paths):
+        Zero-density pixels are always left unlabelled (NaN) regardless of
+        classify_method — they represent "no fire signal", not "class 0 / low
+        risk", and mixing the two would bias every downstream model toward
+        treating absence-of-evidence as evidence-of-low-risk.
+
+        classify_method controls how the 3 breakpoints between the 4 classes
+        are chosen, and is deliberately decoupled from density_method (the
+        density surface can be built by convolution or KDE; either can then
+        be classified by any of the three methods below):
+
+            "percentile" — fixed percentiles of the paper's percentiles config. 
+                            Simple, but the exact cut points are not specified 
+                            in the source paper; treat this as a baseline, 
+                            not a replication.
+            "jenks"      — Fisher-Jenks natural breaks, minimizing within-class
+                            variance. Matches ArcGIS's default classification
+                            method, which the source paper used for its GIS
+                            workflow (tool named, method not specified).
+            "gmm"        — 4-component Gaussian Mixture Model fit on the
+                            non-zero density values; components ordered by
+                            mean and mapped to ordinal classes. Fully
+                            data-driven, no fixed percentiles at all.
+        """
+        method = method or self.config["labels"].get("density_method", "convolution")
+        classify_method = classify_method or self.config["labels"].get("classify_method", "percentile")
+
+        out_paths = {
+            "risk_labels": self.output_dir
+            / f"{self._seasonal_name(f'risk_labels_{method}_{classify_method}', season)}.tif"
+        }
+
+        if self._check_cache(f"KDClassifier[{method}][{classify_method}][{season}]", out_paths):
             with rasterio.open(out_paths["risk_labels"]) as src:
                 return src.read(1)
 
@@ -122,30 +163,35 @@ class KernelDensityClassifier(VarBuilder):
         if len(valid) == 0:
             raise ValueError(f"[{season}] No positive density values to classify")
 
-        p_low, p_mid, p_high = np.percentile(valid, self.config["labels"]["percentiles"])
-
-        labels = np.full(density.shape, np.nan, dtype="float32")
         mask = (density > zero_threshold) & (~np.isnan(density))
 
-        labels[mask & (density < p_low)] = 0
-        labels[mask & (density >= p_low) & (density < p_mid)] = 1
-        labels[mask & (density >= p_mid) & (density < p_high)] = 2
-        labels[mask & (density >= p_high)] = 3
+        dispatch = {
+            "percentile": self._classify_percentile,
+            "jenks": self._classify_jenks,
+            "gmm": self._classify_gmm,
+        }
+        if classify_method not in dispatch:
+            raise ValueError(
+                f"Unknown classify_method '{classify_method}' (use one of {list(dispatch)})"
+            )
 
-        n_total = np.isfinite(density).sum()
+        labels, breakpoints = dispatch[classify_method](density, valid, mask)
+
+        n_total = int(np.isfinite(density).sum())
         counts = {int(c): int(np.sum(labels == c)) for c in [0, 1, 2, 3]}
         n_nan_domain = int(np.isnan(density).sum())
 
         self.logger.info(
-            f"[{season}][{method}] class counts: {counts} | "
+            f"[{season}][{method}][{classify_method}] class counts: {counts} | "
             f"zero-density (unlabelled) cells: {n_total - sum(counts.values())} | "
-            f"out-of-domain NaN cells: {n_nan_domain}"
+            f"out-of-domain NaN cells: {n_nan_domain} | "
+            f"breakpoints: {np.round(breakpoints, 4).tolist()}"
         )
         for c, n in counts.items():
             if n == 0:
-                self.logger.warning(f"[{season}][{method}] class {c} has 0 samples!")
+                self.logger.warning(f"[{season}][{method}][{classify_method}] class {c} has 0 samples!")
 
-        self._plot_diagnostics(valid, p_low, p_mid, p_high, season, method)
+        self._plot_diagnostics(valid, breakpoints, season, method, classify_method)
 
         with rasterio.open(self.ref_path) as ref:
             meta = ref.meta.copy()
@@ -155,20 +201,95 @@ class KernelDensityClassifier(VarBuilder):
 
         return labels
 
-    def _plot_diagnostics(self, valid_density, p_low, p_mid, p_high, season, method):
+    # --- classify_method implementations -------------------------------
+
+    def _classify_percentile(self, density, valid, mask):
+        """Fixed percentiles of non-zero density (paper does not specify exact cut points)."""
+        p_low, p_mid, p_high = np.percentile(valid, self.config["labels"]["percentiles"])
+        labels = self._apply_thresholds(density, mask, (p_low, p_mid, p_high))
+        return labels, np.array([p_low, p_mid, p_high])
+
+    def _classify_jenks(self, density, valid, mask):
+        """Fisher-Jenks natural breaks — ArcGIS's default classification method."""
+
+        n_classes = self.config["labels"].get("jenks_n_classes", 4)
+        max_sample = self.config["labels"].get("jenks_max_sample", 200_000)
+        sample = self._subsample(valid, max_sample)
+
+        breaks = jenkspy.jenks_breaks(sample.tolist(), n_classes=n_classes)
+        thresholds = np.array(breaks[1:-1])  # inner edges only, drop global min/max
+
+        labels = self._apply_thresholds(density, mask, thresholds)
+        return labels, thresholds
+
+    def _classify_gmm(self, density, valid, mask):
+        n_components = self.config["labels"].get("gmm_n_components", 4)
+        max_sample = self.config["labels"].get("gmm_max_sample", 200_000)
+        random_state = self.config["labels"].get("gmm_random_state", 42)
+        sample = self._subsample(valid, max_sample)
+
+        gmm = GaussianMixture(n_components=n_components, random_state=random_state)
+        gmm.fit(sample.reshape(-1, 1))
+
+        means = gmm.means_.flatten()
+        order = np.argsort(means)              
+        remap = {old: new for new, old in enumerate(order)}
+
+        # Predict the ordinal classes for the valid map pixels
+        valid_vals = density[mask]
+        raw = gmm.predict(valid_vals.reshape(-1, 1))
+        ordinal = np.vectorize(remap.get)(raw).astype("float32")
+
+        labels = np.full(density.shape, np.nan, dtype="float32")
+        labels[mask] = ordinal
+
+        # Create a fine linspace spanning the data range to find where predictions shift
+        test_grid = np.linspace(valid.min(), valid.max(), 10000).reshape(-1, 1)
+        test_preds = np.vectorize(remap.get)(gmm.predict(test_grid))
+        
+        thresholds = []
+        for c in range(n_components - 1):
+            # Find the last value belonging to class c before it transitions to c+1
+            transition_idx = np.where(test_preds == c)[0][-1]
+            thresholds.append(test_grid[transition_idx][0])
+
+        return labels, np.array(thresholds)
+
+    # --- shared helpers --------------------------------------------------
+
+    @staticmethod
+    def _subsample(values: np.ndarray, max_n: int) -> np.ndarray:
+        """Randomly subsample large arrays for O(n log n)-or-worse fitting steps."""
+        if len(values) <= max_n:
+            return values
+        return np.random.choice(values, max_n, replace=False)
+
+    @staticmethod
+    def _apply_thresholds(density: np.ndarray, mask: np.ndarray, thresholds) -> np.ndarray:
+        """Bin masked density values into ordinal classes using ascending thresholds."""
+        labels = np.full(density.shape, np.nan, dtype="float32")
+        labels[mask] = np.digitize(density[mask], thresholds).astype("float32")
+        return labels
+
+    def _plot_diagnostics(self, valid_density, breakpoints, season, method, classify_method):
         figures_dir = Path(self.config["base"]["figures_dir"])
         figures_dir.mkdir(parents=True, exist_ok=True)
 
         fig, ax = plt.subplots(figsize=(7, 4))
         ax.hist(valid_density, bins=80, color="steelblue", alpha=0.8)
-        for val, label, color in [(p_low, "60th", "orange"), (p_mid, "75th", "red"), (p_high, "90th", "darkred")]:
-            ax.axvline(val, color=color, linestyle="--", label=f"{label} pct = {val:.4g}")
-        ax.set_title(f"Fire density distribution — {season} ({method})")
+
+        line_label = "break" if classify_method != "gmm" else "component mean"
+        colors = ["orange", "red", "darkred", "purple"]
+        for i, val in enumerate(breakpoints):
+            ax.axvline(val, color=colors[i % len(colors)], linestyle="--",
+                       label=f"{line_label} {i + 1} = {val:.4g}")
+
+        ax.set_title(f"Fire density distribution — {season} ({method} / {classify_method})")
         ax.set_xlabel("Density")
         ax.set_ylabel("Pixel count")
         ax.legend()
         fig.tight_layout()
-        out_path = figures_dir / f"density_dist_{season}_{method}.png"
+        out_path = figures_dir / f"density_dist_{season}_{method}_{classify_method}.png"
         fig.savefig(out_path, dpi=150)
         plt.close(fig)
-        self.logger.info(f"[{season}][{method}] diagnostic plot -> {out_path}")
+        self.logger.info(f"[{season}][{method}][{classify_method}] diagnostic plot -> {out_path}")
