@@ -1,6 +1,7 @@
 data/*
 figures/*
 docs/*
+mlruns/*
 __pycache__/
 *.pyc
 .env

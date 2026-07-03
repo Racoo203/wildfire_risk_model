@@ -182,7 +182,6 @@ def plot_class_balance(
     return _save_and_log(fig, out_path, figures_dir, "class_balance",
                           "viz.charts.plot_class_balance", season)
 
-
 def plot_nan_coverage(
     feature_arrays: Dict[str, np.ndarray],
     figures_dir: Path,
@@ -203,3 +202,29 @@ def plot_nan_coverage(
     out_path = Path(figures_dir) / "eda" / f"nan_coverage_{season or 'static'}.png"
     return _save_and_log(fig, out_path, figures_dir, "nan_coverage",
                           "viz.charts.plot_nan_coverage", season)
+
+def plot_cv_comparison(figures_dir, season=None, mlflow_experiment=None):
+    """Standard vs spatial CV AUC per model — the optimism-gap figure."""
+    import mlflow
+
+    runs = mlflow.search_runs(experiment_names=[mlflow_experiment])
+    if season:
+        runs = runs[runs["tags.season"] == season]
+
+    models = runs["tags.model"].tolist()
+    standard = runs["metrics.cv_auc_standard"].tolist()
+    spatial = runs["metrics.cv_auc_spatial"].tolist()
+
+    fig, ax = plt.subplots(figsize=(7, 5))
+    x = np.arange(len(models))
+    width = 0.35
+    ax.bar(x - width/2, standard, width, label="Standard CV", color="steelblue")
+    ax.bar(x + width/2, spatial, width, label="Spatial CV", color="darkorange")
+    ax.set_xticks(x)
+    ax.set_xticklabels(models)
+    ax.set_ylabel("AUC")
+    ax.set_title(f"Standard vs Spatial CV — optimism gap" + (f" ({season})" if season else ""))
+    ax.legend()
+
+    out_path = Path(figures_dir) / "models" / (season or "static") / "cv_comparison.png"
+    return _save_and_log(fig, out_path, figures_dir, "cv_comparison", "viz.charts.plot_cv_comparison", season)
