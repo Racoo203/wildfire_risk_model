@@ -107,6 +107,9 @@ class LabelsConfig(BaseModel):
     sensitivity_n_reweight_trials: int = 3
     sensitivity_feature_noise_std: float = 0.05
 
+    clustering_exclude_features: List[str] = Field(default_factory=lambda: ["tas", "tasmin"])
+    clustering_variance_floor_pct: float = 0.01
+
 class ModelingConfig(BaseModel):
     models: List[Literal["random_forest", "svm", "xgboost", "neural_net"]] = Field(
         default_factory=lambda: ["random_forest", "svm", "xgboost", "neural_net"]

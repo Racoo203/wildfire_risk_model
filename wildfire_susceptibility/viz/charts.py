@@ -15,6 +15,7 @@ from statsmodels.stats.outliers_influence import variance_inflation_factor
 
 from .manifest import append_to_manifest
 
+import logging
 
 def _save_and_log(
     fig, 
@@ -122,15 +123,33 @@ def plot_vif_correlation(
         "correlation", "viz.charts.plot_vif_correlation", season, params={"threshold": corr_threshold},
     )
 
+    corr_spearman = X.corr(method="spearman")
+    fig3, ax3 = plt.subplots(figsize=(8, 7))
+    sns.heatmap(corr_spearman, cmap="coolwarm", center=0, vmin=-1, vmax=1, ax=ax3, square=True)
+    ax3.set_title(f"Spearman correlation" + (f" — {season}" if season else ""))
+    spearman_path = _save_and_log(
+        fig3, Path(figures_dir) / "eda" / f"correlation_spearman_{season or 'static'}.png",
+        figures_dir, "correlation_spearman", "viz.charts.plot_vif_correlation", season,
+    )
+
     n_flagged = int(((mask_high.sum().sum() - len(feature_cols))) / 2)  # exclude diagonal, undouble
     if n_flagged > 0 or (vifs > vif_threshold).any():
-        import logging
         logging.getLogger(__name__).warning(
             f"[{season}] VIF/correlation: {(vifs > vif_threshold).sum()} feature(s) exceed VIF>{vif_threshold}, "
             f"{n_flagged} pair(s) exceed |corr|>{corr_threshold}"
         )
 
-    return {"vif": vif_path, "correlation": corr_path}
+    disagreement = (corr_spearman - corr).abs()
+    mask_upper = np.triu(np.ones(disagreement.shape, dtype=bool), k=1)
+    notable = disagreement.where(mask_upper).stack()
+    notable = notable[notable > 0.15].index.tolist()
+    if notable:
+        logging.getLogger(__name__).info(
+            f"[{season}] {len(notable)} feature pair(s) show notable Pearson/Spearman "
+            f"divergence (>0.15) — possible non-linear monotonic relationship: {notable[:5]}"
+        )
+
+    return {"vif": vif_path, "correlation": corr_path, "spearman": spearman_path}
 
 
 def plot_class_balance(

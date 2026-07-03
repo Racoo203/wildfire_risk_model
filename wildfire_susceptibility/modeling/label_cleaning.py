@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Dict, List, Optional, Sequence, Set
+from typing import Dict, List, Optional, Set
 
 import numpy as np
 import pandas as pd
@@ -23,68 +23,29 @@ class LabelCleaner(VarBuilder):
     def process(self):
         return
 
-    def clean(
-        self,
-        labels: np.ndarray,
-        feature_arrays: Dict[str, np.ndarray],
-        season: Optional[str] = None,
-    ) -> np.ndarray:
-        out_paths = {
-            "risk_labels_clean": self.output_dir / f"{self._seasonal_name('risk_labels_clean', season)}.tif"
-        }
-
-        if self._check_cache(f"LabelCleaner[{season}]", out_paths):
-            self.logger.info(f"[CACHED] Cleaned labels ({season}) already exist")
-            with rasterio.open(out_paths["risk_labels_clean"]) as src:
-                return src.read(1)
-
-        valid_mask, flat_labels, flat_features, _ = self._flatten_valid(labels, feature_arrays)
-
-        cfg = self.config["labels"]
-        flagged = self._flag_low_pixels(
-            flat_labels, flat_features,
-            n_init=cfg["kmeans_n_init"],
-            max_iter=cfg["kmeans_max_iter"],
-            random_state=cfg["random_state"],
-            sample_random_state=cfg["random_state"],   # fixed baseline sample
-            max_sample=cfg["max_sample_per_class"],
-        )
-
-        cleaned_labels = self._apply_flags(labels, valid_mask, flat_labels, flagged)
-        self._log_removal(flat_labels, flagged, season)
-        self._write_raster(cleaned_labels, out_paths["risk_labels_clean"])
-
-        if cfg.get("run_sensitivity", True):
-            self.sensitivity_analysis(
-                flat_labels, flat_features, baseline_flagged=flagged, season=season,
-            )
-
-        return cleaned_labels
+    def _build_clustering_view(
+        self, feature_arrays: Dict[str, np.ndarray]
+    ) -> Dict[str, np.ndarray]:
+        """Feature set used ONLY for k-means geometry — not for modeling."""
+        view = {k: v for k, v in feature_arrays.items() if k not in self.CLUSTERING_EXCLUDE}
+        for name, fn in self.CLUSTERING_DERIVED.items():
+            if all(dep in feature_arrays for dep in ("tasmax", "tasmin")):
+                view[name] = fn(feature_arrays)
+        return view
     
     def _flag_low_pixels(
-        self,
-        flat_labels: np.ndarray,
-        flat_features: np.ndarray,
-        *,
-        n_init: int,
-        max_iter: int,
-        random_state: int,
-        max_sample: int,
-        sample_random_state: Optional[int] = None,
-        feature_weights: Optional[np.ndarray] = None,
-    ) -> Set[int]:
-        """
-        ...
-        sample_random_state controls WHICH pixels are subsampled and is held
-        fixed across sensitivity variants by design — the sensitivity analysis
-        tests k-means initialization/seed robustness on a constant sample, not
-        robustness to redrawing the sample itself. Defaults to `random_state`
-        for backward compatibility if not given explicitly.
-        """
+        self, flat_labels, flat_features, *, n_init, max_iter, random_state,
+        max_sample, sample_random_state=None, feature_weights=None,
+        feature_names=None,
+        population_std=None,
+    ):
         sample_random_state = sample_random_state if sample_random_state is not None else random_state
         rng = np.random.default_rng(sample_random_state)
         low_idx = np.where(flat_labels == 0)[0]
         low_sample = self._subsample(low_idx, max_sample, rng)
+
+        if population_std is None:
+            population_std = flat_features.std(axis=0)
 
         scaler = StandardScaler()
         flagged: Set[int] = set()
@@ -97,10 +58,21 @@ class LabelCleaner(VarBuilder):
 
             high_sample = self._subsample(high_idx, max_sample, rng)
             subset_idx = np.concatenate([low_sample, high_sample])
+            raw_subset = flat_features[subset_idx]
 
-            X = scaler.fit_transform(flat_features[subset_idx])
+            # --- variance-floor guard -------------------------------
+            subset_std = raw_subset.std(axis=0)
+            degenerate = subset_std < 0.01 * np.maximum(population_std, 1e-8)
+            if degenerate.any() and feature_names is not None:
+                names = np.array(feature_names)[degenerate].tolist()
+                self.logger.warning(
+                    f"[Low vs {high_class}] excluding near-constant-in-subsample "
+                    f"feature(s) from clustering (std < 1% of population std): {names}"
+                )
+
+            X = scaler.fit_transform(raw_subset[:, ~degenerate])
             if feature_weights is not None:
-                X = X * feature_weights
+                X = X * feature_weights[~degenerate]
 
             km = KMeans(n_clusters=2, n_init=n_init, max_iter=max_iter, random_state=random_state)
             cluster_ids = km.fit_predict(X)
@@ -116,9 +88,11 @@ class LabelCleaner(VarBuilder):
         flat_labels: np.ndarray,
         flat_features: np.ndarray,
         baseline_flagged: Set[int],
+        feature_names=None,
         season: Optional[str] = None,
     ) -> pd.DataFrame:
         cfg = self.config["labels"]
+
         max_sample = cfg["max_sample_per_class"]
         low_size = int(np.sum(flat_labels == 0))
         n_features = flat_features.shape[1]
@@ -141,6 +115,7 @@ class LabelCleaner(VarBuilder):
                 sample_random_state=cfg["random_state"],
                 max_sample=max_sample,
                 feature_weights=weights,
+                feature_names=feature_names,
             )
 
             symmetric_diff = len(baseline_flagged ^ flagged)
@@ -184,6 +159,56 @@ class LabelCleaner(VarBuilder):
             )
 
         return report
+
+    def clean(
+        self,
+        labels: np.ndarray,
+        feature_arrays: Dict[str, np.ndarray],
+        season: Optional[str] = None,
+    ) -> np.ndarray:
+        out_paths = {
+            "risk_labels_clean": self.output_dir / f"{self._seasonal_name('risk_labels_clean', season)}.tif"
+        }
+
+        if self._check_cache(f"LabelCleaner[{season}]", out_paths):
+            self.logger.info(f"[CACHED] Cleaned labels ({season}) already exist")
+            with rasterio.open(out_paths["risk_labels_clean"]) as src:
+                return src.read(1)
+            
+        cfg = self.config["labels"]
+
+        self.CLUSTERING_EXCLUDE = cfg.CLUSTERING_EXCLUDE
+        self.CLUSTERING_DERIVED = cfg.CLUSTERING_DERIVED
+
+        clustering_arrays = self._build_clustering_view(feature_arrays)
+        valid_mask, flat_labels, flat_features, feature_names = self._flatten_valid(
+            labels, clustering_arrays
+        )
+
+        flagged = self._flag_low_pixels(
+            flat_labels, flat_features,
+            n_init=cfg["kmeans_n_init"],
+            max_iter=cfg["kmeans_max_iter"],
+            random_state=cfg["random_state"],
+            sample_random_state=cfg["random_state"],   # fixed baseline sample
+            max_sample=cfg["max_sample_per_class"],
+            feature_names=feature_names
+        )
+
+        cleaned_labels = self._apply_flags(labels, valid_mask, flat_labels, flagged)
+        self._log_removal(flat_labels, flagged, season)
+        self._write_raster(cleaned_labels, out_paths["risk_labels_clean"])
+
+        if cfg.get("run_sensitivity", True):
+            self.sensitivity_analysis(
+                flat_labels, 
+                flat_features, 
+                baseline_flagged=flagged, 
+                season=season,
+                feature_names=feature_names
+            )
+
+        return cleaned_labels
 
     @staticmethod
     def _build_sensitivity_variants(cfg: dict) -> List[dict]:
