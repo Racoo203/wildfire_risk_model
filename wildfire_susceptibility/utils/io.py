@@ -12,12 +12,12 @@ def read_geojson(path: Union[str, Path]) -> Dict[str, Any]:
     with open(path) as f:
         return json.load(f)
 
-def write_geojson(path: Union[str, Path]) -> None:
+def write_geojson(data: Dict[str, Any], path: Union[str, Path]) -> None:
     """Write dict as GeoJSON file."""
     path = Path(path)
-    path.parent.mkdir(parents = True, exist_ok = True)  
+    path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w") as f:
-        json.dump(data, f, indent = 2)
+        json.dump(data, f, indent=2)
     logger.info(f"Written {path}")
 
 def read_csv(path: Union[str, Path], **kwargs) -> pd.DataFrame:
@@ -25,6 +25,7 @@ def read_csv(path: Union[str, Path], **kwargs) -> pd.DataFrame:
     try:
         df = pd.read_csv(path, **kwargs)
         logger.info(f"Read {path}: {len(df):,} rows, {len(df.columns)} columns")
+        return df
     except Exception as e:
         logger.error(f"Failed to read {path}: {e}")
         raise
@@ -32,10 +33,10 @@ def read_csv(path: Union[str, Path], **kwargs) -> pd.DataFrame:
 def write_csv(df: pd.DataFrame, path: Union[str, Path], index: bool = False, **kwargs) -> None:
     """Write DataFrame to CSV with error handling."""
     path = Path(path)
-    path.parent.mkdir(parents = True, exist_ok = True)  
+    path.parent.mkdir(parents=True, exist_ok=True)
 
     try:
-        df.to_csv(path, index = index, **kwargs)
+        df.to_csv(path, index=index, **kwargs)
         logger.info(f"Written {path}: {len(df):,} rows")
     except Exception as e:
         logger.error(f"Failed to write {path}: {e}")
@@ -52,17 +53,17 @@ def read_shapefile(path: Union[str, Path], **kwargs) -> gpd.GeoDataFrame:
         raise
 
 def write_shapefile(
-    gdf: gpd.GeoDataFrame, 
-    path: Union[str, Path], 
-    driver: str = "ESRI Shapefile", 
+    gdf: gpd.GeoDataFrame,
+    path: Union[str, Path],
+    driver: str = "ESRI Shapefile",
     **kwargs
 ) -> None:
     path = Path(path)
-    path.parent.mkdir(parents = True, exist_ok = True)
+    path.parent.mkdir(parents=True, exist_ok=True)
 
     try:
-        gdf.to_file(path, driver = driver, **kwargs)
-        logger.info(f"Written {path}: {len(df):,} {len(gdf)} features")
+        gdf.to_file(path, driver=driver, **kwargs)
+        logger.info(f"Written {path}: {len(gdf):,} features")   # was referencing undefined `df`
     except Exception as e:
         logger.error(f"Failed to write {path}: {e}")
         raise

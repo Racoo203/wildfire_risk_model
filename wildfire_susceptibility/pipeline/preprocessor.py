@@ -16,6 +16,11 @@ from ..labels.fire_incidents import FireBuilder
 from ..labels.kernel_density import KernelDensityClassifier
 from ..labels.classification import LabelCleaner
 
+from .orchestrator import FeatureOrchestrator
+from ..core.registry import FEATURE_BUILDERS
+
+from ..modeling.dataset_prep import DatasetPrep  # add this import
+
 from ..core.raster import RasterManager
 from ..utils.logger import setup_logger
 
@@ -90,25 +95,13 @@ class WildfirePreprocessor:
         return dataset_paths
 
     def _build_static_features(self) -> Dict[str, Path]:
-        self.logger.info("Building static features...")
-
-        bound_builder = BoundaryBuilder(self.config)
-        bound_builder.process()
-        
-        topo_builder = TopographyBuilder(self.config)
-        topo_features = topo_builder.process()
-
-        ref_path = topo_features["elevation"]
-
-        prox_builder = ProximityBuilder(self.config, ref_path)
-        prox_features = prox_builder.process()
-
-        static_features = {**topo_features, **prox_features}
+        orchestrator = FeatureOrchestrator(self.config)
+        static_features, ref_path = orchestrator.build_static_features()
+        self._ref_path = ref_path  # stash for _build_seasonal_features / labels
 
         if not self.config["seasons"].get("seasonal_ndvi", False):
-            veg_builder = VegetationBuilder(self.config, ref_path)
+            veg_builder = FEATURE_BUILDERS["vegetation"](self.config, ref_path)
             veg_features = veg_builder.process()
-
             static_features.update(veg_features)
 
         return static_features
@@ -169,16 +162,44 @@ class WildfirePreprocessor:
         season: str,
         ref_path: Path,
     ) -> np.ndarray:
-        """
-        Run pairwise k-means label cleaning on the classified labels, using
-        the same feature set that will feed the model dataset. Controlled by
-        labels.clean_labels — set False to keep raw classify() output
-        (e.g. when comparing cleaned vs. uncleaned model performance).
-        """
         if not self.config["labels"].get("clean_labels", True):
             return train_labels
 
         feature_arrays = self._load_feature_arrays(all_features)
+
+        # Resolve missing data BEFORE k-means cleaning (Section 7.3 fix).
+        prep = DatasetPrep(self.config)
+        feature_df = pd.DataFrame({k: v.ravel() for k, v in feature_arrays.items()})
+        feature_df = prep.resolve_missing(
+            feature_df,
+            slope_aspect_cols=("slope", "aspect"),
+            ndvi_col="ndvi",
+            drop_if_any_nan_in=(),
+        )
+        ref_shape = next(iter(feature_arrays.values())).shape
+        feature_arrays = {k: feature_df[k].values.reshape(ref_shape) for k in feature_arrays}
+
+        # NEW: any pixel where a feature still has an unresolved NaN (climate
+        # resampling edges, sea/estuary pixels outside the land mask, etc.)
+        # cannot be fed to KMeans. Rather than drop rows from a dataframe
+        # (which would break the raster shape), exclude those pixels from
+        # labelled training data by setting their label to NaN — this has the
+        # same practical effect as "drop" (LabelCleaner._flatten_valid already
+        # filters on ~np.isnan(labels)) without touching the raster grid.
+        still_nan_mask = np.zeros(ref_shape, dtype=bool)
+        for name, arr in feature_arrays.items():
+            still_nan_mask |= np.isnan(arr)
+
+        n_excluded = int(np.sum(still_nan_mask & ~np.isnan(train_labels)))
+        if n_excluded:
+            self.logger.info(
+                f"[{season}] Excluding {n_excluded:,} otherwise-labelled pixels from "
+                f"cleaning/training due to unresolved feature NaNs (e.g. climate "
+                f"resampling edges) — see per-feature breakdown above."
+            )
+        train_labels = train_labels.copy()
+        train_labels[still_nan_mask] = np.nan
+
         cleaner = LabelCleaner(self.config, ref_path)
         return cleaner.clean(train_labels, feature_arrays, season=season)
 

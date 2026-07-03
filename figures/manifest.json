@@ -1,0 +1,66 @@
+[
+  {
+    "path": "eda\\nan_coverage_spring.png",
+    "category": "nan_coverage",
+    "season": "spring",
+    "generated_by": "viz.charts.plot_nan_coverage",
+    "params": {},
+    "timestamp": "2026-07-03T03:58:21.708547+00:00"
+  },
+  {
+    "path": "eda\\nan_coverage_summer.png",
+    "category": "nan_coverage",
+    "season": "summer",
+    "generated_by": "viz.charts.plot_nan_coverage",
+    "params": {},
+    "timestamp": "2026-07-03T03:58:32.278174+00:00"
+  },
+  {
+    "path": "eda\\nan_coverage_fall.png",
+    "category": "nan_coverage",
+    "season": "fall",
+    "generated_by": "viz.charts.plot_nan_coverage",
+    "params": {},
+    "timestamp": "2026-07-03T03:58:40.959970+00:00"
+  },
+  {
+    "path": "eda\\vif_spring.png",
+    "category": "vif",
+    "season": "spring",
+    "generated_by": "viz.charts.plot_vif_correlation",
+    "params": {
+      "threshold": 10.0
+    },
+    "timestamp": "2026-07-03T04:00:57.941166+00:00"
+  },
+  {
+    "path": "eda\\correlation_spring.png",
+    "category": "correlation",
+    "season": "spring",
+    "generated_by": "viz.charts.plot_vif_correlation",
+    "params": {
+      "threshold": 0.8
+    },
+    "timestamp": "2026-07-03T04:01:01.744466+00:00"
+  },
+  {
+    "path": "eda\\vif_summer.png",
+    "category": "vif",
+    "season": "summer",
+    "generated_by": "viz.charts.plot_vif_correlation",
+    "params": {
+      "threshold": 10.0
+    },
+    "timestamp": "2026-07-03T04:03:22.571581+00:00"
+  },
+  {
+    "path": "eda\\correlation_summer.png",
+    "category": "correlation",
+    "season": "summer",
+    "generated_by": "viz.charts.plot_vif_correlation",
+    "params": {
+      "threshold": 0.8
+    },
+    "timestamp": "2026-07-03T04:03:27.650333+00:00"
+  }
+]

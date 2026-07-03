@@ -1,0 +1,193 @@
+"""
+Model-ready dataset preparation (the 'Gold' layer, Section 7.3).
+
+Three responsibilities, run in this order:
+    1. Missing-data resolution — per the three documented NaN sources:
+       sea/estuary pixels outside the HadUK land mask (drop), flat SRTM
+       no-data cells affecting slope/aspect (impute zero), NDVI cloud
+       contamination (spatial nearest-neighbor fill).
+    2. Per-model-family scaling — tree models (RF/XGBoost) get the raw
+       imputed table; SVM/NN get a StandardScaler-transformed copy.
+    3. Stratified 70/30 train/test split matching the paper's methodology.
+
+NOTE: this module does NOT currently sit in front of LabelCleaner in
+WildfirePreprocessor.run_full_pipeline() — wiring that ordering fix into
+the live pipeline is deliberately deferred to Phase 3 so it can be reviewed
+as its own change rather than folded into this one. Today, this module is
+usable standalone (e.g. from a notebook) against an already-assembled
+dataset_clean_<season>.csv.
+"""
+
+from pathlib import Path
+from typing import Dict, Optional, Tuple
+
+import numpy as np
+import pandas as pd
+from scipy.ndimage import distance_transform_edt
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+
+import logging
+
+logger = logging.getLogger(__name__)
+
+class DatasetPrep:
+    """
+    Turns a raw stacked feature/label table (one row per valid pixel, as
+    produced by RasterManager.stack_to_dataframe) into model-ready arrays.
+    """
+
+    def __init__(self, config: dict):
+        self.config = config
+
+    # --- 1. missing-data resolution ------------------------------------
+
+    def resolve_missing(
+        self,
+        df: pd.DataFrame,
+        *,
+        slope_aspect_cols: Tuple[str, ...] = ("slope", "aspect"),
+        ndvi_col: str = "ndvi",
+        drop_if_any_nan_in: Tuple[str, ...] = (),
+    ) -> pd.DataFrame:
+        """
+        Apply the three documented NaN-handling rules to a stacked dataframe.
+
+        Args:
+            df: stacked feature/label table (columns = feature names + 'label').
+            slope_aspect_cols: columns to zero-impute (flat SRTM no-data cells).
+            ndvi_col: column to nearest-neighbor fill (MODIS cloud contamination).
+            drop_if_any_nan_in: columns where a NaN means "outside land mask" —
+                rows with NaN in any of these are dropped outright (e.g. a
+                climate variable, which is NaN only for sea/estuary pixels
+                once slope/aspect/NDVI have already been resolved).
+
+        Returns:
+            A new dataframe with the three NaN-handling rules applied. Any
+            remaining NaNs (unexpected sources) are logged as a warning
+            rather than silently dropped, so new NaN sources don't vanish
+            unnoticed.
+        """
+        out = df.copy()
+
+        # Rule 1: flat SRTM no-data cells -> zero-impute slope/aspect
+        for col in slope_aspect_cols:
+            if col in out.columns:
+                n_nan = out[col].isna().sum()
+                if n_nan:
+                    out[col] = out[col].fillna(0.0)
+                    logger.info(f"Zero-imputed {n_nan:,} NaNs in '{col}' (flat SRTM cells)")
+
+        # Rule 2: NDVI cloud contamination -> spatial nearest-neighbor fill
+        if ndvi_col in out.columns:
+            n_nan = out[ndvi_col].isna().sum()
+            if n_nan:
+                out[ndvi_col] = self._nearest_neighbor_fill_1d(out[ndvi_col])
+                logger.info(f"Nearest-neighbor filled {n_nan:,} NaNs in '{ndvi_col}'")
+
+        # Rule 3: sea/estuary pixels outside the HadUK land mask -> drop
+        if drop_if_any_nan_in:
+            before = len(out)
+            out = out.dropna(subset=[c for c in drop_if_any_nan_in if c in out.columns])
+            dropped = before - len(out)
+            if dropped:
+                logger.info(f"Dropped {dropped:,} rows with NaN in {drop_if_any_nan_in} (sea/estuary)")
+
+        remaining_nan_cols = out.columns[out.isna().any()].tolist()
+        if remaining_nan_cols:
+            # Report counts, but clarify these include the (expected, large) area
+            # outside the study boundary — not just genuine in-domain gaps.
+            counts = {c: int(out[c].isna().sum()) for c in remaining_nan_cols}
+            logger.warning(
+                f"Unresolved NaNs remain in columns {counts} after applying the three "
+                f"documented rules. Note: this count spans the full rectangular grid, "
+                f"including area outside the study boundary — check against the valid "
+                f"label mask before treating this as an in-domain data quality issue."
+            )
+
+        return out
+
+    @staticmethod
+    def _nearest_neighbor_fill_1d(series: pd.Series) -> pd.Series:
+        """
+        Fill NaNs in a 1-D series using nearest-valid-value by row position.
+
+        This operates on the *stacked* (already-flattened) representation,
+        which approximates spatial nearest-neighbor fill when row order
+        follows raster row-major order (as RasterManager.stack_to_dataframe
+        produces via a fixed valid_mask). For a stricter 2-D spatial fill,
+        apply distance_transform_edt's `return_indices` on the raster
+        directly before stacking — this 1-D approximation is a reasonable
+        and much cheaper stand-in at this stage of the pipeline.
+        """
+        values = series.to_numpy()
+        nan_mask = np.isnan(values)
+        if not nan_mask.any():
+            return series
+        if nan_mask.all():
+            logger.warning("Entire NDVI column is NaN — cannot nearest-neighbor fill.")
+            return series
+
+        idx = np.arange(len(values))
+        valid_idx = idx[~nan_mask]
+        # distance_transform_edt on the 1-D NaN mask gives nearest-valid indices
+        _, nearest_idx = distance_transform_edt(nan_mask, return_indices=True, return_distances=True)
+        filled = values.copy()
+        filled[nan_mask] = values[valid_idx[np.searchsorted(valid_idx, nearest_idx[0][nan_mask]) - 1]] \
+            if False else values[nearest_idx[0]][nan_mask]
+        return pd.Series(filled, index=series.index)
+
+    # --- 2. per-model-family scaling ------------------------------------
+
+    def scale_for_model_family(
+        self,
+        X_train: pd.DataFrame,
+        X_test: pd.DataFrame,
+        needs_scaling: bool,
+    ) -> Tuple[pd.DataFrame, pd.DataFrame, Optional[StandardScaler]]:
+        """
+        Return (X_train, X_test) as-is for tree models, or StandardScaler-
+        transformed copies for scale-sensitive models (SVM, NN).
+
+        The scaler is fit on X_train only, never X_test, to avoid leakage.
+        """
+        if not needs_scaling:
+            return X_train, X_test, None
+
+        scaler = StandardScaler()
+        X_train_scaled = pd.DataFrame(
+            scaler.fit_transform(X_train), columns=X_train.columns, index=X_train.index
+        )
+        X_test_scaled = pd.DataFrame(
+            scaler.transform(X_test), columns=X_test.columns, index=X_test.index
+        )
+        return X_train_scaled, X_test_scaled, scaler
+
+    # --- 3. stratified split ---------------------------------------------
+
+    def stratified_split(
+        self,
+        df: pd.DataFrame,
+        label_col: str = "label",
+        test_size: float = 0.30,
+        random_state: Optional[int] = None,
+    ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
+        """
+        70/30 split stratified by class, matching the paper's methodology
+        (Section 1.5). Rows with NaN labels (unlabelled / zero-density
+        pixels) are excluded before splitting.
+        """
+        random_state = random_state if random_state is not None else self.config.get("labels", {}).get("random_state", 42)
+
+        labelled = df.dropna(subset=[label_col])
+        X = labelled.drop(columns=[label_col])
+        y = labelled[label_col]
+
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=test_size, stratify=y, random_state=random_state,
+        )
+        logger.info(
+            f"Stratified split: {len(X_train):,} train / {len(X_test):,} test "
+            f"(test_size={test_size}, random_state={random_state})"
+        )
+        return X_train, X_test, y_train, y_test

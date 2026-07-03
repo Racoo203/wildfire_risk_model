@@ -67,7 +67,7 @@ class RasterManager:
     def reproject_and_resample(
         src_path: Union[str, Path], 
         dst_path: Union[str, Path],
-        target_crs: str = "ESPG:27700",
+        target_crs: str = "EPSG:27700",
         target_res: float = 30.0,
         resampling_method: Resampling = Resampling.bilinear,
     ) -> None:

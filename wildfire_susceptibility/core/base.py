@@ -96,7 +96,7 @@ class VarBuilder(ABC):
         tmp_stem: Optional[str] = None,
     ) -> Path:
         """
-        Bring *src_path* fully into the reference grid in three steps:
+        Bring *src_path* fully into the reference grid in two steps:
 
             1. align to reference grid (reproject + resample to 30 m BNG)
             2. clip to Essex boundary  (removes data outside study area)

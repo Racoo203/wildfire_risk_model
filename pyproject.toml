@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wildfire-susceptibility"
+version = "0.2.0"
+description = "Wildfire susceptibility mapping pipeline for Essex, UK — replication/extension of Bouzeraa et al. 2025"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy",
+    "pandas",
+    "scikit-learn",
+    "scikit-image",
+    "scipy",
+    "xarray",
+    "matplotlib",
+    "seaborn",
+    "pyyaml",
+    "pydantic>=2.0",
+    "affine",
+    "cftime",
+    "cligj",
+    "geopandas",
+    "h5netcdf",
+    "netcdf4",
+    "pyogrio",
+    "pyproj",
+    "rasterio",
+    "shapely",
+    "jenkspy",
+    "statsmodels",
+]
+
+[project.optional-dependencies]
+app = ["streamlit", "plotly"]
+modeling = ["xgboost", "torch", "mlflow", "optuna", "shap"]
+dev = ["pytest", "pytest-cov", "ruff"]
+
+[tool.setuptools.packages.find]
+include = ["wildfire_susceptibility*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
