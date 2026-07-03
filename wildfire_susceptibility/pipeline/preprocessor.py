@@ -81,11 +81,15 @@ class WildfirePreprocessor:
                 months, season, ref_path
             )
 
-            all_features.update(fire_prox_features)
+            if self.config["labels"].get("include_d_fires_as_feature", True):
+                all_features.update(fire_prox_features)
+            else:
+                self.logger.info(f"[{season}] include_d_fires_as_feature=False — d_fires excluded from feature stack")
 
             train_labels = self._clean_seasonal_labels(
                 train_labels, all_features, season, ref_path
             )
+            
 
             dataset_paths[season] = self._assemble_seasonal_dataset(
                 season, all_features, train_labels, ref_path
@@ -167,7 +171,11 @@ class WildfirePreprocessor:
 
         feature_arrays = self._load_feature_arrays(all_features)
 
-        # Resolve missing data BEFORE k-means cleaning (Section 7.3 fix).
+        # Domain mask: elevation is the reference raster, so its valid cells
+        # define "inside Essex" for NaN-reporting purposes.
+        domain_mask_2d = ~np.isnan(feature_arrays["elevation"])
+        domain_mask_flat = domain_mask_2d.ravel()
+
         prep = DatasetPrep(self.config)
         feature_df = pd.DataFrame({k: v.ravel() for k, v in feature_arrays.items()})
         feature_df = prep.resolve_missing(
@@ -175,27 +183,20 @@ class WildfirePreprocessor:
             slope_aspect_cols=("slope", "aspect"),
             ndvi_col="ndvi",
             drop_if_any_nan_in=(),
+            domain_mask=domain_mask_flat,
         )
         ref_shape = next(iter(feature_arrays.values())).shape
         feature_arrays = {k: feature_df[k].values.reshape(ref_shape) for k in feature_arrays}
 
-        # NEW: any pixel where a feature still has an unresolved NaN (climate
-        # resampling edges, sea/estuary pixels outside the land mask, etc.)
-        # cannot be fed to KMeans. Rather than drop rows from a dataframe
-        # (which would break the raster shape), exclude those pixels from
-        # labelled training data by setting their label to NaN — this has the
-        # same practical effect as "drop" (LabelCleaner._flatten_valid already
-        # filters on ~np.isnan(labels)) without touching the raster grid.
         still_nan_mask = np.zeros(ref_shape, dtype=bool)
-        for name, arr in feature_arrays.items():
+        for arr in feature_arrays.values():
             still_nan_mask |= np.isnan(arr)
 
         n_excluded = int(np.sum(still_nan_mask & ~np.isnan(train_labels)))
         if n_excluded:
             self.logger.info(
                 f"[{season}] Excluding {n_excluded:,} otherwise-labelled pixels from "
-                f"cleaning/training due to unresolved feature NaNs (e.g. climate "
-                f"resampling edges) — see per-feature breakdown above."
+                f"cleaning/training due to unresolved in-domain feature NaNs."
             )
         train_labels = train_labels.copy()
         train_labels[still_nan_mask] = np.nan

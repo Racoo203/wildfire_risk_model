@@ -26,10 +26,7 @@ def log_cached(
     step_name: str,
     paths: Dict[str, Union[str, Path]]
 ) -> None:
-    """
-    Log that a step's outputs were found cached and computation was skipped
-    """
     logger.info(f"[CACHED] {step_name}: outputs already exist, skipping computation")
     for name, path in paths.items():
-        logger.info(f"  [cached] {name} -> {path}")
+        logger.debug(f"  [cached] {name} -> {path}")   # was INFO
 

@@ -46,6 +46,7 @@ class LabelCleaner(VarBuilder):
             n_init=cfg["kmeans_n_init"],
             max_iter=cfg["kmeans_max_iter"],
             random_state=cfg["random_state"],
+            sample_random_state=cfg["random_state"],   # fixed baseline sample
             max_sample=cfg["max_sample_per_class"],
         )
 
@@ -59,7 +60,7 @@ class LabelCleaner(VarBuilder):
             )
 
         return cleaned_labels
-
+    
     def _flag_low_pixels(
         self,
         flat_labels: np.ndarray,
@@ -69,9 +70,19 @@ class LabelCleaner(VarBuilder):
         max_iter: int,
         random_state: int,
         max_sample: int,
+        sample_random_state: Optional[int] = None,
         feature_weights: Optional[np.ndarray] = None,
     ) -> Set[int]:
-        rng = np.random.default_rng(random_state)
+        """
+        ...
+        sample_random_state controls WHICH pixels are subsampled and is held
+        fixed across sensitivity variants by design — the sensitivity analysis
+        tests k-means initialization/seed robustness on a constant sample, not
+        robustness to redrawing the sample itself. Defaults to `random_state`
+        for backward compatibility if not given explicitly.
+        """
+        sample_random_state = sample_random_state if sample_random_state is not None else random_state
+        rng = np.random.default_rng(sample_random_state)
         low_idx = np.where(flat_labels == 0)[0]
         low_sample = self._subsample(low_idx, max_sample, rng)
 
@@ -127,6 +138,7 @@ class LabelCleaner(VarBuilder):
                 n_init=variant["n_init"],
                 max_iter=cfg["kmeans_max_iter"],
                 random_state=variant["random_state"],
+                sample_random_state=cfg["random_state"],
                 max_sample=max_sample,
                 feature_weights=weights,
             )
@@ -145,6 +157,15 @@ class LabelCleaner(VarBuilder):
             })
 
         report = pd.DataFrame(rows)
+        fully_flagged = report["n_flagged"] >= int(0.999 * max_sample)
+        if fully_flagged.any():
+            self.logger.warning(
+                f"[{season}] {int(fully_flagged.sum())}/{len(report)} sensitivity variants flagged "
+                f"~100% of the subsampled Low class — this indicates near-total separability "
+                f"between Low and high-risk classes in feature space (a dominant feature, likely "
+                f"d_fires, may be driving this), not genuine k-means robustness. Low variance here "
+                f"is not the same as the paper's <0.2% stability result."
+            )
 
         figures_dir = Path(self.config["base"]["figures_dir"])
         figures_dir.mkdir(parents=True, exist_ok=True)

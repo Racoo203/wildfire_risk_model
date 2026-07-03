@@ -9,13 +9,22 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.metrics import roc_curve, auc as sklearn_auc
+
+import statsmodels.api as sm
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 
 from .manifest import append_to_manifest
 
 
-def _save_and_log(fig, out_path: Path, figures_dir: Path, category: str, generated_by: str,
-                   season: Optional[str] = None, params: Optional[dict] = None) -> Path:
+def _save_and_log(
+    fig, 
+    out_path: Path, 
+    figures_dir: Path, 
+    category: str, 
+    generated_by: str,
+    season: Optional[str] = None, 
+    params: Optional[dict] = None
+) -> Path:
     out_path = Path(out_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     fig.tight_layout()
@@ -64,7 +73,6 @@ def plot_shap_summary(shap_values, feature_names: List[str], figures_dir: Path,
     return _save_and_log(fig, out_path, figures_dir, "shap_summary", "viz.charts.plot_shap_summary",
                           season, params={"model": model_name})
 
-
 def plot_vif_correlation(
     df: pd.DataFrame,
     feature_cols: List[str],
@@ -79,11 +87,17 @@ def plot_vif_correlation(
     Returns paths to both figures.
     """
     X = df[feature_cols].dropna()
+    X_with_const = sm.add_constant(X)
 
     vifs = pd.Series(
-        [variance_inflation_factor(X.values, i) for i in range(len(feature_cols))],
-        index=feature_cols,
-    ).sort_values(ascending=False)
+        [
+        variance_inflation_factor(X_with_const.values, i)
+        for i in range(X_with_const.shape[1])
+        ],
+        index=X_with_const.columns,
+    ).drop("const")
+
+    vifs = vifs.sort_values(ascending=False)
 
     fig1, ax1 = plt.subplots(figsize=(7, max(4, 0.35 * len(feature_cols))))
     colors = ["crimson" if v > vif_threshold else "steelblue" for v in vifs]

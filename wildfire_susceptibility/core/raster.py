@@ -182,32 +182,25 @@ class RasterManager:
         reference_raster: Union[str, Path],
         output_csv: Union[str, Path],
     ) -> "pd.DataFrame":
-        """
-        Stack multiple rasters into a pandas DataFrame.
-        One row per valid pixel.
-        """
-
         import pandas as pd
 
         output_csv = Path(output_csv)
-        output_csv.parent.mkdir(parents = True, exist_ok = True)
+        output_csv.parent.mkdir(parents=True, exist_ok=True)
 
-        # Use reference to define valid pixel mask
         with rasterio.open(reference_raster) as ref:
             mask_data = ref.read(1)
         valid_mask = ~np.isnan(mask_data)
 
         data = {}
-
         for name, path in raster_paths.items():
             with rasterio.open(path) as src:
                 arr = src.read(1)
             data[name] = arr[valid_mask].astype("float32")
-            logger.info(f"Stacked {name}: {data[name].shape[0]:,} valid pixels")
+            logger.debug(f"Stacked {name}: {data[name].shape[0]:,} valid pixels")  # was INFO
 
         df = pd.DataFrame(data)
-        df.to_csv(output_csv, index = False)
-        logger.info(f"Dataset saved to {output_csv}")
+        df.to_csv(output_csv, index=False)
+        logger.info(f"Dataset saved to {output_csv} ({len(df):,} rows, {len(df.columns)} columns)")
 
         return df
     

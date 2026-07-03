@@ -49,61 +49,58 @@ class DatasetPrep:
         slope_aspect_cols: Tuple[str, ...] = ("slope", "aspect"),
         ndvi_col: str = "ndvi",
         drop_if_any_nan_in: Tuple[str, ...] = (),
+        domain_mask: Optional[np.ndarray] = None,
     ) -> pd.DataFrame:
         """
-        Apply the three documented NaN-handling rules to a stacked dataframe.
+        Apply the three documented NaN-handling rules to a stacked dataframe,
+        restricted to rows inside `domain_mask` when given.
 
-        Args:
-            df: stacked feature/label table (columns = feature names + 'label').
-            slope_aspect_cols: columns to zero-impute (flat SRTM no-data cells).
-            ndvi_col: column to nearest-neighbor fill (MODIS cloud contamination).
-            drop_if_any_nan_in: columns where a NaN means "outside land mask" —
-                rows with NaN in any of these are dropped outright (e.g. a
-                climate variable, which is NaN only for sea/estuary pixels
-                once slope/aspect/NDVI have already been resolved).
-
-        Returns:
-            A new dataframe with the three NaN-handling rules applied. Any
-            remaining NaNs (unexpected sources) are logged as a warning
-            rather than silently dropped, so new NaN sources don't vanish
-            unnoticed.
+        Rows outside the study-area domain are left completely untouched —
+        they never reach k-means (their labels are already NaN), so imputing
+        them wastes compute and only invites confusion in NaN-count logs.
         """
         out = df.copy()
+        scope = domain_mask if domain_mask is not None else np.ones(len(out), dtype=bool)
 
-        # Rule 1: flat SRTM no-data cells -> zero-impute slope/aspect
         for col in slope_aspect_cols:
             if col in out.columns:
-                n_nan = out[col].isna().sum()
+                fillable = scope & out[col].isna().to_numpy()
+                n_nan = int(fillable.sum())
                 if n_nan:
-                    out[col] = out[col].fillna(0.0)
-                    logger.info(f"Zero-imputed {n_nan:,} NaNs in '{col}' (flat SRTM cells)")
+                    out.loc[fillable, col] = 0.0
+                    logger.info(f"Zero-imputed {n_nan:,} in-domain NaNs in '{col}' (flat SRTM cells)")
 
-        # Rule 2: NDVI cloud contamination -> spatial nearest-neighbor fill
         if ndvi_col in out.columns:
-            n_nan = out[ndvi_col].isna().sum()
+            fillable = scope & out[ndvi_col].isna().to_numpy()
+            n_nan = int(fillable.sum())
             if n_nan:
-                out[ndvi_col] = self._nearest_neighbor_fill_1d(out[ndvi_col])
-                logger.info(f"Nearest-neighbor filled {n_nan:,} NaNs in '{ndvi_col}'")
+                filled = self._nearest_neighbor_fill_1d(out.loc[scope, ndvi_col])
+                out.loc[scope, ndvi_col] = filled.values
+                logger.info(f"Nearest-neighbor filled {n_nan:,} in-domain NaNs in '{ndvi_col}'")
 
-        # Rule 3: sea/estuary pixels outside the HadUK land mask -> drop
         if drop_if_any_nan_in:
             before = len(out)
-            out = out.dropna(subset=[c for c in drop_if_any_nan_in if c in out.columns])
+            drop_cols = [c for c in drop_if_any_nan_in if c in out.columns]
+            keep = ~(scope & out[drop_cols].isna().any(axis=1).to_numpy())
+            out = out.loc[keep]
             dropped = before - len(out)
             if dropped:
-                logger.info(f"Dropped {dropped:,} rows with NaN in {drop_if_any_nan_in} (sea/estuary)")
+                logger.info(f"Dropped {dropped:,} in-domain rows with NaN in {drop_if_any_nan_in}")
 
-        remaining_nan_cols = out.columns[out.isna().any()].tolist()
-        if remaining_nan_cols:
-            # Report counts, but clarify these include the (expected, large) area
-            # outside the study boundary — not just genuine in-domain gaps.
-            counts = {c: int(out[c].isna().sum()) for c in remaining_nan_cols}
-            logger.warning(
-                f"Unresolved NaNs remain in columns {counts} after applying the three "
-                f"documented rules. Note: this count spans the full rectangular grid, "
-                f"including area outside the study boundary — check against the valid "
-                f"label mask before treating this as an in-domain data quality issue."
-            )
+        if domain_mask is not None:
+            in_domain = out.loc[scope[:len(out)] if len(scope) == len(out) else domain_mask]
+            remaining = {c: int(in_domain[c].isna().sum()) for c in out.columns if in_domain[c].isna().any()}
+            if remaining:
+                logger.warning(f"Unresolved NaNs WITHIN the study-area domain: {remaining} — this is the number that matters for data quality.")
+            else:
+                logger.info("No unresolved in-domain NaNs after imputation.")
+        else:
+            remaining_nan_cols = out.columns[out.isna().any()].tolist()
+            if remaining_nan_cols:
+                logger.warning(
+                    f"Unresolved NaNs remain in columns {remaining_nan_cols} — no domain_mask "
+                    f"supplied, so this includes out-of-boundary padding."
+                )
 
         return out
 

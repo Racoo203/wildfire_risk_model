@@ -70,7 +70,7 @@ labels:
   conv_sigma_cells: 3
   kde_bandwidth_m: 500
   kde_zero_threshold: 1.0e-12
-  include_d_fires_as_feature: true
+  include_d_fires_as_feature: false
 
   classify_method: "gmm"                    # options: "percentile" | "jenks" | "gmm" (Feeds downstream model)
   compare_classify_methods: ["percentile", "jenks", "gmm"] # Structural visual checks
