@@ -188,3 +188,22 @@ class DatasetPrep:
             f"(test_size={test_size}, random_state={random_state})"
         )
         return X_train, X_test, y_train, y_test
+    
+def assign_spatial_blocks(
+    self,
+    df: pd.DataFrame,
+    block_size_m: float = 5000.0,   # 5 km blocks — coarse enough to break local autocorrelation
+    x_col: str = "_x",
+    y_col: str = "_y",
+) -> pd.Series:
+    """
+    Assign each row to a spatial block on a block_size_m grid, for use as
+    the `groups` argument to sklearn's GroupKFold. Blocks are the spatial
+    CV unit, not folds themselves — GroupKFold handles the fold assignment.
+    """
+    block_x = (df[x_col] // block_size_m).astype(int)
+    block_y = (df[y_col] // block_size_m).astype(int)
+    blocks = (block_x.astype(str) + "_" + block_y.astype(str))
+    n_blocks = blocks.nunique()
+    logger.info(f"Assigned {len(df):,} rows to {n_blocks} spatial blocks ({block_size_m/1000:.0f} km grid)")
+    return blocks

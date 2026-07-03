@@ -118,6 +118,8 @@ class ModelingConfig(BaseModel):
     cv_folds: int = 5
     mlflow_experiment: str = "wildfire-susceptibility-essex"
     selection_rule: Literal["best_auc", "most_conservative"] = "best_auc"
+    cv_strategy: Literal["standard", "spatial", "both"] = "both"
+    spatial_block_size_m: float = 5000.0
 
 class LoggingConfig(BaseModel):
     level: str = "INFO"

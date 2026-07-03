@@ -181,6 +181,7 @@ class RasterManager:
         raster_paths: dict,
         reference_raster: Union[str, Path],
         output_csv: Union[str, Path],
+        include_coords: bool = True,
     ) -> "pd.DataFrame":
         import pandas as pd
 
@@ -189,6 +190,7 @@ class RasterManager:
 
         with rasterio.open(reference_raster) as ref:
             mask_data = ref.read(1)
+            transform = ref.transform
         valid_mask = ~np.isnan(mask_data)
 
         data = {}
@@ -196,11 +198,17 @@ class RasterManager:
             with rasterio.open(path) as src:
                 arr = src.read(1)
             data[name] = arr[valid_mask].astype("float32")
-            logger.debug(f"Stacked {name}: {data[name].shape[0]:,} valid pixels")  # was INFO
+
+        if include_coords:
+            rows, cols = np.where(valid_mask)
+            xs, ys = rasterio.transform.xy(transform, rows, cols)
+            data["_x"] = np.array(xs, dtype="float32")
+            data["_y"] = np.array(ys, dtype="float32")
 
         df = pd.DataFrame(data)
         df.to_csv(output_csv, index=False)
         logger.info(f"Dataset saved to {output_csv} ({len(df):,} rows, {len(df.columns)} columns)")
+        return df
 
         return df
     

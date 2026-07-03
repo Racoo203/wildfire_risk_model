@@ -96,7 +96,7 @@ modeling:
   optuna_n_trials: 30
   cv_folds: 5
   mlflow_experiment: "wildfire-susceptibility-essex"
-  selection_rule: "best_auc"                # options: "best_auc" | "most_conservative"
+  selection_rule: "best_auc" # options: "best_auc" | "most_conservative"
 
 logging:
   level: "INFO"
