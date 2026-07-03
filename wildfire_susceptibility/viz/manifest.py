@@ -10,16 +10,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-
-def append_to_manifest(
-    figures_dir: Path,
-    path: Path,
-    category: str,
-    generated_by: str,
-    season: Optional[str] = None,
-    params: Optional[Dict[str, Any]] = None,
-) -> None:
-    """Append one figure's metadata to figures/manifest.json (created if absent)."""
+def append_to_manifest(figures_dir, path, category, generated_by, season=None, params=None):
     manifest_path = Path(figures_dir) / "manifest.json"
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -31,8 +22,13 @@ def append_to_manifest(
             logger.warning(f"Could not parse existing manifest at {manifest_path}; starting fresh.")
             entries = []
 
+    rel_path = str(Path(path).relative_to(figures_dir)) if _is_relative(path, figures_dir) else str(path)
+
+    # Upsert: a rerun of the same figure replaces its old entry instead of
+    # duplicating it — the manifest reflects current state, not a log.
+    entries = [e for e in entries if e["path"] != rel_path]
     entries.append({
-        "path": str(Path(path).relative_to(figures_dir)) if _is_relative(path, figures_dir) else str(path),
+        "path": rel_path,
         "category": category,
         "season": season,
         "generated_by": generated_by,

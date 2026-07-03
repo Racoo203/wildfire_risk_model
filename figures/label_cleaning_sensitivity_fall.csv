@@ -1,8 +1,0 @@
-label,n_init,random_state,reweighted,n_flagged,pct_low_flagged,variance_vs_baseline_pct
-n_init=10,10,42,False,200000,33.4996030297041,0.0
-n_init=20,20,42,False,200000,33.4996030297041,0.0
-seed=7,10,7,False,200000,33.4996030297041,0.0
-seed=123,10,123,False,200000,33.4996030297041,0.0
-reweight_trial_0,10,43,True,200000,33.4996030297041,0.0
-reweight_trial_1,10,44,True,200000,33.4996030297041,0.0
-reweight_trial_2,10,45,True,199975,33.49541557932538,0.0042

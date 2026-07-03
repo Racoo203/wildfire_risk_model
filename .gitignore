@@ -1,5 +1,6 @@
 data/*
-docs/V2_ARCHITECTURE_BLUEPRINT.md
+figures/*
+docs/*
 __pycache__/
 *.pyc
 .env
