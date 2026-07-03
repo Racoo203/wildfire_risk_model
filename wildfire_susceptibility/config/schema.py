@@ -1,0 +1,130 @@
+from pydantic import BaseModel, Field
+from pathlib import Path
+from typing import Literal, List, Dict, Tuple
+
+class BaseConfig(BaseModel):
+    region: str = Field(default="Essex")
+    boundary_shapefile: Path = Field(default=Path("./data/silver/layers/boundary.shp"))
+    output_dir: Path = Field(default=Path("./data/silver/layers"))
+    model_data_dir: Path = Field(default=Path("./data/silver/model_datasets"))
+    figures_dir: Path = Field(default=Path("./figures"))
+
+class ProcessingConfig(BaseModel):
+    cell_size_m: float = Field(default=30.0)
+    crs: str = Field(default="EPSG:27700")
+    training_years: Tuple[int, int] = Field(default=(2009, 2020), description="[start, end)")
+    validation_years: Tuple[int, int] = Field(default=(2020, 2022), description="[start, end)")
+    test_years: Tuple[int, int] = Field(default=(2022, 9999), description="[start, end)")
+    force_recompute: bool = Field(default=False)
+
+class SeasonsConfig(BaseModel):
+    active: List[Literal["spring", "summer", "fall", "winter"]] = Field(
+        default_factory=lambda: ["spring", "summer", "fall"],
+        description="Seasons to process this run",
+    )
+    seasonal_ndvi: bool = Field(
+        default=True,
+        description="If true, NDVI is recomputed per season instead of once",
+    )
+    definitions: Dict[str, List[int]] = Field(
+        default_factory=lambda: {
+            "spring": [3, 4, 5],
+            "summer": [6, 7, 8],
+            "fall": [9, 10, 11],
+            "winter": [12, 1, 2],
+        }
+    )
+
+class DataSourceConfig(BaseModel):
+    class Cua(BaseModel):
+        data_dir: Path = Path("./data/bronze/boundary")
+
+    class Srtm(BaseModel):
+        data_dir: Path = Path("./data/bronze/topography")
+        tiles: List[str] = [
+            "n51_e000_1arc_v3.tif",
+            "n51_e001_1arc_v3.tif",
+            "n51_w001_1arc_v3.tif",
+            "n52_e000_1arc_v3.tif",
+            "n52_e001_1arc_v3.tif",
+        ]
+
+    class Haduk(BaseModel):
+        data_dir: Path = Path("./data/bronze/climate_haduk")
+        sources: List[str] = ["tas", "tasmax", "tasmin", "rainfall", "sfcWind", "hurs"]
+
+    class Modis(BaseModel):
+        data_dir: Path = Path("./data/bronze/vegetation")
+
+    class Proximity(BaseModel):
+        data_dir: Path = Path("./data/bronze/proximity")
+        sources: List[str] = ["oproad_gpkg_gb", "oprvrs_gpkg_gb", "essex-260607-free."]
+        human_fclasses: List[str] = [
+            "residential", "farmland", "farm", "farm_auxiliary", "industrial",
+            "commercial", "retail", "allotmets", "orchard", "greenhouse_horticulture",
+        ]
+
+    class Incidents(BaseModel):
+        data_dir: Path = Path("./data/bronze/incidents")
+        date_col: str = "CallDateID"
+        geo_cols: List[str] = ["IncidentEasting", "IncidentNorthing"]
+        severity_cols: List[str] = ["NumberVehiclesDeployed"]
+
+    cua: Cua = Cua()
+    srtm: Srtm = Srtm()
+    haduk: Haduk = Haduk()
+    modis_nvdi: Modis = Modis()
+    proximity: Proximity = Proximity()
+    incidents: Incidents = Incidents()
+
+class LabelsConfig(BaseModel):
+    density_method: Literal["convolution", "kde"] = "convolution"
+    classify_method: Literal["percentile", "jenks", "gmm"] = "gmm"
+    compare_classify_methods: List[str] = Field(default_factory=lambda: ["percentile", "jenks", "gmm"])
+    include_d_fires_as_feature: bool = True
+    kmeans_n_init: int = 10
+    kmeans_max_iter: int = 300
+    random_state: int = 42
+
+    max_sample_per_class: int = 200_000
+    percentiles: List[int] = Field(default_factory=lambda: [60, 75, 90])
+    conv_sigma_cells: int = 3
+    kde_bandwidth_m: int = 500
+    kde_zero_threshold: float = 1.0e-12
+
+    jenks_n_classes: int = 4
+    jenks_max_sample: int = 200_000
+    gmm_n_components: int = 4
+    gmm_max_sample: int = 200_000
+    gmm_random_state: int = 42
+
+    kmeans_k: int = 2
+
+    clean_labels: bool = True
+    run_sensitivity: bool = True
+    sensitivity_n_inits: List[int] = Field(default_factory=lambda: [10, 20])
+    sensitivity_seeds: List[int] = Field(default_factory=lambda: [7, 123])
+    sensitivity_n_reweight_trials: int = 3
+    sensitivity_feature_noise_std: float = 0.05
+
+class ModelingConfig(BaseModel):
+    models: List[Literal["random_forest", "svm", "xgboost", "neural_net"]] = Field(
+        default_factory=lambda: ["random_forest", "svm", "xgboost", "neural_net"]
+    )
+    optuna_n_trials: int = 30
+    cv_folds: int = 5
+    mlflow_experiment: str = "wildfire-susceptibility-essex"
+    selection_rule: Literal["best_auc", "most_conservative"] = "best_auc"
+
+class LoggingConfig(BaseModel):
+    level: str = "INFO"
+    log_path: Path = Path("./data/logs/pipeline.log")
+
+class WildfireConfig(BaseModel):
+    base: BaseConfig = Field(default_factory=BaseConfig)
+    processing: ProcessingConfig = Field(default_factory=ProcessingConfig)
+    seasons: SeasonsConfig = Field(default_factory=SeasonsConfig)
+    data_sources: DataSourceConfig = Field(default_factory=DataSourceConfig)
+    labels: LabelsConfig = Field(default_factory=LabelsConfig)
+    modeling: ModelingConfig = Field(default_factory=ModelingConfig)
+    logging: LoggingConfig = Field(default_factory=LoggingConfig)

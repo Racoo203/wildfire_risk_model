@@ -10,6 +10,10 @@ import rasterio
 
 from ..core.base import VarBuilder
 from ..core.raster import RasterManager
+
+from ..core.registry import FEATURE_BUILDERS
+
+@FEATURE_BUILDERS.register("vegetation")
 class VegetationBuilder(VarBuilder):
     """
     Build a mean NDVI surface from MODIS MOD13Q1 250 m composites.
@@ -17,10 +21,6 @@ class VegetationBuilder(VarBuilder):
     When *months* and *season* are supplied (seasonal_ndvi mode) only files
     whose acquisition date falls in the requested months and training years
     are included. Otherwise all available files are averaged.
-
-    Pipeline:
-        load + scale MODIS files  →  average  →  write native GeoTIFF
-        →  clip to Essex  →  align to reference grid
     """
 
     # MODIS scale factor: stored DN → reflectance

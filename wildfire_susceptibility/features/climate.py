@@ -9,8 +9,9 @@ import rasterio
 from rasterio.transform import Affine
 
 from ..core.base import VarBuilder
-import logging
+from ..core.registry import FEATURE_BUILDERS
 
+@FEATURE_BUILDERS.register("climate")
 class ClimateBuilder(VarBuilder):
     """
     Build seasonal climate averages from HadUK-Grid monthly NetCDF files.

@@ -10,6 +10,9 @@ from rasterio.merge import merge
 from ..core.base import VarBuilder
 from ..core.raster import RasterManager
 
+from ..core.registry import FEATURE_BUILDERS
+
+@FEATURE_BUILDERS.register("topography")
 class TopographyBuilder(VarBuilder):
     """
     Build elevation, slope, and aspect from SRTM DEM tiles.

@@ -6,6 +6,9 @@ import geopandas as gpd
 from ..core.base import VarBuilder
 from ..core.raster import RasterManager
 
+from ..core.registry import FEATURE_BUILDERS
+
+@FEATURE_BUILDERS.register("boundary")
 class BoundaryBuilder(VarBuilder):
     """From the boundaries of all historic counties of the UK, save only the boundary of Essex."""
 

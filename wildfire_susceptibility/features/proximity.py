@@ -9,6 +9,9 @@ import pandas as pd
 from ..core.base import VarBuilder
 from ..core.raster import RasterManager
 
+from ..core.registry import FEATURE_BUILDERS
+
+@FEATURE_BUILDERS.register("proximity")
 class ProximityBuilder(VarBuilder):
     """
     Compute Euclidean distance (km) from every 30 m grid cell to the
