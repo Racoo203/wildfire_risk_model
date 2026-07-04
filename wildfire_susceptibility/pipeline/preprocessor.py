@@ -178,10 +178,12 @@ class WildfirePreprocessor:
 
         prep = DatasetPrep(self.config)
         feature_df = pd.DataFrame({k: v.ravel() for k, v in feature_arrays.items()})
+        
+        climate_vars = tuple(self.config["data_sources"]["haduk"]["sources"])
         feature_df = prep.resolve_missing(
             feature_df,
             slope_aspect_cols=("slope", "aspect"),
-            ndvi_col="ndvi",
+            nearest_neighbor_cols=("ndvi", *climate_vars),
             drop_if_any_nan_in=(),
             domain_mask=domain_mask_flat,
         )

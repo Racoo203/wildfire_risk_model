@@ -2,6 +2,7 @@ data/*
 figures/*
 docs/*
 mlruns/*
+wildfire_susceptibility.egg-info/*
 __pycache__/
 *.pyc
 .env

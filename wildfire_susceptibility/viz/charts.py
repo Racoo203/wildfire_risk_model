@@ -85,19 +85,18 @@ def plot_vif_correlation(
     """
     VIF bar chart + Pearson correlation heatmap, using the paper's exact
     thresholds (Section 1.3): VIF > 10 or |corr| > 0.8 flags a feature.
-    Returns paths to both figures.
+    Returns paths to all three figures (vif, correlation, spearman).
     """
     X = df[feature_cols].dropna()
     X_with_const = sm.add_constant(X)
 
     vifs = pd.Series(
         [
-        variance_inflation_factor(X_with_const.values, i)
-        for i in range(X_with_const.shape[1])
+            variance_inflation_factor(X_with_const.values, i)
+            for i in range(X_with_const.shape[1])
         ],
         index=X_with_const.columns,
     ).drop("const")
-
     vifs = vifs.sort_values(ascending=False)
 
     fig1, ax1 = plt.subplots(figsize=(7, max(4, 0.35 * len(feature_cols))))
@@ -105,43 +104,33 @@ def plot_vif_correlation(
     ax1.barh(vifs.index, vifs.values, color=colors)
     ax1.axvline(vif_threshold, color="black", linestyle="--", label=f"threshold={vif_threshold}")
     ax1.set_xlabel("VIF")
-    ax1.set_title(f"Variance Inflation Factor" + (f" ({season})" if season else ""))
+    ax1.set_title("Variance Inflation Factor" + (f" ({season})" if season else ""))
     ax1.legend()
-    
     vif_path = _save_and_log(
         fig1, Path(figures_dir) / (season or "static") / "eda" / "vif.png", figures_dir,
         "vif", "viz.charts.plot_vif_correlation", season, params={"threshold": vif_threshold},
-    )
-    corr_path = _save_and_log(
-        fig2, Path(figures_dir) / (season or "static") / "eda" / "correlation.png", figures_dir,
-        "correlation", "viz.charts.plot_vif_correlation", season, params={"threshold": corr_threshold},
-    )
-    spearman_path = _save_and_log(
-        fig3, Path(figures_dir) / (season or "static") / "eda" / "correlation_spearman.png",
-        figures_dir, "correlation_spearman", "viz.charts.plot_vif_correlation", season,
     )
 
     corr = X.corr()
     fig2, ax2 = plt.subplots(figsize=(8, 7))
     mask_high = corr.abs() > corr_threshold
-    sns.heatmap(corr, cmap="coolwarm", center=0, vmin=-1, vmax=1, ax=ax2,
-                annot=False, square=True)
+    sns.heatmap(corr, cmap="coolwarm", center=0, vmin=-1, vmax=1, ax=ax2, annot=False, square=True)
     ax2.set_title(f"Feature Correlation (|r| > {corr_threshold} flagged)" + (f" — {season}" if season else ""))
     corr_path = _save_and_log(
-        fig2, Path(figures_dir) / "eda" / f"correlation_{season or 'static'}.png", figures_dir,
+        fig2, Path(figures_dir) / (season or "static") / "eda" / "correlation.png", figures_dir,
         "correlation", "viz.charts.plot_vif_correlation", season, params={"threshold": corr_threshold},
     )
 
     corr_spearman = X.corr(method="spearman")
     fig3, ax3 = plt.subplots(figsize=(8, 7))
     sns.heatmap(corr_spearman, cmap="coolwarm", center=0, vmin=-1, vmax=1, ax=ax3, square=True)
-    ax3.set_title(f"Spearman correlation" + (f" — {season}" if season else ""))
+    ax3.set_title("Spearman correlation" + (f" — {season}" if season else ""))
     spearman_path = _save_and_log(
-        fig3, Path(figures_dir) / "eda" / f"correlation_spearman_{season or 'static'}.png",
+        fig3, Path(figures_dir) / (season or "static") / "eda" / "correlation_spearman.png",
         figures_dir, "correlation_spearman", "viz.charts.plot_vif_correlation", season,
     )
 
-    n_flagged = int(((mask_high.sum().sum() - len(feature_cols))) / 2)  # exclude diagonal, undouble
+    n_flagged = int((mask_high.sum().sum() - len(feature_cols)) / 2)
     if n_flagged > 0 or (vifs > vif_threshold).any():
         logging.getLogger(__name__).warning(
             f"[{season}] VIF/correlation: {(vifs > vif_threshold).sum()} feature(s) exceed VIF>{vif_threshold}, "

@@ -10,6 +10,8 @@ from wildfire_susceptibility.modeling.train import ModelTrainer
 from wildfire_susceptibility.modeling.dataset_prep import DatasetPrep
 from wildfire_susceptibility import viz
 
+from ..scripts.generate_report_figures import generate_all, ALL_CATEGORIES
+
 CONFIG_PATH = Path("./wildfire_susceptibility/config/defaults.yaml")
 WORKING_CONFIG_PATH = Path("./wildfire_susceptibility/config/_working.yaml")
 
@@ -28,6 +30,7 @@ if "log_handler" not in st.session_state:
     handler = _StreamlitLogHandler()
     handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s"))
     logging.getLogger("wildfire_susceptibility").addHandler(handler)
+    logging.getLogger("wildfire_susceptibility.scripts.generate_report_figures").addHandler(handler)
     st.session_state.log_handler = handler
 
 # --- load working config (a scratch copy, never overwrites defaults.yaml) -
@@ -71,6 +74,10 @@ cfg["modeling"]["optuna_n_trials"] = st.sidebar.number_input(
 )
 cfg["processing"]["force_recompute"] = st.sidebar.checkbox(
     "Force recompute (bypass cache)", value=cfg["processing"]["force_recompute"]
+)
+
+figure_categories = st.sidebar.multiselect(
+    "Figure categories to generate", list(ALL_CATEGORIES), default=list(ALL_CATEGORIES)
 )
 
 if st.sidebar.button("Save config"):
@@ -144,7 +151,12 @@ for label, key in STAGES:
                             st.success(f"[{season}] training complete: {list(results.keys())}")
 
                 elif key == "figures":
-                    st.info("Wire specific viz.* calls here per artifact you want regenerated (factor maps, EDA charts, CV comparison) — kept manual rather than auto-detected, since figures/ is untracked and regeneration cost varies a lot per figure type.")
+                    generate_all(
+                        config_path=WORKING_CONFIG_PATH,
+                        seasons=cfg["seasons"]["active"],
+                        categories=figure_categories,
+                    )
+                    st.success(f"Figures regenerated for {cfg['seasons']['active']}: {figure_categories}")
 
             except Exception as ex:
                 st.error(f"Failed: {ex}")

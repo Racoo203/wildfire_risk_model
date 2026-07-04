@@ -47,7 +47,7 @@ class DatasetPrep:
         df: pd.DataFrame,
         *,
         slope_aspect_cols: Tuple[str, ...] = ("slope", "aspect"),
-        ndvi_col: str = "ndvi",
+        nearest_neighbor_cols: Tuple[str, ...] = ("ndvi",),
         drop_if_any_nan_in: Tuple[str, ...] = (),
         domain_mask: Optional[np.ndarray] = None,
     ) -> pd.DataFrame:
@@ -62,21 +62,22 @@ class DatasetPrep:
         out = df.copy()
         scope = domain_mask if domain_mask is not None else np.ones(len(out), dtype=bool)
 
-        for col in slope_aspect_cols:
+        # for col in slope_aspect_cols:
+        #     if col in out.columns:
+        #         fillable = scope & out[col].isna().to_numpy()
+        #         n_nan = int(fillable.sum())
+        #         if n_nan:
+        #             out.loc[fillable, col] = 0.0
+        #             logger.info(f"Zero-imputed {n_nan:,} in-domain NaNs in '{col}' (flat SRTM cells)")
+
+        for col in nearest_neighbor_cols:
             if col in out.columns:
                 fillable = scope & out[col].isna().to_numpy()
                 n_nan = int(fillable.sum())
                 if n_nan:
-                    out.loc[fillable, col] = 0.0
-                    logger.info(f"Zero-imputed {n_nan:,} in-domain NaNs in '{col}' (flat SRTM cells)")
-
-        if ndvi_col in out.columns:
-            fillable = scope & out[ndvi_col].isna().to_numpy()
-            n_nan = int(fillable.sum())
-            if n_nan:
-                filled = self._nearest_neighbor_fill_1d(out.loc[scope, ndvi_col])
-                out.loc[scope, ndvi_col] = filled.values
-                logger.info(f"Nearest-neighbor filled {n_nan:,} in-domain NaNs in '{ndvi_col}'")
+                    filled = self._nearest_neighbor_fill_1d(out.loc[scope, col])
+                    out.loc[scope, col] = filled.values
+                    logger.info(f"Nearest-neighbor filled {n_nan:,} in-domain NaNs in '{col}'")
 
         if drop_if_any_nan_in:
             before = len(out)
