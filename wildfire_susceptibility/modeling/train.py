@@ -30,11 +30,12 @@ class ModelTrainer:
         season: str,
         X_train, y_train,
         X_val, y_val,
+        groups_train=None,
     ) -> Dict[str, dict]:
         """Train every model listed in config.modeling.models for one season."""
         results = {}
         for model_name in self.config["modeling"]["models"]:
-            results[model_name] = self.train_one(season, model_name, X_train, y_train, X_val, y_val)
+            results[model_name] = self.train_one(season, model_name, X_train, y_train, X_val, y_val, groups_train)
         return results
 
     def train_one(

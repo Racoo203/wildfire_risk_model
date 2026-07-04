@@ -146,7 +146,12 @@ for label, key in STAGES:
                             feature_cols = [c for c in X_train.columns if not c.startswith("_")]
                             trainer = ModelTrainer(cfg)
                             results = trainer.train_all(
-                                season, X_train[feature_cols], y_train, X_test[feature_cols], y_test,
+                                season, 
+                                X_train[feature_cols], 
+                                y_train, 
+                                X_test[feature_cols], 
+                                y_test,
+                                groups_train=groups_train,
                             )
                             st.success(f"[{season}] training complete: {list(results.keys())}")
 
