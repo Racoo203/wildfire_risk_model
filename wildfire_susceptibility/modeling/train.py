@@ -1,6 +1,6 @@
-"""Optuna hyperparameter search + mlflow logging, per (season, model)."""
+# modeling/train.py
 
-from typing import Dict, Optional
+from typing import Dict, Optional, Callable
 import logging
 
 import numpy as np
@@ -10,17 +10,13 @@ from sklearn.model_selection import StratifiedKFold, GroupKFold, cross_val_score
 from sklearn.metrics import roc_auc_score, f1_score
 
 from ..core.registry import MODELS
-from . import models  # noqa: F401 — import side effect registers model wrappers
+from . import models  # noqa: F401
 from .dataset_prep import DatasetPrep
 
 logger = logging.getLogger(__name__)
 
-class ModelTrainer:
-    """
-    Runs an Optuna study per (season, model_name), logs each trial and the
-    final refit to mlflow, and returns the best-by-CV-AUC fitted model.
-    """
 
+class ModelTrainer:
     def __init__(self, config: dict):
         self.config = config
         mlflow.set_experiment(config["modeling"]["mlflow_experiment"])
@@ -31,11 +27,21 @@ class ModelTrainer:
         X_train, y_train,
         X_val, y_val,
         groups_train=None,
+        progress_callback: Optional[Callable[[str, int, float], None]] = None,
     ) -> Dict[str, dict]:
-        """Train every model listed in config.modeling.models for one season."""
+        """Train every model listed in config.modeling.models for one season.
+
+        progress_callback(model_name, trial_number, trial_value) fires after
+        every completed Optuna trial, letting the caller (e.g. Streamlit)
+        render live progress instead of blocking silently until the whole
+        study finishes.
+        """
         results = {}
         for model_name in self.config["modeling"]["models"]:
-            results[model_name] = self.train_one(season, model_name, X_train, y_train, X_val, y_val, groups_train)
+            results[model_name] = self.train_one(
+                season, model_name, X_train, y_train, X_val, y_val, groups_train,
+                progress_callback=progress_callback,
+            )
         return results
 
     def train_one(
@@ -44,7 +50,8 @@ class ModelTrainer:
         model_name: str,
         X_train, y_train,
         X_val, y_val,
-        groups_train
+        groups_train=None,
+        progress_callback: Optional[Callable[[str, int, float], None]] = None,
     ) -> dict:
         if model_name not in MODELS:
             raise ValueError(f"Model '{model_name}' not found in MODELS registry: {list(MODELS)}")
@@ -57,15 +64,14 @@ class ModelTrainer:
         X_tr, X_va, _ = prep.scale_for_model_family(X_train, X_val, needs_scaling)
 
         n_trials = self.config["modeling"]["optuna_n_trials"]
-        cv_strategy = self.config["modeling"].get("cv_strategy", "both")  # "standard" | "spatial" | "both"
-        
+        cv_strategy = self.config["modeling"].get("cv_strategy", "both")
+        cv_folds = self.config["modeling"]["cv_folds"]
+
         study = optuna.create_study(
             direction="maximize",
             study_name=f"{season}_{model_name}",
             load_if_exists=True,
         )
-
-        cv_folds = self.config["modeling"]["cv_folds"]
 
         def _make_folds(strategy):
             if strategy == "spatial":
@@ -93,17 +99,25 @@ class ModelTrainer:
                 aucs.append(auc)
             return float(np.mean(aucs))
 
+        # Optuna callback — fires after every trial regardless of success/pruning
+        def _optuna_progress(study, trial):
+            logger.info(f"[{season}][{model_name}] trial {trial.number}: value={trial.value:.4f}")
+            if progress_callback is not None:
+                progress_callback(model_name, trial.number, trial.value)
+
         with mlflow.start_run(run_name=f"{season}_{model_name}"):
             mlflow.set_tags({"season": season, "model": model_name, "cv_strategy": cv_strategy})
 
-            # Optuna search uses standard CV (cheaper, same relative ranking of
-            # hyperparams in practice) — spatial CV is used for the *reported*
-            # metric, since that's the number that needs to be trustworthy.
-            study.optimize(lambda t: objective(t, "standard"), n_trials=n_trials)
+            study.optimize(
+                lambda t: objective(t, "standard"),
+                n_trials=n_trials,
+                callbacks=[_optuna_progress],
+            )
             best_params = study.best_params
             mlflow.log_params(best_params)
             mlflow.log_metric("cv_auc_standard", study.best_value)
 
+            cv_auc_spatial = None
             if cv_strategy in ("spatial", "both") and groups_train is not None:
                 spatial_folds = _make_folds("spatial")
                 spatial_aucs = []
@@ -132,9 +146,27 @@ class ModelTrainer:
             mlflow.log_metric("val_auc", val_auc)
             mlflow.log_metric("val_f1", val_f1)
 
+            # Persist the fitted model artifact so evaluate.py / the dashboard
+            # can load it later without retraining in-process.
+            self._log_model_artifact(model_name, final_model)
+
         return {
             "model": final_model, "best_params": best_params,
             "cv_auc_standard": study.best_value,
-            "cv_auc_spatial": cv_auc_spatial if cv_strategy in ("spatial", "both") else None,
+            "cv_auc_spatial": cv_auc_spatial,
             "val_auc": val_auc, "val_f1": val_f1,
+            "study": study,
         }
+
+    @staticmethod
+    def _log_model_artifact(model_name: str, fitted_model) -> None:
+        """Log the underlying fitted estimator via the appropriate mlflow flavor."""
+        try:
+            if model_name in ("random_forest", "svm"):
+                mlflow.sklearn.log_model(fitted_model.model, artifact_path="model")
+            elif model_name == "xgboost":
+                mlflow.xgboost.log_model(fitted_model.model, artifact_path="model")
+            elif model_name == "neural_net":
+                mlflow.pytorch.log_model(fitted_model.model, artifact_path="model")
+        except Exception as exc:
+            logger.warning(f"Could not log model artifact for '{model_name}': {exc}")

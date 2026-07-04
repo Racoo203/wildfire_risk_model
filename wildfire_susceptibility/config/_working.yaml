@@ -91,14 +91,11 @@ logging:
   log_path: ./data/logs/pipeline.log
 modeling:
   cv_folds: 5
-  cv_strategy: both
+  cv_strategy: standard
   mlflow_experiment: wildfire-susceptibility-essex
   models:
   - random_forest
-  - svm
-  - xgboost
-  - neural_net
-  optuna_n_trials: 30
+  optuna_n_trials: 3
   selection_rule: best_auc
 processing:
   cell_size_m: 30.0
@@ -115,9 +112,7 @@ processing:
   - 2022
 seasons:
   active:
-  - spring
   - summer
-  - fall
   definitions:
     fall:
     - 9
