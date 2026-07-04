@@ -3,6 +3,7 @@ figures/*
 docs/*
 mlruns/*
 wildfire_susceptibility.egg-info/*
+mlflow.db
 __pycache__/
 *.pyc
 .env
