@@ -12,6 +12,12 @@ _FACTOR_CMAPS = {
     "slope": "YlOrRd",
     "aspect": "twilight",
     "ndvi": "YlGn",
+    "tas": "RdYlBu_r",
+    "tasmax": "Reds",
+    "tasmin": "Blues",
+    "rainfall": "Blues",
+    "hurs": "Greens",
+    "sfcWind": "Purples",
     "d_roads": "Blues_r",
     "d_rivers": "Blues_r",
     "d_activity": "Blues_r",
@@ -29,11 +35,9 @@ def render_factor_map(
     season: Optional[str] = None,
     out_subdir: str = "factors",
 ) -> Path:
-    """Render one factor raster (e.g. elevation, ndvi, d_fires) with terrain backdrop."""
     figures_dir = Path(figures_dir)
     cmap = _FACTOR_CMAPS.get(factor_name, "viridis")
-    fname = f"{factor_name}_{season}.png" if season else f"{factor_name}.png"
-    out_path = figures_dir / out_subdir / fname
+    out_path = figures_dir / (season or "static") / out_subdir / f"{factor_name}.png"
 
     save_terrain_map(
         data_path, dem_path, out_path,
@@ -60,15 +64,9 @@ def render_susceptibility_map(
     model_name: Optional[str] = None,
     include_d_fires_as_feature: Optional[bool] = None,
 ) -> Path:
-    """Render a 4-class susceptibility raster (Low/Medium/High/Very High)."""
     figures_dir = Path(figures_dir)
-    parts = ["susceptibility"]
-    if season:
-        parts.append(season)
-    if model_name:
-        parts.append(model_name)
-    fname = "_".join(parts) + ".png"
-    out_path = figures_dir / "susceptibility" / fname
+    fname = f"{model_name}.png" if model_name else "default.png"
+    out_path = figures_dir / (season or "static") / "susceptibility" / fname
 
     title = "Wildfire Susceptibility"
     if season:
@@ -91,7 +89,6 @@ def render_susceptibility_map(
         params={"model": model_name, "include_d_fires_as_feature": include_d_fires_as_feature},
     )
     return out_path
-
 
 def render_all_factor_maps(
     feature_paths: Dict[str, Path],

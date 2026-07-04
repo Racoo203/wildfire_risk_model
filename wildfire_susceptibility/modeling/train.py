@@ -15,7 +15,6 @@ from .dataset_prep import DatasetPrep
 
 logger = logging.getLogger(__name__)
 
-
 class ModelTrainer:
     """
     Runs an Optuna study per (season, model_name), logs each trial and the
@@ -137,51 +136,4 @@ class ModelTrainer:
             "cv_auc_standard": study.best_value,
             "cv_auc_spatial": cv_auc_spatial if cv_strategy in ("spatial", "both") else None,
             "val_auc": val_auc, "val_f1": val_f1,
-        }
-
-        def objective(trial):
-            params = model_cls().param_space(trial)
-            skf = StratifiedKFold(n_splits=cv_folds, shuffle=True, random_state=42)
-            aucs = []
-            for train_idx, test_idx in skf.split(X_tr, y_train):
-                m = model_cls(**params)
-                m.fit(X_tr.iloc[train_idx].values, y_train.iloc[train_idx].values)
-                proba = m.predict_proba(X_tr.iloc[test_idx].values)
-                y_fold = y_train.iloc[test_idx].values
-                try:
-                    auc = roc_auc_score(y_fold, proba, multi_class="ovr")
-                except ValueError:
-                    auc = 0.0
-                aucs.append(auc)
-            return float(np.mean(aucs))
-
-        with mlflow.start_run(run_name=f"{season}_{model_name}"):
-            mlflow.set_tags({"season": season, "model": model_name})
-            study.optimize(objective, n_trials=n_trials)
-
-            best_params = study.best_params
-            mlflow.log_params(best_params)
-            mlflow.log_metric("cv_auc", study.best_value)
-
-            final_model = model_cls(**best_params)
-            final_model.fit(X_tr.values, y_train.values)
-
-            val_proba = final_model.predict_proba(X_va.values)
-            val_auc = roc_auc_score(y_val, val_proba, multi_class="ovr")
-            val_f1 = f1_score(y_val, np.argmax(val_proba, axis=1), average="macro")
-
-            mlflow.log_metric("val_auc", val_auc)
-            mlflow.log_metric("val_f1", val_f1)
-
-            logger.info(
-                f"[{season}][{model_name}] cv_auc={study.best_value:.4f} "
-                f"val_auc={val_auc:.4f} val_f1={val_f1:.4f}"
-            )
-
-        return {
-            "model": final_model,
-            "best_params": best_params,
-            "cv_auc": study.best_value,
-            "val_auc": val_auc,
-            "val_f1": val_f1,
         }

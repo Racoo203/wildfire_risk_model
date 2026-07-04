@@ -57,7 +57,7 @@ def plot_roc_curves(
     ax.set_title(f"ROC — model comparison" + (f" ({season})" if season else ""))
     ax.legend()
 
-    out_path = Path(figures_dir) / "models" / (season or "static") / "roc_comparison.png"
+    out_path = Path(figures_dir) / (season or "static") / "models" / "roc_comparison.png"
     return _save_and_log(fig, out_path, figures_dir, "roc_curve", "viz.charts.plot_roc_curves", season)
 
 
@@ -70,7 +70,7 @@ def plot_shap_summary(shap_values, feature_names: List[str], figures_dir: Path,
     shap.summary_plot(shap_values, feature_names=feature_names, show=False)
 
     fname = f"shap_summary_{model_name or 'model'}.png"
-    out_path = Path(figures_dir) / "models" / (season or "static") / fname
+    out_path = Path(figures_dir) / (season or "static") / "models" / fname
     return _save_and_log(fig, out_path, figures_dir, "shap_summary", "viz.charts.plot_shap_summary",
                           season, params={"model": model_name})
 
@@ -107,9 +107,18 @@ def plot_vif_correlation(
     ax1.set_xlabel("VIF")
     ax1.set_title(f"Variance Inflation Factor" + (f" ({season})" if season else ""))
     ax1.legend()
+    
     vif_path = _save_and_log(
-        fig1, Path(figures_dir) / "eda" / f"vif_{season or 'static'}.png", figures_dir,
+        fig1, Path(figures_dir) / (season or "static") / "eda" / "vif.png", figures_dir,
         "vif", "viz.charts.plot_vif_correlation", season, params={"threshold": vif_threshold},
+    )
+    corr_path = _save_and_log(
+        fig2, Path(figures_dir) / (season or "static") / "eda" / "correlation.png", figures_dir,
+        "correlation", "viz.charts.plot_vif_correlation", season, params={"threshold": corr_threshold},
+    )
+    spearman_path = _save_and_log(
+        fig3, Path(figures_dir) / (season or "static") / "eda" / "correlation_spearman.png",
+        figures_dir, "correlation_spearman", "viz.charts.plot_vif_correlation", season,
     )
 
     corr = X.corr()
@@ -178,7 +187,7 @@ def plot_class_balance(
     ax.set_title("Class balance before/after label cleaning" + (f" — {season}" if season else ""))
     ax.legend()
 
-    out_path = Path(figures_dir) / "eda" / f"class_balance_{season or 'static'}.png"
+    out_path = Path(figures_dir) / (season or "static") / "eda" / "class_balance.png"
     return _save_and_log(fig, out_path, figures_dir, "class_balance",
                           "viz.charts.plot_class_balance", season)
 
@@ -199,7 +208,7 @@ def plot_nan_coverage(
     ax.set_xlabel("NaN (%)")
     ax.set_title("NaN coverage by feature" + (f" — {season}" if season else ""))
 
-    out_path = Path(figures_dir) / "eda" / f"nan_coverage_{season or 'static'}.png"
+    out_path = Path(figures_dir) / (season or "static") / "eda" / "nan_coverage.png"
     return _save_and_log(fig, out_path, figures_dir, "nan_coverage",
                           "viz.charts.plot_nan_coverage", season)
 
@@ -226,5 +235,5 @@ def plot_cv_comparison(figures_dir, season=None, mlflow_experiment=None):
     ax.set_title(f"Standard vs Spatial CV — optimism gap" + (f" ({season})" if season else ""))
     ax.legend()
 
-    out_path = Path(figures_dir) / "models" / (season or "static") / "cv_comparison.png"
+    out_path = Path(figures_dir) / (season or "static") / "models" / "cv_comparison.png"
     return _save_and_log(fig, out_path, figures_dir, "cv_comparison", "viz.charts.plot_cv_comparison", season)

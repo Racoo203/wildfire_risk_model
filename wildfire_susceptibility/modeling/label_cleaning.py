@@ -11,6 +11,10 @@ from ..core.base import VarBuilder
 
 HIGH_RISK_CLASSES = (1, 2, 3)  # Medium, High, Very High — each paired against Low (0)
 
+_CLUSTERING_DERIVED_FEATURES = {
+    "diurnal_range": lambda arrays: arrays["tasmax"] - arrays["tasmin"],
+}
+
 class LabelCleaner(VarBuilder):
     """
     Flags and removes ambiguous Low-risk pixels via pairwise k-means,
@@ -22,13 +26,23 @@ class LabelCleaner(VarBuilder):
 
     def process(self):
         return
+    
+    def _build_clustering_view(
+        self, feature_arrays: Dict[str, np.ndarray]
+    ) -> Dict[str, np.ndarray]:
+        """Feature set used ONLY for k-means geometry — not for modeling."""
+        view = {k: v for k, v in feature_arrays.items() if k not in self.CLUSTERING_EXCLUDE}
+        for name, fn in _CLUSTERING_DERIVED_FEATURES.items():
+            if all(dep in feature_arrays for dep in ("tasmax", "tasmin")):
+                view[name] = fn(feature_arrays)
+        return view
 
     def _build_clustering_view(
         self, feature_arrays: Dict[str, np.ndarray]
     ) -> Dict[str, np.ndarray]:
         """Feature set used ONLY for k-means geometry — not for modeling."""
         view = {k: v for k, v in feature_arrays.items() if k not in self.CLUSTERING_EXCLUDE}
-        for name, fn in self.CLUSTERING_DERIVED.items():
+        for name, fn in _CLUSTERING_DERIVED_FEATURES.items():
             if all(dep in feature_arrays for dep in ("tasmax", "tasmin")):
                 view[name] = fn(feature_arrays)
         return view
@@ -62,7 +76,9 @@ class LabelCleaner(VarBuilder):
 
             # --- variance-floor guard -------------------------------
             subset_std = raw_subset.std(axis=0)
-            degenerate = subset_std < 0.01 * np.maximum(population_std, 1e-8)
+            variance_floor = getattr(self, "CLUSTERING_VARIANCE_FLOOR_PCT", 0.01)
+            degenerate = subset_std < variance_floor * np.maximum(population_std, 1e-8)
+
             if degenerate.any() and feature_names is not None:
                 names = np.array(feature_names)[degenerate].tolist()
                 self.logger.warning(
@@ -177,8 +193,8 @@ class LabelCleaner(VarBuilder):
             
         cfg = self.config["labels"]
 
-        self.CLUSTERING_EXCLUDE = cfg.CLUSTERING_EXCLUDE
-        self.CLUSTERING_DERIVED = cfg.CLUSTERING_DERIVED
+        self.CLUSTERING_EXCLUDE = set(cfg.get("clustering_exclude_features", ["tas", "tasmin"]))
+        self.CLUSTERING_VARIANCE_FLOOR_PCT = cfg.get("clustering_variance_floor_pct", 0.01)
 
         clustering_arrays = self._build_clustering_view(feature_arrays)
         valid_mask, flat_labels, flat_features, feature_names = self._flatten_valid(
