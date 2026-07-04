@@ -10,7 +10,7 @@ from wildfire_susceptibility.modeling.train import ModelTrainer
 from wildfire_susceptibility.modeling.dataset_prep import DatasetPrep
 from wildfire_susceptibility import viz
 
-from ..scripts.generate_report_figures import generate_all, ALL_CATEGORIES
+from wildfire_susceptibility.reporting import generate_all, ALL_CATEGORIES
 
 CONFIG_PATH = Path("./wildfire_susceptibility/config/defaults.yaml")
 WORKING_CONFIG_PATH = Path("./wildfire_susceptibility/config/_working.yaml")

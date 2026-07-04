@@ -1,0 +1,138 @@
+base:
+  boundary_shapefile: ./data/silver/layers/boundary.shp
+  figures_dir: ./figures
+  model_data_dir: ./data/silver/model_datasets
+  output_dir: ./data/silver/layers
+  region: Essex
+data_sources:
+  cua:
+    data_dir: ./data/bronze/boundary
+  haduk:
+    data_dir: ./data/bronze/climate_haduk
+    sources:
+    - tas
+    - tasmax
+    - tasmin
+    - rainfall
+    - sfcWind
+    - hurs
+  incidents:
+    data_dir: ./data/bronze/incidents
+    date_col: CallDateID
+    geo_cols:
+    - IncidentEasting
+    - IncidentNorthing
+    severity_cols:
+    - NumberVehiclesDeployed
+  modis_nvdi:
+    data_dir: ./data/bronze/vegetation
+  proximity:
+    data_dir: ./data/bronze/proximity
+    human_fclasses:
+    - residential
+    - farmland
+    - farm
+    - farm_auxiliary
+    - industrial
+    - commercial
+    - retail
+    - allotmets
+    - orchard
+    - greenhouse_horticulture
+    sources:
+    - oproad_gpkg_gb
+    - oprvrs_gpkg_gb
+    - essex-260607-free.
+  srtm:
+    data_dir: ./data/bronze/topography
+    tiles:
+    - n51_e000_1arc_v3.tif
+    - n51_e001_1arc_v3.tif
+    - n51_w001_1arc_v3.tif
+    - n52_e000_1arc_v3.tif
+    - n52_e001_1arc_v3.tif
+labels:
+  classify_method: gmm
+  clean_labels: true
+  compare_classify_methods:
+  - percentile
+  - jenks
+  - gmm
+  conv_sigma_cells: 3
+  density_method: convolution
+  gmm_max_sample: 200000
+  gmm_n_components: 4
+  gmm_random_state: 42
+  include_d_fires_as_feature: false
+  jenks_max_sample: 200000
+  jenks_n_classes: 4
+  kde_bandwidth_m: 500
+  kde_zero_threshold: 1.0e-12
+  kmeans_k: 2
+  kmeans_max_iter: 300
+  kmeans_n_init: 10
+  max_sample_per_class: 200000
+  percentiles:
+  - 60
+  - 75
+  - 90
+  random_state: 42
+  run_sensitivity: true
+  sensitivity_feature_noise_std: 0.05
+  sensitivity_n_inits:
+  - 10
+  - 20
+  sensitivity_n_reweight_trials: 3
+  sensitivity_seeds:
+  - 7
+  - 123
+logging:
+  level: INFO
+  log_path: ./data/logs/pipeline.log
+modeling:
+  cv_folds: 5
+  cv_strategy: both
+  mlflow_experiment: wildfire-susceptibility-essex
+  models:
+  - random_forest
+  - svm
+  - xgboost
+  - neural_net
+  optuna_n_trials: 30
+  selection_rule: best_auc
+processing:
+  cell_size_m: 30.0
+  crs: EPSG:27700
+  force_recompute: false
+  test_years:
+  - 2022
+  - 9999
+  training_years:
+  - 2009
+  - 2020
+  validation_years:
+  - 2020
+  - 2022
+seasons:
+  active:
+  - spring
+  - summer
+  - fall
+  definitions:
+    fall:
+    - 9
+    - 10
+    - 11
+    spring:
+    - 3
+    - 4
+    - 5
+    summer:
+    - 6
+    - 7
+    - 8
+    winter:
+    - 12
+    - 1
+    - 2
+  seasonal_ndvi: true
