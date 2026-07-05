@@ -127,10 +127,10 @@ for label, key in STAGES:
             try:
                 if key == "features_labels":
                     st.info("Work in progress")
-                    # wf = DatasetBuilder(WORKING_CONFIG_PATH)
-                    # dataset_paths = wf.run_full_pipeline()
-                    # st.session_state["dataset_paths"] = dataset_paths
-                    # st.success(f"Done: {dataset_paths}")
+                    wf = DatasetBuilder(WORKING_CONFIG_PATH)
+                    dataset_paths = wf.run_full_pipeline()
+                    st.session_state["dataset_paths"] = dataset_paths
+                    st.success(f"Done: {dataset_paths}")
 
                 elif key == "dataset_assembly":
                     st.info("Dataset assembly runs as part of the features/labels stage in the current pipeline.")

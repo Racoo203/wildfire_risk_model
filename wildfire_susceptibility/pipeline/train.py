@@ -159,11 +159,14 @@ class ModelTrainer:
         incomplete = [t for t in study.trials if t.state not in FINISHED_STATES]
         if incomplete:
             logger.info(
-                f"[{season}][{model_name}] clearing {len(incomplete)} incomplete trial(s) "
+                f"[{season}][{model_name}] removing {len(incomplete)} incomplete trial(s) "
                 f"from a previous run: {[t.number for t in incomplete]}"
             )
             for t in incomplete:
-                storage.set_trial_state_values(t._trial_id, state=optuna.trial.TrialState.FAIL)
+                try:
+                    study.tell(t.number, state=optuna.trial.TrialState.FAIL)
+                except Exception as e:
+                    logger.warning(f"Could not mark trial {t.number} as FAILED: {e}")
 
         return study
 

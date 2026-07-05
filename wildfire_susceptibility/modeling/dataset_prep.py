@@ -46,7 +46,6 @@ class DatasetPrep:
         self,
         df: pd.DataFrame,
         *,
-        slope_aspect_cols: Tuple[str, ...] = ("slope", "aspect"),
         nearest_neighbor_cols: Tuple[str, ...] = ("ndvi",),
         drop_if_any_nan_in: Tuple[str, ...] = (),
         domain_mask: Optional[np.ndarray] = None,
@@ -75,16 +74,19 @@ class DatasetPrep:
             before = len(out)
             drop_cols = [c for c in drop_if_any_nan_in if c in out.columns]
             keep = ~(scope & out[drop_cols].isna().any(axis=1).to_numpy())
+            
+            scope = scope[keep] 
+            
             out = out.loc[keep]
             dropped = before - len(out)
             if dropped:
-                logger.info(f"Dropped {dropped:,} in-domain rows with NaN in {drop_if_any_nan_in}")
+                logger.info(f"Dropped {dropped:,} in-domain rows...")
 
         if domain_mask is not None:
             in_domain = out.loc[scope[:len(out)] if len(scope) == len(out) else domain_mask]
             remaining = {c: int(in_domain[c].isna().sum()) for c in out.columns if in_domain[c].isna().any()}
             if remaining:
-                logger.warning(f"Unresolved NaNs WITHIN the study-area domain: {remaining} — this is the number that matters for data quality.")
+                logger.warning(f"Unresolved NaNs WITHIN the study-area domain: {remaining}")
             else:
                 logger.info("No unresolved in-domain NaNs after imputation.")
         else:
@@ -94,6 +96,12 @@ class DatasetPrep:
                     f"Unresolved NaNs remain in columns {remaining_nan_cols} — no domain_mask "
                     f"supplied, so this includes out-of-boundary padding."
                 )
+
+        # Check if the remaining NaNs are actually inside your filtered scope
+        debug_in_domain = out[scope]
+        nans_in_domain = debug_in_domain["label"].isna().sum()
+        print(f"NaNs remaining in domain: {nans_in_domain}")
+        print(f"NaNs remaining out of domain: {out['label'].isna().sum() - nans_in_domain}")
 
         return out
 
@@ -193,20 +201,21 @@ class DatasetPrep:
         """
         feature_cols = [c for c in df_train.columns if c not in ("label", "_x", "_y")]
 
-        domain_mask = df_train["elevation"].notna().to_numpy() if "elevation" in df_train else None
+        domain_mask = df_train["elevation"].notna().to_numpy()
         df_train = self.resolve_missing(
             df_train,
-            slope_aspect_cols=("slope", "aspect"),
             nearest_neighbor_cols=("ndvi", *climate_vars),
+            drop_if_any_nan_in=("label",),
             domain_mask=domain_mask,
         )
 
+
         if self.config["labels"].get("clean_labels", True):
             cleaner = LabelCleaner(self.config, ref_path)
-            df_train["label"] = cleaner.clean_flat(
-                df_train, feature_cols=feature_cols, label_col="label", season=f"{season}_train"
+            df_train = cleaner.clean_flat(
+                df_train, feature_cols=feature_cols, season=f"{season}_train"
             )
-
+        
         return df_train
 
     def prepare_test(
@@ -220,10 +229,10 @@ class DatasetPrep:
         cleaning — test labels stay exactly as classified, so evaluation
         reflects genuine held-out performance.
         """
-        domain_mask = df_test["elevation"].notna().to_numpy() if "elevation" in df_test else None
+        domain_mask = df_test["elevation"].notna().to_numpy()
         return self.resolve_missing(
             df_test,
-            slope_aspect_cols=("slope", "aspect"),
             nearest_neighbor_cols=("ndvi", *climate_vars),
+            drop_if_any_nan_in=("label",),
             domain_mask=domain_mask,
         )

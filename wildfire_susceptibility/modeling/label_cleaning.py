@@ -32,10 +32,6 @@ class LabelCleaner:
         self.config = config
         self.logger = logging.getLogger(__name__)
 
-    # ------------------------------------------------------------------
-    # Public: raster-shaped (2D) — kept for callers still working pre-stack
-    # ------------------------------------------------------------------
-
     def clean_flat(
         self,
         df: pd.DataFrame,
@@ -88,9 +84,9 @@ class LabelCleaner:
                 season=season, feature_names=feature_names,
             )
 
-        cleaned = df[label_col].copy()
-        cleaned.loc[valid_mask] = cleaned_flat
-        return cleaned
+        clean_df = df.copy()
+        clean_df.loc[valid_mask, label_col] = cleaned_flat
+        return clean_df.dropna(subset=label_col)
 
     def _build_clustering_view_df(self, df: pd.DataFrame, feature_cols: List[str]) -> pd.DataFrame:
         """Feature set used ONLY for k-means geometry — flat-dataframe variant."""
