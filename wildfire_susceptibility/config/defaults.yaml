@@ -18,7 +18,7 @@ processing:
 
 seasons:
   active: ["spring", "summer", "fall"] # Seasons calculated this iteration
-  seasonal_ndvi: true                 # Recompute NDVI per season if true; else compute static
+  seasonal_ndvi: false                 # Recompute NDVI per season if true; else compute static
   definitions:
     spring: [3, 4, 5]
     summer: [6, 7, 8]

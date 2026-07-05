@@ -7,8 +7,8 @@ import io
 import pandas as pd
 
 from wildfire_susceptibility.config.loader import ConfigLoader
-from wildfire_susceptibility.pipeline.preprocessor import WildfirePreprocessor
-from wildfire_susceptibility.modeling.train import ModelTrainer
+from wildfire_susceptibility.pipeline.dataset_builder import DatasetBuilder
+from wildfire_susceptibility.pipeline.train import ModelTrainer
 from wildfire_susceptibility.modeling.dataset_prep import DatasetPrep
 from wildfire_susceptibility import viz
 
@@ -126,10 +126,11 @@ for label, key in STAGES:
         with st.spinner(f"Running {label}..."):
             try:
                 if key == "features_labels":
-                    wf = WildfirePreprocessor(WORKING_CONFIG_PATH)
-                    dataset_paths = wf.run_full_pipeline()
-                    st.session_state["dataset_paths"] = dataset_paths
-                    st.success(f"Done: {dataset_paths}")
+                    st.info("Work in progress")
+                    # wf = DatasetBuilder(WORKING_CONFIG_PATH)
+                    # dataset_paths = wf.run_full_pipeline()
+                    # st.session_state["dataset_paths"] = dataset_paths
+                    # st.success(f"Done: {dataset_paths}")
 
                 elif key == "dataset_assembly":
                     st.info("Dataset assembly runs as part of the features/labels stage in the current pipeline.")

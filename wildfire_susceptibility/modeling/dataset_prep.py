@@ -27,6 +27,8 @@ from scipy.ndimage import distance_transform_edt
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
+from .label_cleaning import LabelCleaner
+
 import logging
 
 logger = logging.getLogger(__name__)
@@ -39,8 +41,6 @@ class DatasetPrep:
 
     def __init__(self, config: dict):
         self.config = config
-
-    # --- 1. missing-data resolution ------------------------------------
 
     def resolve_missing(
         self,
@@ -127,8 +127,6 @@ class DatasetPrep:
             if False else values[nearest_idx[0]][nan_mask]
         return pd.Series(filled, index=series.index)
 
-    # --- 2. per-model-family scaling ------------------------------------
-
     def scale_for_model_family(
         self,
         X_train: pd.DataFrame,
@@ -152,35 +150,6 @@ class DatasetPrep:
             scaler.transform(X_test), columns=X_test.columns, index=X_test.index
         )
         return X_train_scaled, X_test_scaled, scaler
-
-    # --- 3. stratified split ---------------------------------------------
-
-    def stratified_split(
-        self,
-        df: pd.DataFrame,
-        label_col: str = "label",
-        test_size: float = 0.30,
-        random_state: Optional[int] = None,
-    ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
-        """
-        70/30 split stratified by class, matching the paper's methodology
-        (Section 1.5). Rows with NaN labels (unlabelled / zero-density
-        pixels) are excluded before splitting.
-        """
-        random_state = random_state if random_state is not None else self.config.get("labels", {}).get("random_state", 42)
-
-        labelled = df.dropna(subset=[label_col])
-        X = labelled.drop(columns=[label_col])
-        y = labelled[label_col]
-
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=test_size, stratify=y, random_state=random_state,
-        )
-        logger.info(
-            f"Stratified split: {len(X_train):,} train / {len(X_test):,} test "
-            f"(test_size={test_size}, random_state={random_state})"
-        )
-        return X_train, X_test, y_train, y_test
     
     def assign_spatial_blocks(
         self,
@@ -200,3 +169,61 @@ class DatasetPrep:
         n_blocks = blocks.nunique()
         logger.info(f"Assigned {len(df):,} rows to {n_blocks} spatial blocks ({block_size_m/1000:.0f} km grid)")
         return blocks
+    
+    def load_train_test(self, dataset_paths: Dict[str, Path]) -> Dict[str, pd.DataFrame]:
+        """dataset_paths = {"train": path, "test": path} for one season."""
+        return {split: pd.read_csv(p) for split, p in dataset_paths.items()}
+
+    def prepare_train(
+        self,
+        df_train: pd.DataFrame,
+        season: str,
+        ref_path: Path,
+        climate_vars: Tuple[str, ...],
+    ) -> pd.DataFrame:
+        """
+        Model-ready prep for the TRAINING split only:
+            1. resolve_missing (slope/aspect zero-fill, NDVI/climate NN-fill)
+            2. LabelCleaner.clean_flat() — pairwise k-means Low-cleaning
+
+        Label cleaning only ever runs on train: it defines "ambiguous Low"
+        using the training feature distribution, and mutating test labels
+        based on training-fitted clusters would contaminate the held-out
+        evaluation.
+        """
+        feature_cols = [c for c in df_train.columns if c not in ("label", "_x", "_y")]
+
+        domain_mask = df_train["elevation"].notna().to_numpy() if "elevation" in df_train else None
+        df_train = self.resolve_missing(
+            df_train,
+            slope_aspect_cols=("slope", "aspect"),
+            nearest_neighbor_cols=("ndvi", *climate_vars),
+            domain_mask=domain_mask,
+        )
+
+        if self.config["labels"].get("clean_labels", True):
+            cleaner = LabelCleaner(self.config, ref_path)
+            df_train["label"] = cleaner.clean_flat(
+                df_train, feature_cols=feature_cols, label_col="label", season=f"{season}_train"
+            )
+
+        return df_train
+
+    def prepare_test(
+        self,
+        df_test: pd.DataFrame,
+        season: str,
+        climate_vars: Tuple[str, ...],
+    ) -> pd.DataFrame:
+        """
+        Model-ready prep for the TEST split: imputation only, no label
+        cleaning — test labels stay exactly as classified, so evaluation
+        reflects genuine held-out performance.
+        """
+        domain_mask = df_test["elevation"].notna().to_numpy() if "elevation" in df_test else None
+        return self.resolve_missing(
+            df_test,
+            slope_aspect_cols=("slope", "aspect"),
+            nearest_neighbor_cols=("ndvi", *climate_vars),
+            domain_mask=domain_mask,
+        )

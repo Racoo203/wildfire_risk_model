@@ -1,13 +1,15 @@
+# wildfire_susceptibility/modeling/label_cleaning.py
+
 import logging
 from pathlib import Path
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional, Set, Tuple
 
 import numpy as np
 import pandas as pd
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 
-HIGH_RISK_CLASSES = (1, 2, 3)  # Medium, High, Very High — each paired against Low (0)
+HIGH_RISK_CLASSES = (1, 2, 3)
 
 _CLUSTERING_DERIVED_FEATURES = {
     "diurnal_range": lambda arrays: arrays["tasmax"] - arrays["tasmin"],
@@ -16,32 +18,52 @@ _CLUSTERING_DERIVED_FEATURES = {
 
 class LabelCleaner:
     """
-    Flags and removes ambiguous Low-risk pixels via pairwise k-means,
-    replicating the paper's methodology (k=2, StandardScaler, Euclidean;
-    n_init=10, max_iter=300, random_state=42), and runs a sensitivity
-    analysis (alternate n_init / seeds / feature reweighting) to confirm
-    the flagged set is stable rather than an artifact of one random run.
+    Flags and removes ambiguous Low-risk pixels via pairwise k-means.
+
+    Two entry points, same core logic:
+        clean()      — 2D raster in, 2D raster out (legacy / raster-stage use)
+        clean_flat()  — stacked dataframe in, cleaned label Series out
+                         (used by modeling/dataset_prep.py on the raw
+                         dataset_train_<season>.csv table — this is now
+                         the only caller in the standard pipeline)
     """
 
     def __init__(self, config: dict, *args, **kwargs):
         self.config = config
         self.logger = logging.getLogger(__name__)
 
-    def clean(
+    # ------------------------------------------------------------------
+    # Public: raster-shaped (2D) — kept for callers still working pre-stack
+    # ------------------------------------------------------------------
+
+    def clean_flat(
         self,
-        labels: np.ndarray,
-        feature_arrays: Dict[str, np.ndarray],
+        df: pd.DataFrame,
+        feature_cols: List[str],
+        label_col: str = "label",
         season: Optional[str] = None,
-    ) -> np.ndarray:
+    ) -> pd.Series:
+        """
+        Clean the label column of a stacked (one-row-per-pixel) dataframe.
+
+        Only rows with a non-NaN label participate in k-means; rows with
+        NaN labels (zero-density / unlabelled pixels) pass through
+        unchanged. Returns a new Series (same index as `df`) — caller
+        decides whether to assign it back into `df[label_col]`.
+
+        `feature_cols` should be the modeling feature set (post
+        resolve_missing, so no NaNs remain in-domain); this method does NOT
+        do its own imputation.
+        """
+        clustering_df = self._build_clustering_view_df(df, feature_cols)
+        valid_mask = df[label_col].notna().to_numpy()
+
+        flat_labels = df.loc[valid_mask, label_col].to_numpy()
+        feature_names = list(clustering_df.columns)
+        flat_features = clustering_df.loc[valid_mask].to_numpy()
+
         cfg = self.config["labels"]
-
-        self.CLUSTERING_EXCLUDE = set(cfg.get("clustering_exclude_features", ["tas", "tasmin"]))
         self.CLUSTERING_VARIANCE_FLOOR_PCT = cfg.get("clustering_variance_floor_pct", 0.01)
-
-        clustering_arrays = self._build_clustering_view(feature_arrays)
-        valid_mask, flat_labels, flat_features, feature_names = self._flatten_valid(
-            labels, clustering_arrays
-        )
 
         flagged = self._flag_low_pixels(
             flat_labels,
@@ -49,48 +71,39 @@ class LabelCleaner:
             n_init=cfg["kmeans_n_init"],
             max_iter=cfg["kmeans_max_iter"],
             random_state=cfg["random_state"],
-            sample_random_state=cfg["random_state"],  # fixed baseline sample
+            sample_random_state=cfg["random_state"],
             max_sample=cfg["max_sample_per_class"],
             feature_names=feature_names,
         )
 
-        cleaned_labels = self._apply_flags(labels, valid_mask, flat_labels, flagged)
+        cleaned_flat = flat_labels.copy().astype("float32")
+        if flagged:
+            cleaned_flat[np.array(list(flagged))] = np.nan
+
         self._log_removal(flat_labels, flagged, season)
 
         if cfg.get("run_sensitivity", True):
             self.sensitivity_analysis(
-                flat_labels,
-                flat_features,
-                baseline_flagged=flagged,
-                season=season,
-                feature_names=feature_names,
+                flat_labels, flat_features, baseline_flagged=flagged,
+                season=season, feature_names=feature_names,
             )
 
-        return cleaned_labels
+        cleaned = df[label_col].copy()
+        cleaned.loc[valid_mask] = cleaned_flat
+        return cleaned
 
-    def _build_clustering_view(
-        self, feature_arrays: Dict[str, np.ndarray]
-    ) -> Dict[str, np.ndarray]:
-        """Feature set used ONLY for k-means geometry — not for modeling."""
-        view = {k: v for k, v in feature_arrays.items() if k not in self.CLUSTERING_EXCLUDE}
-        for name, fn in _CLUSTERING_DERIVED_FEATURES.items():
-            if all(dep in feature_arrays for dep in ("tasmax", "tasmin")):
-                view[name] = fn(feature_arrays)
+    def _build_clustering_view_df(self, df: pd.DataFrame, feature_cols: List[str]) -> pd.DataFrame:
+        """Feature set used ONLY for k-means geometry — flat-dataframe variant."""
+        exclude = set(self.config["labels"].get("clustering_exclude_features", ["tas", "tasmin"]))
+        keep_cols = [c for c in feature_cols if c not in exclude]
+        view = df[keep_cols].copy()
+        if "tasmax" in df.columns and "tasmin" in df.columns:
+            view["diurnal_range"] = df["tasmax"] - df["tasmin"]
         return view
 
     def _flag_low_pixels(
-        self,
-        flat_labels,
-        flat_features,
-        *,
-        n_init,
-        max_iter,
-        random_state,
-        max_sample,
-        sample_random_state=None,
-        feature_weights=None,
-        feature_names=None,
-        population_std=None,
+        self, flat_labels, flat_features, *, n_init, max_iter, random_state, max_sample,
+        sample_random_state=None, feature_weights=None, feature_names=None, population_std=None,
     ):
         sample_random_state = sample_random_state if sample_random_state is not None else random_state
         rng = np.random.default_rng(sample_random_state)
@@ -113,7 +126,6 @@ class LabelCleaner:
             subset_idx = np.concatenate([low_sample, high_sample])
             raw_subset = flat_features[subset_idx]
 
-            # --- variance-floor guard -------------------------------
             subset_std = raw_subset.std(axis=0)
             variance_floor = getattr(self, "CLUSTERING_VARIANCE_FLOOR_PCT", 0.01)
             degenerate = subset_std < variance_floor * np.maximum(population_std, 1e-8)
@@ -139,15 +151,9 @@ class LabelCleaner:
         return flagged
 
     def sensitivity_analysis(
-        self,
-        flat_labels: np.ndarray,
-        flat_features: np.ndarray,
-        baseline_flagged: Set[int],
-        feature_names=None,
-        season: Optional[str] = None,
+        self, flat_labels, flat_features, baseline_flagged, feature_names=None, season=None,
     ) -> pd.DataFrame:
         cfg = self.config["labels"]
-
         max_sample = cfg["max_sample_per_class"]
         low_size = int(np.sum(flat_labels == 0))
         n_features = flat_features.shape[1]
@@ -163,25 +169,18 @@ class LabelCleaner:
                 weights = rng.normal(loc=1.0, scale=noise_std, size=n_features)
 
             flagged = self._flag_low_pixels(
-                flat_labels,
-                flat_features,
-                n_init=variant["n_init"],
-                max_iter=cfg["kmeans_max_iter"],
-                random_state=variant["random_state"],
-                sample_random_state=cfg["random_state"],
-                max_sample=max_sample,
-                feature_weights=weights,
-                feature_names=feature_names,
+                flat_labels, flat_features,
+                n_init=variant["n_init"], max_iter=cfg["kmeans_max_iter"],
+                random_state=variant["random_state"], sample_random_state=cfg["random_state"],
+                max_sample=max_sample, feature_weights=weights, feature_names=feature_names,
             )
 
             symmetric_diff = len(baseline_flagged ^ flagged)
             variance_pct = 100 * symmetric_diff / low_size if low_size else 0.0
 
             rows.append({
-                "label": variant["label"],
-                "n_init": variant["n_init"],
-                "random_state": variant["random_state"],
-                "reweighted": variant["reweight"],
+                "label": variant["label"], "n_init": variant["n_init"],
+                "random_state": variant["random_state"], "reweighted": variant["reweight"],
                 "n_flagged": len(flagged),
                 "pct_low_flagged": 100 * len(flagged) / low_size if low_size else 0.0,
                 "variance_vs_baseline_pct": round(variance_pct, 4),
@@ -192,10 +191,8 @@ class LabelCleaner:
         if fully_flagged.any():
             self.logger.warning(
                 f"[{season}] {int(fully_flagged.sum())}/{len(report)} sensitivity variants flagged "
-                f"~100% of the subsampled Low class — this indicates near-total separability "
-                f"between Low and high-risk classes in feature space (a dominant feature, likely "
-                f"d_fires, may be driving this), not genuine k-means robustness. Low variance here "
-                f"is not the same as the paper's <0.2% stability result."
+                f"~100% of the subsampled Low class — likely near-total separability, not genuine "
+                f"k-means robustness. Low variance here is not the paper's <0.2% stability result."
             )
 
         figures_dir = Path(self.config["base"]["figures_dir"])
@@ -213,7 +210,6 @@ class LabelCleaner:
                 f"[{season}] Sensitivity variance ({max_variance:.4f}%) exceeds 1% — "
                 f"flagged set may be sensitive to k-means initialization."
             )
-
         return report
 
     @staticmethod
@@ -245,21 +241,6 @@ class LabelCleaner:
         if len(idx) <= max_n:
             return idx
         return rng.choice(idx, max_n, replace=False)
-
-    def _apply_flags(
-        self,
-        labels: np.ndarray,
-        valid_mask: np.ndarray,
-        flat_labels: np.ndarray,
-        flagged: Set[int],
-    ) -> np.ndarray:
-        cleaned_flat = flat_labels.copy().astype("float32")
-        if flagged:
-            cleaned_flat[np.array(list(flagged))] = np.nan
-
-        cleaned_labels = np.full(labels.shape, np.nan, dtype="float32")
-        cleaned_labels[valid_mask] = cleaned_flat
-        return cleaned_labels
 
     def _log_removal(self, flat_labels: np.ndarray, flagged: Set[int], season: Optional[str]) -> None:
         low_size = int(np.sum(flat_labels == 0))

@@ -103,12 +103,9 @@ processing:
   force_recompute: false
   test_years:
   - 2022
-  - 9999
+  - 2026
   training_years:
   - 2009
-  - 2020
-  validation_years:
-  - 2020
   - 2022
 seasons:
   active:

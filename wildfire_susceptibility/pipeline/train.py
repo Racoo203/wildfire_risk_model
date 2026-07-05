@@ -15,14 +15,13 @@ from sklearn.model_selection import (
 from sklearn.metrics import roc_auc_score, f1_score
 
 from ..core.registry import MODELS
-from . import models  # noqa: F401
-from .dataset_prep import DatasetPrep
+from ..modeling import models  # noqa: F401
+from ..modeling.dataset_prep import DatasetPrep
 
 logger = logging.getLogger(__name__)
 
 OPTUNA_STORAGE = "sqlite:///data/silver/dbs/optuna_studies.db"
 FINISHED_STATES = {optuna.trial.TrialState.COMPLETE, optuna.trial.TrialState.PRUNED}
-
 
 class ModelTrainer:
     def __init__(self, config: dict):

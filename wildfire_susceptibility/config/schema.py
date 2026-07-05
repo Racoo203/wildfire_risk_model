@@ -12,9 +12,8 @@ class BaseConfig(BaseModel):
 class ProcessingConfig(BaseModel):
     cell_size_m: float = Field(default=30.0)
     crs: str = Field(default="EPSG:27700")
-    training_years: Tuple[int, int] = Field(default=(2009, 2020), description="[start, end)")
-    validation_years: Tuple[int, int] = Field(default=(2020, 2022), description="[start, end)")
-    test_years: Tuple[int, int] = Field(default=(2022, 9999), description="[start, end)")
+    training_years: Tuple[int, int] = Field(default=(2009, 2022), description="[start, end)")
+    test_years: Tuple[int, int] = Field(default=(2022, 2026), description="[start, end)")
     force_recompute: bool = Field(default=False)
 
 class SeasonsConfig(BaseModel):

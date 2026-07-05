@@ -30,55 +30,43 @@ class VegetationBuilder(VarBuilder):
     def process(
         self,
         months: Optional[Tuple[int, ...]] = None,
+        year_range: Optional[Tuple[int, int]] = None,
+        split: str = "static",
         season: Optional[str] = None,
     ) -> Dict[str, Path]:
         data_config = self.config["data_sources"]["modis_nvdi"]
-        training_years: Tuple[int, int] = self.config["processing"]["training_years"]
 
         out_name = self._seasonal_name("ndvi", season)
-        output_paths = {"ndvi": self.output_dir / f"{out_name}.tif"}
+        output_paths = {"ndvi": self.output_dir / f"{out_name}_{split}.tif"}
 
-        if self._check_cache(f"VegetationBuilder[{season}]", output_paths):
+        if self._check_cache(f"VegetationBuilder[{season}][{split}]", output_paths):
             return output_paths
 
         self._validate_reference()
         modis_dir = Path(data_config["data_dir"])
 
-        tif_files = self._find_files(modis_dir, training_years, months)
+        tif_files = self._find_files(modis_dir, year_range, months)
         mean_ndvi, source_meta = self._average_ndvi(tif_files)
 
-        native_path = self.output_dir / f"_tmp_ndvi_native_{season or 'static'}.tif"
+        native_path = self.output_dir / f"_tmp_ndvi_native_{season or 'static'}_{split}.tif"
         self._write_native(mean_ndvi, source_meta, native_path)
-        self._to_reference(native_path, output_paths["ndvi"], tmp_stem=f"_tmp_clip_ndvi_{season}")
+        self._to_reference(native_path, output_paths["ndvi"], tmp_stem=f"_tmp_clip_ndvi_{season}_{split}")
         native_path.unlink()
 
-        self.logger.info(f"[{season}] NDVI ready → {output_paths['ndvi'].name}")
+        self.logger.info(f"[{season}][{split}] NDVI ready -> {output_paths['ndvi'].name}")
         return output_paths
 
-    def _find_files(
-        self,
-        modis_dir: Path,
-        training_years: Tuple[int, int],
-        months: Optional[Tuple[int, ...]],
-    ) -> List[Path]:
-        """Return MODIS .tif files filtered by training window and season."""
+    def _find_files(self, modis_dir, year_range, months):
         all_files = sorted(modis_dir.glob("**/*.tif"))
         if not all_files:
             raise FileNotFoundError(f"No MODIS .tif files found under {modis_dir}")
-
-        if months is None:
+        if months is None or year_range is None:
             return all_files
 
-        year_start, year_end = training_years
-        filtered = [
-            f for f in all_files
-            if self._file_in_season(f, range(year_start, year_end), months)
-        ]
+        year_start, year_end = year_range
+        filtered = [f for f in all_files if self._file_in_season(f, range(year_start, year_end), months)]
         if not filtered:
-            raise FileNotFoundError(
-                f"No MODIS files matched training years {training_years} "
-                f"and months {months}."
-            )
+            raise FileNotFoundError(f"No MODIS files matched years {year_range} and months {months}.")
         return filtered
 
     @staticmethod

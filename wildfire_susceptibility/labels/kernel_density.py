@@ -191,7 +191,7 @@ class KernelDensityClassifier(VarBuilder):
             if n == 0:
                 self.logger.warning(f"[{season}][{method}][{classify_method}] class {c} has 0 samples!")
 
-        self._plot_diagnostics(valid, breakpoints, season, method, classify_method)
+        # self._plot_diagnostics(valid, breakpoints, season, method, classify_method)
 
         with rasterio.open(self.ref_path) as ref:
             meta = ref.meta.copy()
@@ -271,25 +271,25 @@ class KernelDensityClassifier(VarBuilder):
         labels[mask] = np.digitize(density[mask], thresholds).astype("float32")
         return labels
 
-    def _plot_diagnostics(self, valid_density, breakpoints, season, method, classify_method):
-        figures_dir = Path(self.config["base"]["figures_dir"])
-        figures_dir.mkdir(parents=True, exist_ok=True)
+    # def _plot_diagnostics(self, valid_density, breakpoints, season, method, classify_method):
+    #     figures_dir = Path(self.config["base"]["figures_dir"])
+    #     figures_dir.mkdir(parents=True, exist_ok=True)
 
-        fig, ax = plt.subplots(figsize=(7, 4))
-        ax.hist(valid_density, bins=80, color="steelblue", alpha=0.8)
+    #     fig, ax = plt.subplots(figsize=(7, 4))
+    #     ax.hist(valid_density, bins=80, color="steelblue", alpha=0.8)
 
-        line_label = "break" if classify_method != "gmm" else "component mean"
-        colors = ["orange", "red", "darkred", "purple"]
-        for i, val in enumerate(breakpoints):
-            ax.axvline(val, color=colors[i % len(colors)], linestyle="--",
-                       label=f"{line_label} {i + 1} = {val:.4g}")
+    #     line_label = "break" if classify_method != "gmm" else "component mean"
+    #     colors = ["orange", "red", "darkred", "purple"]
+    #     for i, val in enumerate(breakpoints):
+    #         ax.axvline(val, color=colors[i % len(colors)], linestyle="--",
+    #                    label=f"{line_label} {i + 1} = {val:.4g}")
 
-        ax.set_title(f"Fire density distribution — {season} ({method} / {classify_method})")
-        ax.set_xlabel("Density")
-        ax.set_ylabel("Pixel count")
-        ax.legend()
-        fig.tight_layout()
-        out_path = figures_dir / f"density_dist_{season}_{method}_{classify_method}.png"
-        fig.savefig(out_path, dpi=150)
-        plt.close(fig)
-        self.logger.info(f"[{season}][{method}][{classify_method}] diagnostic plot -> {out_path}")
+    #     ax.set_title(f"Fire density distribution — {season} ({method} / {classify_method})")
+    #     ax.set_xlabel("Density")
+    #     ax.set_ylabel("Pixel count")
+    #     ax.legend()
+    #     fig.tight_layout()
+    #     out_path = figures_dir / f"density_dist_{season}_{method}_{classify_method}.png"
+    #     fig.savefig(out_path, dpi=150)
+    #     plt.close(fig)
+    #     self.logger.info(f"[{season}][{method}][{classify_method}] diagnostic plot -> {out_path}")

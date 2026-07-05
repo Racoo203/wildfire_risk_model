@@ -30,6 +30,6 @@ class BoundaryBuilder(VarBuilder):
         essex = gdf[gdf["CTYUA24NM"] == "Essex"].copy()
 
         essex_bng = essex.to_crs(self.config["processing"]["crs"])
-        essex_bng.to_file(output_paths["boundary"], driver="GPKG")
+        essex_bng.to_file(output_paths["boundary"])
 
         return None

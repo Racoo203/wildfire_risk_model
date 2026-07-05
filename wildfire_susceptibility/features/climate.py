@@ -23,43 +23,38 @@ class ClimateBuilder(VarBuilder):
     def process(
         self,
         months: Tuple[int, ...],
+        year_range: Tuple[int, int],
+        split: str,
         season: Optional[str] = None,
     ) -> Dict[str, Path]:
         """
-        Compute long-term seasonal means over the training period only.
+        Compute seasonal climate means for an explicit (year_range, split).
 
-        Using training-period data exclusively is essential: including
-        validation- or test-period climate would constitute data leakage.
-
-        Args:
-            months: Calendar months that define this season (e.g. (6, 7, 8)).
-            season: Label used in output filenames (e.g. 'summer').
-
-        Returns:
-            Mapping from HadUK variable name to aligned GeoTIFF path.
+        `split` ("train" | "test") only affects output filenames/caching —
+        it does not change the computation itself. Called once per split so
+        the test-set feature stack reflects the test period's own climate
+        rather than reusing training-period means, which would otherwise
+        create a train/test feature mismatch for the years that matter most.
         """
         data_config = self.config["data_sources"]["haduk"]
-        training_years: Tuple[int, int] = self.config["processing"]["training_years"]
 
         output_paths = {
-            var: self.output_dir / f"meteo_{self._seasonal_name(var, season)}.tif"
+            var: self.output_dir / f"meteo_{self._seasonal_name(var, season)}_{split}.tif"
             for var in data_config["sources"]
         }
 
-        if self._check_cache(f"ClimateBuilder[{season}]", output_paths):
+        if self._check_cache(f"ClimateBuilder[{season}][{split}]", output_paths):
             return output_paths
 
         haduk_dir = Path(data_config["data_dir"])
         self._validate_reference()
 
         for var_name, out_path in output_paths.items():
-            mean_grid, lons, lats = self._load_seasonal_mean(
-                haduk_dir, var_name, training_years, months
-            )
-            native_bng = self._write_native_bng(mean_grid, lons, lats, var_name, season)
-            self._to_reference(native_bng, out_path, tmp_stem=f"_tmp_clip_{var_name}_{season}")
+            mean_grid, lons, lats = self._load_seasonal_mean(haduk_dir, var_name, year_range, months)
+            native_bng = self._write_native_bng(mean_grid, lons, lats, var_name, f"{season}_{split}")
+            self._to_reference(native_bng, out_path, tmp_stem=f"_tmp_clip_{var_name}_{season}_{split}")
             native_bng.unlink()
-            self.logger.info(f"[{season}] Climate feature ready: {var_name} → {out_path.name}")
+            self.logger.info(f"[{season}][{split}] Climate feature ready: {var_name} → {out_path.name}")
 
         return output_paths
     
@@ -67,7 +62,7 @@ class ClimateBuilder(VarBuilder):
         self,
         haduk_dir: Path,
         var_name: str,
-        training_years: Tuple[int, int],
+        year_range: Tuple[int, int],
         months: Tuple[int, ...],
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
@@ -77,7 +72,7 @@ class ClimateBuilder(VarBuilder):
         Returns:
             (mean_2d, eastings_1d, northings_1d)
         """
-        year_start, year_end = training_years
+        year_start, year_end = year_range
         files = sorted((haduk_dir / var_name).glob("*.nc"))
         files = [
             f for f in files

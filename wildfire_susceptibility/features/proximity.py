@@ -1,5 +1,7 @@
 """Proximity features: distance to roads, rivers, and human activity."""
 
+# Distance to Human activity has too little variance. We can split the variables into two: the first, distance to buildings, and the second, as the type of land use in each pixel (we can grab the most dominant).
+
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 

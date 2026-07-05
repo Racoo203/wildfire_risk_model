@@ -106,9 +106,8 @@ def minimal_config(tmp_path):
         "processing": {
             "crs": CRS,
             "force_recompute": False,
-            "training_years": [2009, 2020],
-            "validation_years": [2020, 2022],
-            "test_years": [2022, 9999],
+            "training_years": [2009, 2022],
+            "test_years": [2022, 2026],
         },
         "logging": {
             "level": "INFO",
