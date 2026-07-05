@@ -62,14 +62,6 @@ class DatasetPrep:
         out = df.copy()
         scope = domain_mask if domain_mask is not None else np.ones(len(out), dtype=bool)
 
-        # for col in slope_aspect_cols:
-        #     if col in out.columns:
-        #         fillable = scope & out[col].isna().to_numpy()
-        #         n_nan = int(fillable.sum())
-        #         if n_nan:
-        #             out.loc[fillable, col] = 0.0
-        #             logger.info(f"Zero-imputed {n_nan:,} in-domain NaNs in '{col}' (flat SRTM cells)")
-
         for col in nearest_neighbor_cols:
             if col in out.columns:
                 fillable = scope & out[col].isna().to_numpy()

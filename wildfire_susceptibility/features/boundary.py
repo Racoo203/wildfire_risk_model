@@ -13,9 +13,6 @@ class BoundaryBuilder(VarBuilder):
     """From the boundaries of all historic counties of the UK, save only the boundary of Essex."""
 
     def process(self) -> None:
-        """
-        ...
-        """
         data_config = self.config["data_sources"]["cua"]
 
         output_paths = {
@@ -33,6 +30,6 @@ class BoundaryBuilder(VarBuilder):
         essex = gdf[gdf["CTYUA24NM"] == "Essex"].copy()
 
         essex_bng = essex.to_crs(self.config["processing"]["crs"])
-        essex_bng.to_file(output_paths["boundary"])
+        essex_bng.to_file(output_paths["boundary"], driver="GPKG")
 
         return None

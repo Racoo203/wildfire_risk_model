@@ -146,12 +146,6 @@ class WildfirePreprocessor:
         kde = KernelDensityClassifier(self.config, ref_path)
         density = kde.compute_density(fire_train, season=season, method=density_method)
 
-        # 4. Optionally render every classify_method for side-by-side comparison
-        #    (figures + label rasters), without changing which one feeds the dataset.
-        for compare_method in self.config["labels"].get("compare_classify_methods", []):
-            if compare_method != classify_method:
-                kde.classify(density, season=season, method=density_method, classify_method=compare_method)
-
         # 5. The method that actually feeds the model dataset
         train_labels = kde.classify(
             density, season=season, method=density_method, classify_method=classify_method

@@ -12,9 +12,8 @@ base:
 processing:
   cell_size_m: 30.0
   crs: "EPSG:27700"
-  training_years: [2009, 2020]    # [start, end)
-  validation_years: [2020, 2022]  # [start, end)
-  test_years: [2022, 9999]        # [start, end)
+  training_years: [2009, 2022]    # [start, end)
+  test_years: [2022, 2026]        # [start, end)
   force_recompute: false          # Set true to bypass caches and force feature generation
 
 seasons:
