@@ -34,7 +34,7 @@ dependencies = [
 
 [project.optional-dependencies]
 app = ["streamlit", "plotly"]
-modeling = ["xgboost", "torch", "mlflow", "optuna", "shap"]
+modeling = ["xgboost", "torch", "mlflow", "optuna", "shap", "imbalanced-learn"]
 dev = ["pytest", "pytest-cov", "ruff"]
 
 [tool.setuptools.packages.find]

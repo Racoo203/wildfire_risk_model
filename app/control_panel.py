@@ -8,9 +8,11 @@ import pandas as pd
 
 from wildfire_susceptibility.config.loader import ConfigLoader
 from wildfire_susceptibility.pipeline.dataset_builder import DatasetBuilder
-from wildfire_susceptibility.pipeline.train import ModelTrainer
-from wildfire_susceptibility.modeling.dataset_prep import DatasetPrep
+from wildfire_susceptibility.pipeline.train import run_training_pipeline, results_to_dataframe
+
 from wildfire_susceptibility import viz
+
+# app/control_panel.py — imports
 
 from wildfire_susceptibility.reporting import generate_all, ALL_CATEGORIES
 
@@ -74,6 +76,16 @@ cfg["modeling"]["cv_strategy"] = st.sidebar.selectbox(
 cfg["modeling"]["optuna_n_trials"] = st.sidebar.number_input(
     "Optuna trials", min_value=1, max_value=200, value=cfg["modeling"]["optuna_n_trials"]
 )
+
+cfg["modeling"]["use_smote"] = st.sidebar.checkbox(
+    "Use SMOTE oversampling", value=cfg["modeling"].get("use_smote", False)
+)
+if cfg["modeling"]["use_smote"]:
+    cfg["modeling"]["smote_k_neighbors"] = st.sidebar.number_input(
+        "SMOTE k_neighbors", min_value=1, max_value=20,
+        value=cfg["modeling"].get("smote_k_neighbors", 5),
+    )
+
 cfg["processing"]["force_recompute"] = st.sidebar.checkbox(
     "Force recompute (bypass cache)", value=cfg["processing"]["force_recompute"]
 )
@@ -130,7 +142,8 @@ for label, key in STAGES:
                     wf = DatasetBuilder(WORKING_CONFIG_PATH)
                     dataset_paths = wf.run_full_pipeline()
                     st.session_state["dataset_paths"] = dataset_paths
-                    st.success(f"Done: {dataset_paths}")
+                    st.success(f"Type: {type(dataset_paths)}")
+                    st.success(f"Done: {list(dataset_paths.keys())}")
 
                 elif key == "dataset_assembly":
                     st.info("Dataset assembly runs as part of the features/labels stage in the current pipeline.")
@@ -140,57 +153,32 @@ for label, key in STAGES:
                     if not dataset_paths:
                         st.error("Run features/labels first.")
                     else:
-                        for season, path in dataset_paths.items():
-                            st.markdown(f"### Training — {season}")
-                            df = pd.read_csv(path)
-                            prep = DatasetPrep(cfg)
-                            X_train, X_test, y_train, y_test = prep.stratified_split(df)
-                            groups_train = (
-                                prep.assign_spatial_blocks(X_train)
-                                if cfg["modeling"].get("cv_strategy") in ("spatial", "both")
-                                else None
+                        ref_path = Path(cfg["base"]["output_dir"]) / "topo_elevation.tif"
+
+                        n_trials = cfg["modeling"]["optuna_n_trials"]
+                        n_models = len(cfg["modeling"]["models"])
+                        n_seasons = len(dataset_paths)
+                        total_trials = max(n_trials * n_models * n_seasons, 1)
+
+                        overall_bar = st.progress(0)
+                        trial_log = st.empty()
+                        completed = {"n": 0}
+
+                        def _on_trial(season, model_name, trial_number, trial_value):
+                            completed["n"] += 1
+                            overall_bar.progress(min(completed["n"] / total_trials, 1.0))
+                            trial_log.text(
+                                f"[{season}][{model_name}] trial {trial_number + 1}/{n_trials} — AUC: {trial_value:.4f}"
                             )
-                            feature_cols = [c for c in X_train.columns if not c.startswith("_")]
-                            trainer = ModelTrainer(cfg)
 
-                            for model_name in cfg["modeling"]["models"]:
-                                st.write(f"**{model_name}**")
-                                progress_bar = st.progress(0)
-                                trial_placeholder = st.empty()
-                                chart_placeholder = st.empty()
-                                trial_history = []
+                        with st.spinner("Training + evaluating all seasons/models — this can run a long time..."):
+                            all_results = run_training_pipeline(
+                                cfg, dataset_paths, ref_path, progress_callback=_on_trial,
+                            )
+                        st.session_state["training_results"] = all_results
 
-                                n_trials = cfg["modeling"]["optuna_n_trials"]
-
-                                def _on_trial(m_name, trial_number, trial_value, _hist=trial_history):
-                                    _hist.append({"trial": trial_number, "auc": trial_value})
-                                    progress_bar.progress(min((trial_number + 1) / n_trials, 1.0))
-                                    trial_placeholder.text(
-                                        f"Trial {trial_number + 1}/{n_trials} — AUC: {trial_value:.4f} "
-                                        f"— best so far: {max(h['auc'] for h in _hist):.4f}"
-                                    )
-                                    hist_df = pd.DataFrame(_hist).set_index("trial")
-                                    chart_placeholder.line_chart(hist_df)
-
-                                result = trainer.train_one(
-                                    season, model_name,
-                                    X_train[feature_cols], y_train,
-                                    X_test[feature_cols], y_test,
-                                    groups_train=groups_train,
-                                    progress_callback=_on_trial,
-                                )
-
-                                metric_cols = st.columns(4)
-                                metric_cols[0].metric("CV AUC (standard)", f"{result['cv_auc_standard']:.4f}")
-                                if result["cv_auc_spatial"] is not None:
-                                    metric_cols[1].metric("CV AUC (spatial)", f"{result['cv_auc_spatial']:.4f}")
-                                    metric_cols[2].metric(
-                                        "Optimism gap",
-                                        f"{result['cv_auc_standard'] - result['cv_auc_spatial']:.4f}",
-                                    )
-                                metric_cols[3].metric("Val AUC", f"{result['val_auc']:.4f}")
-
-                            st.success(f"[{season}] all models trained.")
+                        st.success("Training and evaluation complete for all active seasons/models.")
+                        st.dataframe(results_to_dataframe(all_results))
 
                         st.divider()
                         st.subheader("mlflow run history")

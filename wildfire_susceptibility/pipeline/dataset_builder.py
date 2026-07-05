@@ -93,8 +93,8 @@ class DatasetBuilder:
         months: Tuple[int, ...],
         static_features: Dict[str, Path],
         ref_path: Path,
-    ) -> Dict[str, Path]:
-        """Returns {"train": path, "test": path} for this season."""
+    ) -> Dict[str, object]:
+        """Returns {"train": path, "test": path, "fire_train": gdf, "fire_test": gdf}."""
 
         fire_builder = FireBuilder(self.config)
         fire_train, fire_test = fire_builder.process(months=months, season=season)
@@ -107,7 +107,7 @@ class DatasetBuilder:
             "test": (self.config["processing"]["test_years"], fire_test),
         }
 
-        out_paths = {}
+        out_paths = {"fire_train": fire_train, "fire_test": fire_test}
         for split, (year_range, fire_gdf) in splits.items():
             seasonal_features = self._build_seasonal_features(season, months, year_range, split, ref_path)
             all_features = {**static_features, **seasonal_features}

@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from pathlib import Path
-from typing import Literal, List, Dict, Tuple
+from typing import Literal, List, Dict, Tuple, Optional
 
 class BaseConfig(BaseModel):
     region: str = Field(default="Essex")
@@ -109,6 +109,8 @@ class LabelsConfig(BaseModel):
     clustering_exclude_features: List[str] = Field(default_factory=lambda: ["tas", "tasmin"])
     clustering_variance_floor_pct: float = 0.01
 
+# wildfire_susceptibility/config/schema.py — ModelingConfig
+
 class ModelingConfig(BaseModel):
     models: List[Literal["random_forest", "svm", "xgboost", "neural_net"]] = Field(
         default_factory=lambda: ["random_forest", "svm", "xgboost", "neural_net"]
@@ -119,6 +121,9 @@ class ModelingConfig(BaseModel):
     selection_rule: Literal["best_auc", "most_conservative"] = "best_auc"
     cv_strategy: Literal["standard", "spatial", "both"] = "both"
     spatial_block_size_m: float = 5000.0
+    optuna_search_subsample: Optional[int] = None
+    use_smote: bool = False
+    smote_k_neighbors: int = 5
 
 class LoggingConfig(BaseModel):
     level: str = "INFO"

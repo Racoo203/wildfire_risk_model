@@ -91,12 +91,17 @@ logging:
   log_path: ./data/logs/pipeline.log
 modeling:
   cv_folds: 5
-  cv_strategy: standard
+  cv_strategy: spatial
   mlflow_experiment: wildfire-susceptibility-essex
   models:
   - random_forest
-  optuna_n_trials: 3
+  - svm
+  - xgboost
+  - neural_net
+  optuna_n_trials: 30
   selection_rule: best_auc
+  smote_k_neighbors: 5
+  use_smote: true
 processing:
   cell_size_m: 30.0
   crs: EPSG:27700
@@ -110,6 +115,8 @@ processing:
 seasons:
   active:
   - summer
+  - spring
+  - fall
   definitions:
     fall:
     - 9
