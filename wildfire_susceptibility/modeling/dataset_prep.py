@@ -97,12 +97,6 @@ class DatasetPrep:
                     f"supplied, so this includes out-of-boundary padding."
                 )
 
-        # Check if the remaining NaNs are actually inside your filtered scope
-        debug_in_domain = out[scope]
-        nans_in_domain = debug_in_domain["label"].isna().sum()
-        print(f"NaNs remaining in domain: {nans_in_domain}")
-        print(f"NaNs remaining out of domain: {out['label'].isna().sum() - nans_in_domain}")
-
         return out
 
     @staticmethod
