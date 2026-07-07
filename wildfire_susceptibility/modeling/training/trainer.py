@@ -14,7 +14,7 @@ import mlflow
 from sklearn.metrics import roc_auc_score, f1_score
 
 from ...core.registry import MODELS
-from ... import modeling  # noqa: F401 — registers model wrappers
+from .. import models  # noqa: F401 — registers model wrappers (two dots: training/ -> modeling/)
 from ..dataset_prep import DatasetPrep
 from .resampling import SMOTEResampler
 from .cv import FoldStrategy
@@ -23,10 +23,16 @@ from .evaluation import PostTrainingEvaluator
 
 logger = logging.getLogger(__name__)
 
+# wildfire_susceptibility/modeling/training/trainer.py — __init__
 
+import mlflow
+from pathlib import Path
+
+MLFLOW_TRACKING_URI = "sqlite:///data/silver/dbs/mlflow.db"
 class ModelTrainer:
     def __init__(self, config: dict):
         self.config = config
+        self._ensure_mlflow_backend()
         mlflow.set_experiment(config["modeling"]["mlflow_experiment"])
 
         resampler = SMOTEResampler(config)
@@ -34,6 +40,18 @@ class ModelTrainer:
         self.search = HyperparamSearch(config, self.fold_strategy)
         self.evaluator = PostTrainingEvaluator(config)
         self.dataset_prep = DatasetPrep(config)
+
+    @staticmethod
+    def _ensure_mlflow_backend() -> None:
+        """
+        mlflow's plain filesystem store ('./mlruns') is deprecated in newer
+        mlflow versions and raises unless explicitly opted into. Use the
+        same sqlite-backed pattern as Optuna instead, so both trackers are
+        consistent, persistent, and compatible with the mlflow UI / dashboard.
+        """
+        db_path = Path("data/silver/dbs/mlflow.db")
+        db_path.parent.mkdir(parents=True, exist_ok=True)
+        mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
 
     def train_all(
         self,
