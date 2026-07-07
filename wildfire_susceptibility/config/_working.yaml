@@ -99,6 +99,7 @@ modeling:
   - xgboost
   - neural_net
   optuna_n_trials: 30
+  optuna_search_subsample: 50000
   selection_rule: best_auc
   smote_k_neighbors: 5
   use_smote: true
