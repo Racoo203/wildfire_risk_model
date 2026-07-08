@@ -35,8 +35,14 @@ class ModelTrainer:
         self._ensure_mlflow_backend()
         mlflow.set_experiment(config["modeling"]["mlflow_experiment"])
 
-        resampler = SMOTEResampler(config)
-        self.fold_strategy = FoldStrategy(config, resampler)
+        no_smote_config = {
+            **config,
+            "modeling": {**config["modeling"], "use_smote": False},
+        }
+        search_resampler = SMOTEResampler(no_smote_config)
+        self.final_resampler = SMOTEResampler(config)
+
+        self.fold_strategy = FoldStrategy(config, search_resampler)
         self.search = HyperparamSearch(config, self.fold_strategy)
         self.evaluator = PostTrainingEvaluator(config)
         self.dataset_prep = DatasetPrep(config)
@@ -141,8 +147,9 @@ class ModelTrainer:
     def _subsample_for_search(self, X_tr, y_train, season, model_name):
         from sklearn.model_selection import train_test_split
 
-        n = self.config["modeling"].get("optuna_search_subsample_by_model", {}).get(model_name) \
-            or self.config["modeling"].get("optuna_search_subsample")
+        # n = self.config["modeling"].get("optuna_search_subsample_by_model", {}).get(model_name) \
+        #     or self.config["modeling"].get("optuna_search_subsample")
+        n = self.config["modeling"].get("optuna_search_subsample")
         if not n or len(X_tr) <= n:
             return X_tr, y_train
 
@@ -183,8 +190,9 @@ class ModelTrainer:
         return cv_auc_spatial
 
     def _fit_final_and_validate(self, model_cls, best_params, X_tr, y_train, X_va, y_val, season, model_name):
-        resampler = self.fold_strategy.resampler
-        X_fit, y_fit = resampler.resample(X_tr.values, y_train.values, context=f"[{season}][{model_name}] final refit")
+        X_fit, y_fit = self.final_resampler.resample(
+            X_tr.values, y_train.values, context=f"[{season}][{model_name}] final refit"
+        )
 
         final_model = model_cls(**best_params)
         final_model.fit(X_fit, y_fit)

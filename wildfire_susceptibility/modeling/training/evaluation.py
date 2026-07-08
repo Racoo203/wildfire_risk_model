@@ -7,6 +7,7 @@ import geopandas as gpd
 import mlflow
 import rasterio
 
+from ..metrics import compute_full_metrics, log_metrics_to_mlflow, save_metrics_sidecar
 from ..evaluate import evaluate_on_test, generate_susceptibility_raster
 
 logger = logging.getLogger(__name__)
@@ -18,21 +19,36 @@ class PostTrainingEvaluator:
         self.config = config
 
     def evaluate(
-        self,
-        final_model,
-        X_val,
-        y_val,
-        season: str,
-        model_name: str,
-        ref_path: Optional[Path],
-        fire_test_gdf: Optional[gpd.GeoDataFrame],
-        x_coords: Optional[np.ndarray],
-        y_coords: Optional[np.ndarray],
-    ) -> Dict:
-        defaults = {"shap_path": None, "time_forward_validation": None, "susceptibility_map_path": None}
+            self, 
+            final_model, 
+            X_val, 
+            y_val, 
+            season, 
+            model_name, 
+            ref_path, 
+            fire_test_gdf, 
+            x_coords, 
+            y_coords
+        ):
+        defaults = {
+            "shap_path": None, 
+            "time_forward_validation": None, 
+            "susceptibility_map_path": None, 
+            "full_metrics_path": None
+        }
+
+        y_proba = final_model.predict_proba(X_val.values)
+        full_metrics = compute_full_metrics(y_val.values, y_proba)
+        log_metrics_to_mlflow(full_metrics)
+
+        figures_dir = Path(self.config["base"]["figures_dir"])
+        defaults["full_metrics_path"] = save_metrics_sidecar(full_metrics, figures_dir, season, model_name)
+
+        from ...viz.charts import plot_confusion_matrix
+        plot_confusion_matrix(full_metrics["confusion_matrix"], CLASS_NAMES, figures_dir, season=season, model_name=model_name)
 
         if ref_path is None:
-            logger.info(f"[{season}][{model_name}] No ref_path supplied; skipping post-training evaluation.")
+            logger.info(f"[{season}][{model_name}] No ref_path supplied; skipping remaining post-training evaluation.")
             return defaults
 
         results = evaluate_on_test(

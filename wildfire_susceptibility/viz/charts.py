@@ -226,3 +226,33 @@ def plot_cv_comparison(figures_dir, season=None, mlflow_experiment=None):
 
     out_path = Path(figures_dir) / (season or "static") / "models" / "cv_comparison.png"
     return _save_and_log(fig, out_path, figures_dir, "cv_comparison", "viz.charts.plot_cv_comparison", season)
+
+def plot_confusion_matrix(
+    cm: np.ndarray,
+    class_names: List[str],
+    figures_dir: Path,
+    season: Optional[str] = None,
+    model_name: Optional[str] = None,
+    normalize: bool = True,
+) -> Path:
+    cm = np.array(cm, dtype="float64")
+    if normalize:
+        row_sums = cm.sum(axis=1, keepdims=True)
+        cm = np.divide(cm, row_sums, out=np.zeros_like(cm), where=row_sums != 0)
+
+    fig, ax = plt.subplots(figsize=(6, 5))
+    sns.heatmap(cm, annot=True, fmt=".2f" if normalize else ".0f", cmap="Blues",
+                xticklabels=class_names, yticklabels=class_names, ax=ax, cbar=True)
+    ax.set_xlabel("Predicted")
+    ax.set_ylabel("Actual")
+    title = "Confusion Matrix" + (" (row-normalized)" if normalize else "")
+    if model_name:
+        title += f" — {model_name}"
+    if season:
+        title += f" ({season})"
+    ax.set_title(title)
+
+    fname = f"confusion_matrix_{model_name or 'model'}.png"
+    out_path = Path(figures_dir) / (season or "static") / "models" / fname
+    return _save_and_log(fig, out_path, figures_dir, "confusion_matrix",
+                          "viz.charts.plot_confusion_matrix", season, params={"model": model_name})

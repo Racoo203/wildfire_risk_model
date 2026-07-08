@@ -37,15 +37,18 @@ class SMOTEResampler:
             logger.warning(f"{context}: smallest class has {min_class_count} sample(s); skipping SMOTE.")
             return X, y
 
+        majority_count = int(counts.max())
         strategy = self.sampling_strategy
         if isinstance(strategy, dict):
-            # y's class labels may be float32 (0.0, 1.0, ...) while config keys
-            # are plain ints — normalize both to int before matching.
             current = {int(c): n for c, n in zip(classes.tolist(), counts.tolist())}
-            strategy = {
-                int(cls): target for cls, target in strategy.items()
-                if int(cls) in current and target > current[int(cls)]
-            }
+            strategy = {}
+            for cls, target in self.sampling_strategy.items():
+                cls = int(cls)
+                if cls not in current:
+                    continue
+                capped_target = min(target, majority_count)
+                if capped_target > current[cls]:
+                    strategy[cls] = capped_target
             if not strategy:
                 return X, y
 
@@ -54,7 +57,7 @@ class SMOTEResampler:
         X_res, y_res = smote.fit_resample(X, y)
 
         logger.info(
-            f"{context}: SMOTE {dict(zip(classes, counts))} -> "
+            f"{context}: SMOTE applied — {dict(zip(classes, counts))} -> "
             f"{dict(zip(*np.unique(y_res, return_counts=True)))} (k={k}, strategy={strategy})"
         )
         return X_res, y_res

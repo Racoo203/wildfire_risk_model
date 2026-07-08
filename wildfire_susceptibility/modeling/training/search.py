@@ -4,6 +4,7 @@ import logging
 
 import numpy as np
 import optuna
+import hashlib
 from tqdm import tqdm
 
 from .cv import FoldStrategy
@@ -21,18 +22,50 @@ class HyperparamSearch:
         self._ensure_storage_dir()
 
     @staticmethod
+    def _param_space_signature(model_cls) -> str:
+        """
+        A short hash capturing the *shape* of param_space — distribution
+        types and, for categoricals, their choices — so that changing a
+        model's search space (e.g. dropping 'poly' from SVM's kernel
+        choices) produces a new study name instead of colliding with an
+        old study's incompatible persisted distributions.
+
+        Uses a dummy optuna trial to introspect what suggest_* calls the
+        model's param_space() makes, without needing a live study.
+        """
+        import optuna
+
+        probe_study = optuna.create_study()
+        probe_trial = probe_study.ask()
+        space = model_cls().param_space(probe_trial)
+
+        # Capture each param's distribution signature from the probe trial.
+        parts = []
+        for name in sorted(space.keys()):
+            dist = probe_trial.distributions[name]
+            parts.append(f"{name}:{dist!r}")
+        signature = "|".join(parts)
+        return hashlib.sha1(signature.encode()).hexdigest()[:8]
+
+    @staticmethod
     def _ensure_storage_dir() -> None:
         db_path = Path(OPTUNA_STORAGE.replace("sqlite:///", ""))
         db_path.parent.mkdir(parents=True, exist_ok=True)
 
     def get_or_create_study(self, season: str, model_name: str) -> optuna.Study:
+        from ...core.registry import MODELS
+
+        model_cls = MODELS[model_name]
+        sig = self._param_space_signature(model_cls)
+        study_name = f"{season}_{model_name}_{sig}"
+
         storage = optuna.storages.RDBStorage(
             url=OPTUNA_STORAGE,
             engine_kwargs={"connect_args": {"timeout": 30}},
         )
         study = optuna.create_study(
             direction="maximize",
-            study_name=f"{season}_{model_name}",
+            study_name=study_name,
             storage=storage,
             load_if_exists=True,
             pruner=optuna.pruners.MedianPruner(n_warmup_steps=1),

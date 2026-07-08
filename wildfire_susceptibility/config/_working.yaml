@@ -99,9 +99,9 @@ modeling:
   - xgboost
   - neural_net
   optuna_n_trials: 30
-  optuna_search_subsample: 50000
-  optuna_search_subsample_by_model:
-    svm: 6000
+  optuna_search_subsample: 100000
+  # optuna_search_subsample_by_model:
+  #   svm: 6000
   selection_rule: best_auc
   use_smote: true
   smote_sampling_strategy:

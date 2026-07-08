@@ -6,4 +6,5 @@ FigureCategory = Literal[
     "class_balance", "nan_coverage",
     "roc_curve", "shap_summary", "cv_comparison",
     "label_density_diagnostic", "label_cleaning_comparison",
+    "confusion_matrix"
 ]
