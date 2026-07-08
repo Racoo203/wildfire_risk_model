@@ -28,14 +28,8 @@ class _FeedForward(nn.Module):
 @MODELS.register("neural_net")
 class NeuralNetModel:
     def __init__(
-        self,
-        hidden_dim: int = 64,
-        n_layers: int = 2,
-        dropout: float = 0.2,
-        lr: float = 1e-3,
-        epochs: int = 50,
-        batch_size: int = 256,
-        **kwargs,
+        self, hidden_dim=64, n_layers=2, dropout=0.2, lr=1e-3,
+        epochs=50, batch_size=256, weight_decay=0.0, **kwargs,
     ):
         self.hidden_dim = hidden_dim
         self.n_layers = n_layers
@@ -43,15 +37,15 @@ class NeuralNetModel:
         self.lr = lr
         self.epochs = epochs
         self.batch_size = batch_size
-        self.model: _FeedForward | None = None
-        self.n_classes: int | None = None
+        self.weight_decay = weight_decay
+        self.model = None
+        self.n_classes = None
 
-    def fit(self, X: np.ndarray, y: np.ndarray) -> "NeuralNetModel":
+    def fit(self, X, y):
         self.n_classes = int(np.max(y)) + 1
         n_features = X.shape[1]
-
         self.model = _FeedForward(n_features, self.n_classes, self.hidden_dim, self.n_layers, self.dropout)
-        optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
+        optimizer = optim.Adam(self.model.parameters(), lr=self.lr, weight_decay=self.weight_decay)
         criterion = nn.CrossEntropyLoss()
 
         X_t = torch.as_tensor(X, dtype=torch.float32)
@@ -79,10 +73,13 @@ class NeuralNetModel:
 
     def param_space(self, trial) -> dict:
         return {
-            "hidden_dim": trial.suggest_categorical("hidden_dim", [32, 64, 128]),
+            "hidden_dim": trial.suggest_categorical("hidden_dim", [32, 64, 128, 256]),
             "n_layers": trial.suggest_int("n_layers", 1, 4),
             "dropout": trial.suggest_float("dropout", 0.0, 0.5),
             "lr": trial.suggest_float("lr", 1e-4, 1e-2, log=True),
+            "weight_decay": trial.suggest_float("weight_decay", 1e-6, 1e-2, log=True),
+            "batch_size": trial.suggest_categorical("batch_size", [128, 256, 512]),
+            "epochs": trial.suggest_int("epochs", 20, 80),
         }
 
     def needs_scaling(self) -> bool:

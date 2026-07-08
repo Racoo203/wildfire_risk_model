@@ -141,7 +141,8 @@ class ModelTrainer:
     def _subsample_for_search(self, X_tr, y_train, season, model_name):
         from sklearn.model_selection import train_test_split
 
-        n = self.config["modeling"].get("optuna_search_subsample")
+        n = self.config["modeling"].get("optuna_search_subsample_by_model", {}).get(model_name) \
+            or self.config["modeling"].get("optuna_search_subsample")
         if not n or len(X_tr) <= n:
             return X_tr, y_train
 

@@ -53,7 +53,7 @@ class SMOTEResampler:
         smote = SMOTE(sampling_strategy=strategy, k_neighbors=k, random_state=42)
         X_res, y_res = smote.fit_resample(X, y)
 
-        logger.debug(
+        logger.info(
             f"{context}: SMOTE {dict(zip(classes, counts))} -> "
             f"{dict(zip(*np.unique(y_res, return_counts=True)))} (k={k}, strategy={strategy})"
         )

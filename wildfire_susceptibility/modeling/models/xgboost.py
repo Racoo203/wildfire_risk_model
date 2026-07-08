@@ -11,7 +11,11 @@ class XGBoostModel:
 
     def fit(self, X: np.ndarray, y: np.ndarray) -> "XGBoostModel":
         self.model = xgb.XGBClassifier(
-            random_state=42, eval_metric="mlogloss", **self.params
+            random_state=42, 
+            eval_metric="mlogloss", 
+            objective="multi:softprob",
+            n_jobs=-1, 
+            **self.params,
         )
         self.model.fit(X, y)
         return self
@@ -26,6 +30,9 @@ class XGBoostModel:
             "n_estimators": trial.suggest_int("n_estimators", 100, 800),
             "subsample": trial.suggest_float("subsample", 0.5, 1.0),
             "colsample_bytree": trial.suggest_float("colsample_bytree", 0.5, 1.0),
+            "min_child_weight": trial.suggest_int("min_child_weight", 1, 10),
+            "reg_alpha": trial.suggest_float("reg_alpha", 1e-8, 10.0, log=True),
+            "reg_lambda": trial.suggest_float("reg_lambda", 1e-8, 10.0, log=True),
         }
 
     def needs_scaling(self) -> bool:

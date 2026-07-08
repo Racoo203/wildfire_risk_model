@@ -40,6 +40,7 @@ class FoldStrategy:
         test_idx: np.ndarray,
         context: str = "",
     ) -> float:
+        logger.info(f"{context}: fitting on {len(train_idx):,} rows...")
         X_tr = X.iloc[train_idx].values
         y_tr = y.iloc[train_idx].values
         X_tr, y_tr = self.resampler.resample(X_tr, y_tr, context=context)

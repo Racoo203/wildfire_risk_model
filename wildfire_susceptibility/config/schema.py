@@ -125,6 +125,9 @@ class ModelingConfig(BaseModel):
     use_smote: bool = False
     smote_k_neighbors: int = 5
     smote_sampling_strategy: Optional[Dict[int, int]] = None
+    optuna_search_subsample_by_model: Dict[str, int] = Field(
+        default_factory=lambda: {"svm": 6000}
+    )
 
 class LoggingConfig(BaseModel):
     level: str = "INFO"
