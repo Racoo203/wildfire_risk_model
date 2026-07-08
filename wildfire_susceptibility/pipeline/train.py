@@ -9,12 +9,23 @@ from pathlib import Path
 import logging
 
 import pandas as pd
+import mlflow
 
 from ..modeling.dataset_prep import DatasetPrep
 from ..modeling.training.trainer import ModelTrainer
 
 logger = logging.getLogger(__name__)
 
+def _already_trained(experiment_name: str, season: str, model_name: str) -> bool:
+    try:
+        runs = mlflow.search_runs(
+            experiment_names=[experiment_name],
+            filter_string=f"tags.season = '{season}' and tags.model = '{model_name}' and status = 'FINISHED'",
+        )
+        return not runs.empty
+    except Exception as exc:
+        logger.warning(f"Could not query mlflow for existing runs ({season}/{model_name}): {exc}")
+        return False
 
 def run_training_pipeline(
     config: dict,
@@ -59,6 +70,10 @@ def run_training_pipeline(
 
         season_results = {}
         for model_name in config["modeling"]["models"]:
+            experiment_name = config["modeling"]["mlflow_experiment"]
+            if not config["processing"].get("force_recompute", False) and _already_trained(experiment_name, season, model_name):
+                logger.info(f"[{season}][{model_name}] FINISHED run already exists in mlflow; skipping.")
+                continue
             cb = (lambda t, v, _s=season, _m=model_name: progress_callback(_s, _m, t, v)) if progress_callback else None
             season_results[model_name] = trainer.train_one(
                 season, model_name,

@@ -1,6 +1,6 @@
 import yaml
 from pathlib import Path
-from typing import Union, Tuple, Dict
+from typing import Union, Tuple, Dict, Optional
 
 import numpy as np
 import rasterio
@@ -102,12 +102,16 @@ class DatasetBuilder:
         fire_prox_builder = FireProximityBuilder(self.config, ref_path)
         fire_prox_features = fire_prox_builder.process(fire_train, season=season)
 
+        # dict order (train, test) matters here: train must be classified FIRST
+        # so its fit artifact can be frozen and reused for test — see label_fit.
         splits = {
             "train": (self.config["processing"]["training_years"], fire_train),
             "test": (self.config["processing"]["test_years"], fire_test),
         }
 
         out_paths = {"fire_train": fire_train, "fire_test": fire_test}
+        label_fit = None  # populated after the train split classifies; reused, not refit, for test
+
         for split, (year_range, fire_gdf) in splits.items():
             seasonal_features = self._build_seasonal_features(season, months, year_range, split, ref_path)
             all_features = {**static_features, **seasonal_features}
@@ -115,7 +119,7 @@ class DatasetBuilder:
             if self.config["labels"].get("include_d_fires_as_feature", True):
                 all_features.update(fire_prox_features)
 
-            raw_labels = self._build_raw_labels(fire_gdf, season, split, ref_path)
+            raw_labels, label_fit = self._build_raw_labels(fire_gdf, season, split, ref_path, fitted=label_fit)
             out_paths[split] = self._assemble_dataset(season, split, all_features, raw_labels, ref_path)
 
         return out_paths
@@ -136,24 +140,28 @@ class DatasetBuilder:
 
         return seasonal_features
     
-    def _build_raw_labels(self, fire_gdf, season: str, split: str, ref_path: Path) -> np.ndarray:
+    def _build_raw_labels(
+        self, fire_gdf, season: str, split: str, ref_path: Path, fitted: Optional[dict] = None
+    ) -> Tuple[np.ndarray, dict]:
         """
-        Density + classification, computed independently per split so the
-        test set has its own genuine class labels (needed for a real,
-        year-disjoint test table rather than a random stratified split).
+        Density + classification. `fitted` is None for the train split (fits a
+        new classifier) and the train split's returned fit artifact for the
+        test split (applies the frozen boundaries — never refits on test
+        density, which would otherwise silently redefine what "High" means).
         """
         density_method = self.config["labels"].get("density_method", "convolution")
         classify_method = self.config["labels"].get("classify_method", "percentile")
 
         kde = KernelDensityClassifier(self.config, ref_path)
         density = kde.compute_density(fire_gdf, season=f"{season}_{split}", method=density_method)
-        labels = kde.classify(
-            density, 
-            season=f"{season}_{split}", 
-            method=density_method, 
-            classify_method=classify_method
+        labels, fit_artifact = kde.classify(
+            density,
+            season=f"{season}_{split}",
+            method=density_method,
+            classify_method=classify_method,
+            fitted=fitted,
         )
-        return labels
+        return labels, fit_artifact
 
     def _assemble_dataset(
         self, season: str, split: str, features: Dict[str, Path], labels: np.ndarray, ref_path: Path

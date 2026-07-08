@@ -20,36 +20,41 @@ class SMOTEResampler:
         modeling_cfg = config["modeling"]
         self.enabled = modeling_cfg.get("use_smote", False)
         self.k_neighbors = modeling_cfg.get("smote_k_neighbors", 5)
+        self.sampling_strategy = modeling_cfg.get("smote_sampling_strategy", "auto")
 
-    def resample(self, X: np.ndarray, y: np.ndarray, context: str = "") -> Tuple[np.ndarray, np.ndarray]:
+    def resample(self, X, y, context=""):
         if not self.enabled:
             return X, y
-
         try:
             from imblearn.over_sampling import SMOTE
         except ImportError:
-            logger.warning(
-                f"{context}: use_smote=True but imbalanced-learn is not installed "
-                f"(pip install -e '.[modeling]'); skipping SMOTE for this call."
-            )
+            logger.warning(f"{context}: use_smote=True but imbalanced-learn is not installed; skipping.")
             return X, y
 
         classes, counts = np.unique(y, return_counts=True)
         min_class_count = int(counts.min())
-
         if min_class_count <= 1:
-            logger.warning(
-                f"{context}: smallest class has {min_class_count} sample(s) in this fold; "
-                f"skipping SMOTE (cannot form neighbors)."
-            )
+            logger.warning(f"{context}: smallest class has {min_class_count} sample(s); skipping SMOTE.")
             return X, y
 
+        strategy = self.sampling_strategy
+        if isinstance(strategy, dict):
+            # y's class labels may be float32 (0.0, 1.0, ...) while config keys
+            # are plain ints — normalize both to int before matching.
+            current = {int(c): n for c, n in zip(classes.tolist(), counts.tolist())}
+            strategy = {
+                int(cls): target for cls, target in strategy.items()
+                if int(cls) in current and target > current[int(cls)]
+            }
+            if not strategy:
+                return X, y
+
         k = min(self.k_neighbors, min_class_count - 1)
-        smote = SMOTE(k_neighbors=k, random_state=42)
+        smote = SMOTE(sampling_strategy=strategy, k_neighbors=k, random_state=42)
         X_res, y_res = smote.fit_resample(X, y)
 
         logger.debug(
             f"{context}: SMOTE {dict(zip(classes, counts))} -> "
-            f"{dict(zip(*np.unique(y_res, return_counts=True)))} (k={k})"
+            f"{dict(zip(*np.unique(y_res, return_counts=True)))} (k={k}, strategy={strategy})"
         )
         return X_res, y_res

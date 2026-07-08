@@ -124,6 +124,7 @@ class ModelingConfig(BaseModel):
     optuna_search_subsample: Optional[int] = None
     use_smote: bool = False
     smote_k_neighbors: int = 5
+    smote_sampling_strategy: Optional[Dict[int, int]] = None
 
 class LoggingConfig(BaseModel):
     level: str = "INFO"

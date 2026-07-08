@@ -57,5 +57,10 @@ class FoldStrategy:
     def mean_auc_across_folds(
         self, model_cls, params, X, y, folds, context: str = "",
     ) -> float:
-        scores = [self.fit_and_score(model_cls, params, X, y, tr, te, context) for tr, te in folds]
+        scores = []
+        for i, (train_idx, test_idx) in enumerate(folds):
+            fold_context = f"{context} fold {i + 1}/{len(folds)}"
+            auc = self.fit_and_score(model_cls, params, X, y, train_idx, test_idx, context=fold_context)
+            logger.info(f"{fold_context} AUC={auc:.4f}")
+            scores.append(auc)
         return float(np.mean(scores))

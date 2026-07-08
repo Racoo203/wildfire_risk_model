@@ -101,8 +101,12 @@ modeling:
   optuna_n_trials: 30
   optuna_search_subsample: 50000
   selection_rule: best_auc
-  smote_k_neighbors: 5
   use_smote: true
+  smote_sampling_strategy:
+    1: 400000
+    2: 200000
+    3: 100000
+  smote_k_neighbors: 5
 processing:
   cell_size_m: 30.0
   crs: EPSG:27700
