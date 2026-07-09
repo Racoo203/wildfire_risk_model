@@ -83,9 +83,9 @@ def plot_vif_correlation(
     corr_threshold: float = 0.8,
 ) -> Dict[str, Path]:
     """
-    VIF bar chart + Pearson correlation heatmap, using the paper's exact
-    thresholds (Section 1.3): VIF > 10 or |corr| > 0.8 flags a feature.
-    Returns paths to all three figures (vif, correlation, spearman).
+    VIF bar chart + Spearman correlation heatmap, using the paper's exact
+    thresholds (Section 1.3): VIF > 10 flags a feature.
+    Returns paths to VIF and Spearman figures.
     """
     X = df[feature_cols].dropna()
     X_with_const = sm.add_constant(X)
@@ -111,43 +111,22 @@ def plot_vif_correlation(
         "vif", "viz.charts.plot_vif_correlation", season, params={"threshold": vif_threshold},
     )
 
-    corr = X.corr()
-    fig2, ax2 = plt.subplots(figsize=(8, 7))
-    mask_high = corr.abs() > corr_threshold
-    sns.heatmap(corr, cmap="coolwarm", center=0, vmin=-1, vmax=1, ax=ax2, annot=False, square=True)
-    ax2.set_title(f"Feature Correlation (|r| > {corr_threshold} flagged)" + (f" — {season}" if season else ""))
-    corr_path = _save_and_log(
-        fig2, Path(figures_dir) / (season or "static") / "eda" / "correlation.png", figures_dir,
-        "correlation", "viz.charts.plot_vif_correlation", season, params={"threshold": corr_threshold},
-    )
+    if (vifs > vif_threshold).any():
+        logging.getLogger(__name__).warning(
+            f"[{season}] VIF: {(vifs > vif_threshold).sum()} feature(s) exceed VIF>{vif_threshold}"
+        )
 
     corr_spearman = X.corr(method="spearman")
-    fig3, ax3 = plt.subplots(figsize=(8, 7))
-    sns.heatmap(corr_spearman, cmap="coolwarm", center=0, vmin=-1, vmax=1, ax=ax3, square=True)
-    ax3.set_title("Spearman correlation" + (f" — {season}" if season else ""))
+    fig2, ax2 = plt.subplots(figsize=(8, 7))
+    sns.heatmap(corr_spearman, cmap="coolwarm", center=0, vmin=-1, vmax=1, ax=ax2, square=True,
+                annot=True, fmt=".2g", annot_kws={"size": 8})
+    ax2.set_title("Spearman correlation" + (f" — {season}" if season else ""))
     spearman_path = _save_and_log(
-        fig3, Path(figures_dir) / (season or "static") / "eda" / "correlation_spearman.png",
+        fig2, Path(figures_dir) / (season or "static") / "eda" / "correlation_spearman.png",
         figures_dir, "correlation_spearman", "viz.charts.plot_vif_correlation", season,
     )
 
-    n_flagged = int((mask_high.sum().sum() - len(feature_cols)) / 2)
-    if n_flagged > 0 or (vifs > vif_threshold).any():
-        logging.getLogger(__name__).warning(
-            f"[{season}] VIF/correlation: {(vifs > vif_threshold).sum()} feature(s) exceed VIF>{vif_threshold}, "
-            f"{n_flagged} pair(s) exceed |corr|>{corr_threshold}"
-        )
-
-    disagreement = (corr_spearman - corr).abs()
-    mask_upper = np.triu(np.ones(disagreement.shape, dtype=bool), k=1)
-    notable = disagreement.where(mask_upper).stack()
-    notable = notable[notable > 0.15].index.tolist()
-    if notable:
-        logging.getLogger(__name__).info(
-            f"[{season}] {len(notable)} feature pair(s) show notable Pearson/Spearman "
-            f"divergence (>0.15) — possible non-linear monotonic relationship: {notable[:5]}"
-        )
-
-    return {"vif": vif_path, "correlation": corr_path, "spearman": spearman_path}
+    return {"vif": vif_path, "spearman": spearman_path}
 
 
 def plot_class_balance(

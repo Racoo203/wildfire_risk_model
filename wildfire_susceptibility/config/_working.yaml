@@ -100,19 +100,17 @@ modeling:
   - neural_net
   optuna_n_trials: 30
   optuna_search_subsample: 100000
-  # optuna_search_subsample_by_model:
-  #   svm: 6000
   selection_rule: best_auc
-  use_smote: true
+  smote_k_neighbors: 5
   smote_sampling_strategy:
     1: 400000
     2: 200000
     3: 100000
-  smote_k_neighbors: 5
+  use_smote: true
 processing:
   cell_size_m: 30.0
   crs: EPSG:27700
-  force_recompute: false
+  force_recompute: true
   test_years:
   - 2022
   - 2026
