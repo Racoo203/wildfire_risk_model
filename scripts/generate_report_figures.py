@@ -157,7 +157,7 @@
 
 #     feature_cols = [c for c in df.columns if c not in ("label",) and not c.startswith("_")]
 
-#     # VIF + Pearson + Spearman correlation, using the paper's exact thresholds
+#     # VIF + Spearman correlation, using the paper's exact thresholds
 #     viz.plot_vif_correlation(df, feature_cols, figures_dir, season=season)
 
 #     # NaN coverage — read directly from the raster feature stack so pre-

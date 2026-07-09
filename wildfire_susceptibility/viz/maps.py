@@ -22,6 +22,8 @@ _FACTOR_CMAPS = {
     "d_rivers": "Blues_r",
     "d_activity": "Blues_r",
     "d_fires": "Reds_r",
+    "d_buildings": "Blues_r",
+    "land_use": "tab10",
 }
 
 _SUSCEPTIBILITY_CMAP = "RdYlGn_r"  # low (green) -> very high (red)
