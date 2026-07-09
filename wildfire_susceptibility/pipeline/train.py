@@ -42,7 +42,7 @@ def run_training_pipeline(
     Designed to be started once and left running unattended.
     """
     prep = DatasetPrep(config)
-    climate_vars = tuple(config["data_sources"]["haduk"]["sources"])
+    climate_vars = tuple(config["data_sources"]["haduk"]["sources"]) + ("diurnal_range",)
     trainer = ModelTrainer(config)
     block_size = config["modeling"].get("spatial_block_size_m", 5000.0)
 
@@ -59,7 +59,12 @@ def run_training_pipeline(
         X_train, y_train = df_train.drop(columns=["label"]), df_train["label"]
         X_test, y_test = df_test.drop(columns=["label"]), df_test["label"]
 
-        feature_cols = [c for c in X_train.columns if not c.startswith("_")]
+        excluded_features = set(config["modeling"].get("excluded_features", ["tas", "tasmin"]))
+        feature_cols = [
+            c for c in X_train.columns
+            if not c.startswith("_") and c not in excluded_features
+        ]
+
         groups_train = (
             prep.assign_spatial_blocks(X_train, block_size_m=block_size)
             if config["modeling"].get("cv_strategy") in ("spatial", "both")

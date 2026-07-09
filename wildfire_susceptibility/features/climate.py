@@ -18,6 +18,14 @@ class ClimateBuilder(VarBuilder):
 
     Pipeline per variable:
         load + average NetCDF ->  write native-BNG GeoTIFF -> clip -> align
+
+    In addition to the raw variables listed in data_sources.haduk.sources,
+    this also derives `diurnal_range` (tasmax - tasmin) whenever both are
+    present, so it's always available as a feature. Which temperature
+    columns actually get *used* for modeling/label-cleaning (e.g. dropping
+    the redundant `tas` in favour of `tasmax` + `diurnal_range`) is a
+    separate, config-driven decision made later — see
+    labels.clustering_exclude_features and modeling.excluded_features.
     """
 
     def process(
@@ -37,11 +45,17 @@ class ClimateBuilder(VarBuilder):
         create a train/test feature mismatch for the years that matter most.
         """
         data_config = self.config["data_sources"]["haduk"]
+        sources = list(data_config["sources"])
+        derive_diurnal_range = "tasmax" in sources and "tasmin" in sources
 
         output_paths = {
             var: self.output_dir / f"meteo_{self._seasonal_name(var, season)}_{split}.tif"
-            for var in data_config["sources"]
+            for var in sources
         }
+        if derive_diurnal_range:
+            output_paths["diurnal_range"] = (
+                self.output_dir / f"meteo_{self._seasonal_name('diurnal_range', season)}_{split}.tif"
+            )
 
         if self._check_cache(f"ClimateBuilder[{season}][{split}]", output_paths):
             return output_paths
@@ -49,15 +63,47 @@ class ClimateBuilder(VarBuilder):
         haduk_dir = Path(data_config["data_dir"])
         self._validate_reference()
 
-        for var_name, out_path in output_paths.items():
+        diurnal_inputs: Dict[str, Tuple[np.ndarray, np.ndarray, np.ndarray]] = {}
+        for var_name in sources:
+            out_path = output_paths[var_name]
             mean_grid, lons, lats = self._load_seasonal_mean(haduk_dir, var_name, year_range, months)
+            if derive_diurnal_range and var_name in ("tasmax", "tasmin"):
+                diurnal_inputs[var_name] = (mean_grid, lons, lats)
+
             native_bng = self._write_native_bng(mean_grid, lons, lats, var_name, f"{season}_{split}")
             self._to_reference(native_bng, out_path, tmp_stem=f"_tmp_clip_{var_name}_{season}_{split}")
             native_bng.unlink()
             self.logger.info(f"[{season}][{split}] Climate feature ready: {var_name} → {out_path.name}")
 
+        if derive_diurnal_range:
+            self._write_diurnal_range(diurnal_inputs, output_paths["diurnal_range"], season, split)
+
         return output_paths
-    
+
+    def _write_diurnal_range(
+        self,
+        diurnal_inputs: Dict[str, Tuple[np.ndarray, np.ndarray, np.ndarray]],
+        out_path: Path,
+        season: Optional[str],
+        split: str,
+    ) -> None:
+        """
+        Derive mean diurnal temperature range (tasmax - tasmin) from the two
+        seasonal-mean grids already computed in process(). This is
+        mean-of-maxima minus mean-of-minima rather than a true per-day
+        range averaged over the season — HadUK-Grid's monthly files don't
+        expose daily max/min separately, so this is the closest faithful
+        derivation available at this temporal resolution.
+        """
+        tasmax_grid, lons, lats = diurnal_inputs["tasmax"]
+        tasmin_grid, _, _ = diurnal_inputs["tasmin"]
+        diurnal_grid = (tasmax_grid - tasmin_grid).astype("float32")
+
+        native_bng = self._write_native_bng(diurnal_grid, lons, lats, "diurnal_range", f"{season}_{split}")
+        self._to_reference(native_bng, out_path, tmp_stem=f"_tmp_clip_diurnal_range_{season}_{split}")
+        native_bng.unlink()
+        self.logger.info(f"[{season}][{split}] Climate feature ready: diurnal_range → {out_path.name}")
+
     def _load_seasonal_mean(
         self,
         haduk_dir: Path,

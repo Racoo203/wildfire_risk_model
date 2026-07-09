@@ -1,12 +1,13 @@
-"""Proximity features: distance to roads, rivers, and human activity."""
-
-# Distance to Human activity has too little variance. We can split the variables into two: the first, distance to buildings, and the second, as the type of land use in each pixel (we can grab the most dominant).
+"""Proximity features: distance to roads, rivers, buildings, and a
+dominant land-use class per pixel."""
 
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 
+import numpy as np
 import geopandas as gpd
-import pandas as pd
+import rasterio
+from rasterio.features import rasterize
 
 from ..core.base import VarBuilder
 from ..core.raster import RasterManager
@@ -17,7 +18,17 @@ from ..core.registry import FEATURE_BUILDERS
 class ProximityBuilder(VarBuilder):
     """
     Compute Euclidean distance (km) from every 30 m grid cell to the
-    nearest road, river, and area of human activity.
+    nearest road, river, and building, plus a dominant land-use class
+    per pixel.
+
+    d_buildings and landuse_class replace the previous merged
+    `d_activity` layer (buildings + landuse dissolved into one distance
+    surface), which had near-zero variance: buildings are sparse and
+    geometrically discriminating, while the landuse polygons cover most
+    of the non-urban raster and compressed the merged distance range
+    toward near-zero almost everywhere. Splitting them gives (a) a
+    distance layer with real variance, and (b) a genuinely new signal
+    (what kind of activity is nearby, not just how far).
 
     Why distance is computed before clipping (not after):
         distance_transform_edt treats NoData / absent cells identically to
@@ -30,11 +41,7 @@ class ProximityBuilder(VarBuilder):
             3. Mask the result to Essex using the land mask embedded in the
                reference raster (NaN outside Essex).
 
-    Pipeline per layer:
-        load vector -> rasterise to reference grid -> EDT (full extent) ->
-        convert pixels -> km -> apply land mask -> write
-
-    The actual rasterise/EDT/mask/write logic lives in
+    The actual rasterise/EDT/mask/write logic for distance layers lives in
     RasterManager.distance_to_features, shared with FireProximityBuilder.
     """
 
@@ -43,9 +50,10 @@ class ProximityBuilder(VarBuilder):
         prox_path = Path(data_config["data_dir"])
 
         output_paths = {
-            "d_roads":    self.output_dir / "dist_roads.tif",
-            "d_rivers":   self.output_dir / "dist_rivers.tif",
-            "d_activity": self.output_dir / "dist_activity.tif",
+            "d_roads":      self.output_dir / "dist_roads.tif",
+            "d_rivers":     self.output_dir / "dist_rivers.tif",
+            "d_buildings":  self.output_dir / "dist_buildings.tif",
+            "landuse_class": self.output_dir / "landuse_class.tif",
         }
 
         if self._check_cache("ProximityBuilder", output_paths):
@@ -65,8 +73,18 @@ class ProximityBuilder(VarBuilder):
         )
         self._write_distance(rivers, output_paths["d_rivers"], label="Rivers")
 
-        human_activity = self._build_human_activity_layer(prox_path, data_config)
-        self._write_distance(human_activity, output_paths["d_activity"], label="Human activity")
+        osm_path = prox_path / "essex-260607-free.gpkg/essex.gpkg"
+
+        buildings = self._load_vector(osm_path, layer="gis_osm_buildings_a_free")
+        self._write_distance(buildings, output_paths["d_buildings"], label="Buildings")
+
+        landuse = self._load_vector(
+            osm_path,
+            layer="gis_osm_landuse_a_free",
+            filter_col="fclass",
+            filter_values=data_config["human_fclasses"],
+        )
+        self._write_landuse_class(landuse, output_paths["landuse_class"], data_config["human_fclasses"])
 
         return output_paths
 
@@ -83,31 +101,6 @@ class ProximityBuilder(VarBuilder):
             gdf = gdf[gdf[filter_col].isin(filter_values)].copy()
         return gdf.to_crs("EPSG:27700")
 
-    def _build_human_activity_layer(
-        self,
-        prox_path: Path,
-        data_config: dict,
-    ) -> gpd.GeoDataFrame:
-        """
-        Combine OSM land-use polygons and building footprints into a single
-        dissolved geometry representing areas of human activity.
-        """
-        osm_path = prox_path / "essex-260607-free.gpkg/essex.gpkg"
-
-        landuse = self._load_vector(
-            osm_path,
-            layer="gis_osm_landuse_a_free",
-            filter_col="fclass",
-            filter_values=data_config["human_fclasses"],
-        )
-        buildings = self._load_vector(osm_path, layer="gis_osm_buildings_a_free")
-
-        combined = gpd.GeoDataFrame(
-            pd.concat([landuse, buildings], ignore_index=True),
-            crs="EPSG:27700",
-        )
-        return combined.dissolve().explode(index_parts=False)
-
     def _write_distance(
         self,
         gdf: gpd.GeoDataFrame,
@@ -121,6 +114,53 @@ class ProximityBuilder(VarBuilder):
         ]
         RasterManager.distance_to_features(shapes, self.ref_path, out_path)
         self.logger.info(f"{label}: distance raster written -> {out_path.name}")
+
+    def _write_landuse_class(
+        self,
+        gdf: gpd.GeoDataFrame,
+        out_path: Path,
+        fclasses: List[str],
+    ) -> None:
+        """
+        Rasterise the dominant human-activity land-use class per pixel.
+
+        Pixel value is an ordinal code from 1..len(fclasses) — the 1-indexed
+        position of the fclass in the configured `human_fclasses` list; 0
+        means no human-activity land use present in that pixel. Where
+        multiple polygons overlap a single 30 m cell, the last-drawn
+        geometry wins (rasterize does not do area-weighted resolution) —
+        acceptable at this resolution since human_fclasses polygons rarely
+        overlap each other in practice.
+        """
+        class_map = {name: i + 1 for i, name in enumerate(fclasses)}
+        shapes = [
+            (geom, class_map[fclass])
+            for geom, fclass in zip(gdf.geometry, gdf["fclass"])
+            if geom is not None and not geom.is_empty and fclass in class_map
+        ]
+
+        with rasterio.open(self.ref_path) as ref:
+            height, width = ref.height, ref.width
+            transform = ref.transform
+            meta = ref.meta.copy()
+            land_mask = ref.read(1)
+
+        landuse_arr = rasterize(
+            shapes, out_shape=(height, width), transform=transform,
+            fill=0, dtype="float32", all_touched=True,
+        )
+        landuse_arr[np.isnan(land_mask)] = np.nan
+
+        meta.update({"dtype": "float32", "nodata": np.nan, "count": 1})
+        with rasterio.open(out_path, "w", **meta) as dst:
+            dst.write(landuse_arr[np.newaxis, :, :])
+
+        self.logger.info(
+            f"Land-use class raster written -> {out_path.name} "
+            f"({len(shapes):,} polygons, {len(class_map)} classes)"
+        )
+
+
 class FireProximityBuilder(VarBuilder):
     """
     Distance (km) from every grid cell to the nearest *training-set* fire

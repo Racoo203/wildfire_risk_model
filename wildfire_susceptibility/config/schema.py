@@ -106,7 +106,9 @@ class LabelsConfig(BaseModel):
     sensitivity_n_reweight_trials: int = 3
     sensitivity_feature_noise_std: float = 0.05
 
-    clustering_exclude_features: List[str] = Field(default_factory=lambda: ["tas", "tasmin"])
+    clustering_exclude_features: List[str] = Field(
+        default_factory=lambda: ["tas", "tasmin", "landuse_class"]
+    )
     clustering_variance_floor_pct: float = 0.01
 
 # wildfire_susceptibility/config/schema.py — ModelingConfig
@@ -127,6 +129,12 @@ class ModelingConfig(BaseModel):
     smote_sampling_strategy: Optional[Dict[int, int]] = None
     optuna_search_subsample_by_model: Dict[str, int] = Field(
         default_factory=lambda: {"svm": 6000}
+    )
+    excluded_features: List[str] = Field(
+        default_factory=lambda: ["tas", "tasmin"],
+        description="Feature columns dropped from X before model training "
+                     "(distinct from clustering_exclude_features, which only "
+                     "governs label-cleaning k-means geometry).",
     )
 
 class LoggingConfig(BaseModel):

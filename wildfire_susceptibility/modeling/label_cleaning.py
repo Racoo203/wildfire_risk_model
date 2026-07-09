@@ -11,11 +11,6 @@ from sklearn.preprocessing import StandardScaler
 
 HIGH_RISK_CLASSES = (1, 2, 3)
 
-_CLUSTERING_DERIVED_FEATURES = {
-    "diurnal_range": lambda arrays: arrays["tasmax"] - arrays["tasmin"],
-}
-
-
 class LabelCleaner:
     """
     Flags and removes ambiguous Low-risk pixels via pairwise k-means.
@@ -89,13 +84,19 @@ class LabelCleaner:
         return clean_df.dropna(subset=label_col)
 
     def _build_clustering_view_df(self, df: pd.DataFrame, feature_cols: List[str]) -> pd.DataFrame:
-        """Feature set used ONLY for k-means geometry — flat-dataframe variant."""
-        exclude = set(self.config["labels"].get("clustering_exclude_features", ["tas", "tasmin"]))
+        """
+        Feature set used ONLY for k-means geometry — flat-dataframe variant.
+
+        `diurnal_range` (tasmax - tasmin) is now computed upstream by
+        ClimateBuilder and arrives as a regular column in `df`, so it's
+        included automatically like any other feature (unless excluded via
+        clustering_exclude_features) rather than being derived here.
+        """
+        exclude = set(self.config["labels"].get(
+            "clustering_exclude_features", ["tas", "tasmin", "landuse_class"]
+        ))
         keep_cols = [c for c in feature_cols if c not in exclude]
-        view = df[keep_cols].copy()
-        if "tasmax" in df.columns and "tasmin" in df.columns:
-            view["diurnal_range"] = df["tasmax"] - df["tasmin"]
-        return view
+        return df[keep_cols].copy()
 
     def _flag_low_pixels(
         self, flat_labels, flat_features, *, n_init, max_iter, random_state, max_sample,

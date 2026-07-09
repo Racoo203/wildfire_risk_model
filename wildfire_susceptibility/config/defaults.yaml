@@ -89,6 +89,7 @@ labels:
   sensitivity_seeds: [7, 123]
   sensitivity_n_reweight_trials: 3
   sensitivity_feature_noise_std: 0.05
+  clustering_exclude_features: ["tas", "tasmin", "landuse_class"]
 
 modeling:
   models: ["random_forest", "svm", "xgboost", "neural_net"]
@@ -97,6 +98,7 @@ modeling:
   mlflow_experiment: "wildfire-susceptibility-essex"
   selection_rule: "best_auc" # options: "best_auc" | "most_conservative"
   optuna_search_subsample: 50000
+  excluded_features: ["tas", "tasmin"]
 
 logging:
   level: "INFO"
