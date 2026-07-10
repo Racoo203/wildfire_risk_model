@@ -10,7 +10,7 @@ processing:
   crs: "EPSG:27700"
   training_years: [2009, 2022]
   test_years: [2022, 2026]
-  force_recompute: true           # Kept as true for working/debug environment
+  force_recompute: false           # Kept as true for working/debug environment
 
 seasons:
   active: ["spring", "summer", "fall"]
@@ -100,8 +100,6 @@ modeling:
   
   optuna_n_trials: 30
   optuna_search_subsample: 100000 # Retained working override (default is 50000)
-  optuna_search_subsample_by_model: # NEW: Added from schema.py
-    svm: 6000
     
   # --- NEW: Added from defaults.yaml & schema.py ---
   excluded_features: ["tas", "tasmin"]
