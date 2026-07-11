@@ -1,0 +1,7 @@
+modeling:
+  use_smote: true
+  smote_sampling_strategy:
+    1: 400000
+    2: 200000
+    3: 100000
+  mlflow_experiment: "wildfire-smote-sensitivity"
