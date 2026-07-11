@@ -31,10 +31,14 @@ def _make_trainer(tmp_path, monkeypatch, subsample=None):
     )
 
     config = {
+        "base": {
+            "figures_dir": tmp_path
+        },
         "modeling": {
             "mlflow_experiment": "test-subsample",
             "cv_folds": 2,
             "optuna_n_trials": 1,
+            "cv_strategy": "standard",   # ← add this; test is about subsampling, not spatial CV
             "use_smote": False,
             "smote_k_neighbors": 5,
         },
@@ -43,10 +47,6 @@ def _make_trainer(tmp_path, monkeypatch, subsample=None):
         config["modeling"]["optuna_search_subsample"] = subsample
     return ModelTrainer(config)
 
-
-# ------------------------------------------------------------------
-# Unit-level: _subsample_for_search in isolation
-# ------------------------------------------------------------------
 
 def test_subsample_for_search_shrinks_when_configured(tmp_path, monkeypatch, big_dataset):
     X, y = big_dataset
@@ -79,12 +79,6 @@ def test_subsample_for_search_noop_when_smaller_than_n(tmp_path, monkeypatch, bi
 
     assert len(X_search) == len(X)
 
-
-# ------------------------------------------------------------------
-# End-to-end: does train_one() actually use the subsampled size for
-# search, and the FULL size for the final refit?
-# ------------------------------------------------------------------
-
 def test_train_one_uses_subsample_for_search_but_full_data_for_refit(tmp_path, monkeypatch, big_dataset, caplog):
     import logging
     caplog.set_level(logging.INFO)
@@ -108,11 +102,6 @@ def test_train_one_uses_subsample_for_search_but_full_data_for_refit(tmp_path, m
         "config key name/location doesn't match what train.py reads."
     )
 
-
-# ------------------------------------------------------------------
-# Config round-trip: does optuna_search_subsample survive
-# YAML -> pydantic -> model_dump(mode="python") -> plain dict?
-# ------------------------------------------------------------------
 
 def test_optuna_search_subsample_survives_config_roundtrip(tmp_path):
     import yaml

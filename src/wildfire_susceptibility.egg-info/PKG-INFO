@@ -1,0 +1,38 @@
+Metadata-Version: 2.4
+Name: wildfire-susceptibility
+Version: 0.2.0
+Summary: Wildfire susceptibility mapping pipeline for Essex, UK — replication/extension of Bouzeraa et al. 2025
+Requires-Python: >=3.11
+Requires-Dist: numpy
+Requires-Dist: pandas
+Requires-Dist: scikit-learn
+Requires-Dist: scikit-image
+Requires-Dist: scipy
+Requires-Dist: xarray
+Requires-Dist: matplotlib
+Requires-Dist: seaborn
+Requires-Dist: pyyaml
+Requires-Dist: pydantic>=2.0
+Requires-Dist: affine
+Requires-Dist: cftime
+Requires-Dist: cligj
+Requires-Dist: geopandas
+Requires-Dist: h5netcdf
+Requires-Dist: netcdf4
+Requires-Dist: pyogrio
+Requires-Dist: pyproj
+Requires-Dist: rasterio
+Requires-Dist: shapely
+Requires-Dist: jenkspy
+Requires-Dist: statsmodels
+Provides-Extra: modeling
+Requires-Dist: xgboost; extra == "modeling"
+Requires-Dist: torch; extra == "modeling"
+Requires-Dist: mlflow; extra == "modeling"
+Requires-Dist: optuna; extra == "modeling"
+Requires-Dist: shap; extra == "modeling"
+Requires-Dist: imbalanced-learn; extra == "modeling"
+Provides-Extra: dev
+Requires-Dist: pytest; extra == "dev"
+Requires-Dist: pytest-cov; extra == "dev"
+Requires-Dist: ruff; extra == "dev"

@@ -1,4 +1,4 @@
-import wildfire_susceptibility.modeling.models.xgboost as xgb
+import xgboost as xgb
 import numpy as np
 
 from ...core.registry import MODELS
