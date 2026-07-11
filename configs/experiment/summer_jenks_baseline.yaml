@@ -1,0 +1,9 @@
+seasons:
+  active: ["summer"]
+
+labels:
+  density_method: "kde"
+  classify_method: "jenks"
+
+modeling:
+  mlflow_experiment: "wildfire-summer-jenks-baseline"

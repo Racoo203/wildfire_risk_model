@@ -36,6 +36,23 @@ class ConfigLoader:
         return WildfireConfig.model_validate(merged)
 
     @staticmethod
+    def load_experiment(
+        name: str,
+        config_dir: Union[str, Path] = DEFAULT_CONFIG_DIR,
+        base_files: List[str] = DEFAULT_CONFIG_FILES,
+    ) -> WildfireConfig:
+        """
+        Load the six canonical config files, then layer an experiment
+        override file on top. `name` is the experiment filename without
+        the 'experiment/' prefix or '.yaml' suffix, e.g. "summer_gmm_baseline".
+        """
+        experiment_file = f"experiment/{name}.yaml"
+        return ConfigLoader.load(
+            config_dir=config_dir,
+            files=[*base_files, experiment_file],
+        )
+
+    @staticmethod
     def _deep_merge(base: dict, override: dict) -> dict:
         """Recursively merge override into base; override wins on conflicts."""
         result = dict(base)

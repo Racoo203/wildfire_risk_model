@@ -29,3 +29,24 @@ def test_split_config_matches_legacy_defaults():
 
     reconstructed_cfg = WildfireConfig.model_validate(merged)
     assert split_cfg.model_dump(mode="python") == reconstructed_cfg.model_dump(mode="python")
+
+def test_load_experiment_overrides_only_specified_keys():
+    """
+    Guards against load_experiment() accidentally clobbering unrelated
+    base config sections instead of deep-merging just the overridden keys.
+    """
+    base_cfg = ConfigLoader.load()  # six canonical files, no overrides
+    exp_cfg = ConfigLoader.load_experiment("summer_jenks_baseline")
+
+    # Overridden keys actually changed
+    assert exp_cfg.seasons.active == ["summer"]
+    assert exp_cfg.modeling.mlflow_experiment == "wildfire-summer-jenks-baseline"
+
+    # Untouched sections remain identical to base
+    assert exp_cfg.data_sources == base_cfg.data_sources
+    assert exp_cfg.processing == base_cfg.processing
+    assert exp_cfg.logging == base_cfg.logging
+    # labels.classify_method was already "gmm" in base — confirm other
+    # labels.* fields weren't clobbered by the override file's partial dict
+    assert exp_cfg.labels.gmm_n_components == base_cfg.labels.gmm_n_components
+    assert exp_cfg.labels.percentiles == base_cfg.labels.percentiles
