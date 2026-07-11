@@ -1,0 +1,30 @@
+labels:
+  random_state: 42
+  max_sample_per_class: 200000
+  percentiles: [60, 75, 90]
+  density_method: "convolution"             # options: "convolution" | "kde"
+  conv_sigma_cells: 3
+  kde_bandwidth_m: 500
+  kde_zero_threshold: 1.0e-12
+  include_d_fires_as_feature: false
+
+  classify_method: "gmm"                    # options: "percentile" | "jenks" | "gmm"
+  compare_classify_methods: ["percentile", "jenks", "gmm"]
+  jenks_n_classes: 4
+  jenks_max_sample: 200000
+  gmm_n_components: 4
+  gmm_max_sample: 200000
+  gmm_random_state: 42
+
+  kmeans_k: 2
+  kmeans_n_init: 10
+  kmeans_max_iter: 300
+
+  clean_labels: true                        # Run label cleanup operations after classification
+  run_sensitivity: true                     # Run k-means cluster sensitivity parallel to cleaning
+  sensitivity_n_inits: [10, 20]
+  sensitivity_seeds: [7, 123]
+  sensitivity_n_reweight_trials: 3
+  sensitivity_feature_noise_std: 0.05
+  clustering_exclude_features: ["tas", "tasmin", "landuse_class"]
+  clustering_variance_floor_pct: 0.01
