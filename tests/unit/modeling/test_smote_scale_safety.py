@@ -28,7 +28,7 @@ def test_smote_caps_targets_to_batch_majority_size():
     assert len(X_res) <= 3090 * 4  # sane upper bound, nowhere near 703,090
 
 
-def test_trainer_disables_smote_for_search_but_not_final_refit(tmp_path, monkeypatch):
+def test_trainer_disables_smote_for_search_but_not_final_refit(tmp_path, monkeypatch, fast_modeling_config):
     from wildfire_susceptibility.modeling.training import ModelTrainer
 
     test_db = tmp_path / "mlflow_test.db"
@@ -36,14 +36,10 @@ def test_trainer_disables_smote_for_search_but_not_final_refit(tmp_path, monkeyp
         "wildfire_susceptibility.modeling.training.trainer.MLFLOW_TRACKING_URI",
         f"sqlite:///{test_db}",
     )
-    config = {
-        "modeling": {
-            "mlflow_experiment": "test-smote-split",
-            "cv_folds": 2, "optuna_n_trials": 1,
-            "use_smote": True, "smote_k_neighbors": 5,
-            "smote_sampling_strategy": {1: 400000},
-        },
-    }
+    config = fast_modeling_config
+    config["modeling"]["mlflow_experiment"] = "test-smote-split"
+    config["modeling"]["use_smote"] = True
+    config["modeling"]["smote_sampling_strategy"] = {1: 400000}
     trainer = ModelTrainer(config)
 
     assert trainer.fold_strategy.resampler.enabled is False  # search/CV: SMOTE off

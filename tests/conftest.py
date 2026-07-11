@@ -125,3 +125,14 @@ def minimal_modeling_config(tmp_path):
     cfg["base"]["figures_dir"] = str(tmp_path / "figures")
     cfg["base"]["output_dir"] = str(tmp_path / "layers")
     return cfg
+
+@pytest.fixture
+def fast_modeling_config(minimal_modeling_config):
+    """minimal_modeling_config with fast-test overrides layered on top."""
+    cfg = minimal_modeling_config
+    cfg["modeling"].update({
+        "optuna_n_trials": 1,
+        "cv_folds": 2,
+        "use_smote": False,
+    })
+    return cfg
