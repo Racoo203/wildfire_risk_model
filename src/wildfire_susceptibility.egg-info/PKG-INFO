@@ -3,8 +3,8 @@ Name: wildfire-susceptibility
 Version: 0.2.0
 Summary: Wildfire susceptibility mapping pipeline for Essex, UK — replication/extension of Bouzeraa et al. 2025
 Requires-Python: >=3.11
-Requires-Dist: numpy
-Requires-Dist: pandas
+Requires-Dist: numpy<2.5,>=1.22
+Requires-Dist: pandas<3,>=2.0
 Requires-Dist: scikit-learn
 Requires-Dist: scikit-image
 Requires-Dist: scipy

@@ -8,8 +8,8 @@ version = "0.2.0"
 description = "Wildfire susceptibility mapping pipeline for Essex, UK — replication/extension of Bouzeraa et al. 2025"
 requires-python = ">=3.11"
 dependencies = [
-    "numpy",
-    "pandas",
+    "numpy>=1.22,<2.5",
+    "pandas>=2.0,<3",
     "scikit-learn",
     "scikit-image",
     "scipy",

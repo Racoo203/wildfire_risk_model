@@ -36,10 +36,8 @@ def test_param_space_signature_stable_for_unchanged_space():
     assert sig_a == sig_b  # same space -> same study reused, trials preserved
 
 
-def test_get_or_create_study_survives_param_space_change(tmp_path, monkeypatch):
-    """End-to-end: simulate an old study existing under the un-versioned
-    name with an incompatible distribution, then confirm the versioned
-    lookup creates a fresh study instead of raising."""
+def test_get_or_create_study_survives_param_space_change(tmp_path, monkeypatch, fast_modeling_config):
+    """..."""
     from wildfire_susceptibility.modeling.training.search import HyperparamSearch
     from wildfire_susceptibility.modeling.training.cv import FoldStrategy
     from wildfire_susceptibility.modeling.training.resampling import SMOTEResampler
@@ -52,8 +50,9 @@ def test_get_or_create_study_survives_param_space_change(tmp_path, monkeypatch):
         f"sqlite:///{db_path}",
     )
 
-    config = {"modeling": {"cv_folds": 2, "optuna_n_trials": 1}}  # optuna_n_trials was missing
-    resampler = SMOTEResampler({"modeling": {"use_smote": False}})
+    config = fast_modeling_config
+    config["modeling"]["optuna_n_trials"] = 1
+    resampler = SMOTEResampler(config)
     fold_strategy = FoldStrategy(config, resampler)
     search = HyperparamSearch(config, fold_strategy)
 
@@ -61,9 +60,6 @@ def test_get_or_create_study_survives_param_space_change(tmp_path, monkeypatch):
     study1 = search.get_or_create_study("test_season", "svm")
     assert study1.trials == []
 
-    # Simulate SVMModel.param_space changing (monkeypatch the registered
-    # class's method) and confirm no ValueError is raised on next call —
-    # this is the exact failure mode from production.
     original_param_space = MODELS["svm"].param_space
 
     def _changed_param_space(self, trial):

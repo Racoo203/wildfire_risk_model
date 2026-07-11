@@ -9,21 +9,15 @@ import pytest
 
 
 @pytest.fixture
-def tiny_training_config(tmp_path):
-    return {
-        "base": {"figures_dir": str(tmp_path / "figures"), "output_dir": str(tmp_path / "layers")},
-        "modeling": {
-            "models": ["random_forest"],
-            "optuna_n_trials": 2,
-            "cv_folds": 2,
-            "cv_strategy": "standard",
-            "mlflow_experiment": "test-smoke",
-            "use_smote": False,
-            "spatial_block_size_m": 5000.0,
-        },
-        "labels": {"random_state": 42},
-    }
-
+def tiny_training_config(tmp_path, fast_modeling_config):
+    config = fast_modeling_config
+    config["base"]["figures_dir"] = str(tmp_path / "figures")
+    config["base"]["output_dir"] = str(tmp_path / "layers")
+    config["modeling"]["models"] = ["random_forest"]
+    config["modeling"]["mlflow_experiment"] = "test-smoke"
+    config["modeling"]["cv_strategy"] = "standard"
+    config["modeling"]["spatial_block_size_m"] = 5000.0
+    return config
 
 @pytest.fixture
 def tiny_dataset():
@@ -38,65 +32,7 @@ def tiny_dataset():
     return X, y
 
 @pytest.mark.slow
-def test_train_one_runs_end_to_end(tiny_training_config, tiny_dataset, tmp_path, monkeypatch):
-    """train_one() must complete without raising, and MODELS must resolve
-    'random_forest' — this is the exact call path that failed with
-    'Model random_forest not found in MODELS registry: []'."""
-    import mlflow
-    mlflow.set_tracking_uri(f"file:{tmp_path / 'mlruns'}")
-
-    from wildfire_susceptibility.modeling.training import ModelTrainer
-
-    X, y = tiny_dataset
-    trainer = ModelTrainer(tiny_training_config)
-
-    result = trainer.train_one(
-        season="test_season",
-        model_name="random_forest",
-        X_train=X, y_train=y,
-        X_val=X, y_val=y,
-        groups_train=None,
-        ref_path=None,  # skip post-training evaluation for this smoke test
-    )
-
-    assert result["model"] is not None
-    assert 0.0 <= result["cv_auc_standard"] <= 1.0
-    assert result["val_auc"] is not None
-
-@pytest.mark.slow
-def test_train_one_raises_clear_error_for_unregistered_model(tiny_training_config, tiny_dataset):
-    """If someone breaks the registry import again, this should fail loudly
-    with the model name, not silently produce garbage."""
-    from wildfire_susceptibility.modeling.training import ModelTrainer
-
-    X, y = tiny_dataset
-    tiny_training_config["modeling"]["models"] = ["totally_not_a_model"]
-    trainer = ModelTrainer(tiny_training_config)
-
-    with pytest.raises(ValueError, match="not found in MODELS registry"):
-        trainer.train_one(
-            season="test_season", model_name="totally_not_a_model",
-            X_train=X, y_train=y, X_val=X, y_val=y,
-        )
-
-@pytest.fixture
-def tiny_training_config(tmp_path):
-    return {
-        "base": {"figures_dir": str(tmp_path / "figures"), "output_dir": str(tmp_path / "layers")},
-        "modeling": {
-            "models": ["random_forest"],
-            "optuna_n_trials": 2,
-            "cv_folds": 2,
-            "cv_strategy": "standard",
-            "mlflow_experiment": "test-smoke",
-            "use_smote": False,
-            "spatial_block_size_m": 5000.0,
-        },
-        "labels": {"random_state": 42},
-    }
-
-@pytest.mark.slow
-def test_train_one_runs_end_to_end(tiny_training_config, tiny_dataset, tmp_path, monkeypatch):
+def test_train_one_runs_end_to_end(tiny_training_config, tiny_dataset, tmp_path, monkeypatch, fast_modeling_config):
     """train_one() must complete without raising, and MODELS must resolve
     'random_forest' — this is the exact call path that failed with
     'Model random_forest not found in MODELS registry: []'."""
@@ -130,7 +66,7 @@ def test_train_one_runs_end_to_end(tiny_training_config, tiny_dataset, tmp_path,
     assert result["val_auc"] is not None
 
 @pytest.mark.slow
-def test_train_one_raises_clear_error_for_unregistered_model(tiny_training_config, tiny_dataset, tmp_path, monkeypatch):
+def test_train_one_raises_clear_error_for_unregistered_model(tiny_training_config, tiny_dataset, tmp_path, monkeypatch, fast_modeling_config):
     """If someone breaks the registry import again, this should fail loudly
     with the model name, not silently produce garbage."""
     import mlflow
