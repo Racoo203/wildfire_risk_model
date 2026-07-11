@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Union, List
 from wildfire_susceptibility.config.schema import WildfireConfig
 
-DEFAULT_CONFIG_DIR = Path(__file__).parent  # src/wildfire_susceptibility/config/
+DEFAULT_CONFIG_DIR = Path("./configs")
 DEFAULT_CONFIG_FILES = [
     "base.yaml", "processing.yaml", "data_sources.yaml",
     "labels.yaml", "modeling.yaml", "logging.yaml",
