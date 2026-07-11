@@ -1,0 +1,35 @@
+data_sources:
+  cua:
+    data_dir: "./data/bronze/boundary"
+  srtm:
+    data_dir: "./data/bronze/topography"
+    tiles:
+      - "n51_e000_1arc_v3.tif"
+      - "n51_e001_1arc_v3.tif"
+      - "n51_w001_1arc_v3.tif"
+      - "n52_e000_1arc_v3.tif"
+      - "n52_e001_1arc_v3.tif"
+  haduk:
+    data_dir: "./data/bronze/climate_haduk"
+    sources: ["tas", "tasmax", "tasmin", "rainfall", "sfcWind", "hurs"]
+  modis_nvdi:
+    data_dir: "./data/bronze/vegetation"
+  proximity:
+    data_dir: "./data/bronze/proximity"
+    sources: ["oproad_gpkg_gb", "oprvrs_gpkg_gb", "essex-260607-free."]
+    human_fclasses:
+      - "residential"
+      - "farmland"
+      - "farm"
+      - "farm_auxiliary"
+      - "industrial"
+      - "commercial"
+      - "retail"
+      - "allotmets"
+      - "orchard"
+      - "greenhouse_horticulture"
+  incidents:
+    data_dir: "./data/bronze/incidents"
+    date_col: "CallDateID"
+    geo_cols: ["IncidentEasting", "IncidentNorthing"]
+    severity_cols: ["NumberVehiclesDeployed"]
