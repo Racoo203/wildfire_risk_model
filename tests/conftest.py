@@ -114,3 +114,14 @@ def minimal_config(tmp_path):
             "log_path": str(tmp_path / "logs" / "pipeline.log"),
         },
     }
+
+@pytest.fixture
+def minimal_modeling_config(tmp_path):
+    """A config dict with every ModelingConfig field the schema defaults —
+    built by dumping WildfireConfig's own defaults, not hand-typed, so it
+    can never drift from what ConfigLoader actually produces."""
+    from wildfire_susceptibility.config.schema import WildfireConfig
+    cfg = WildfireConfig().model_dump(mode="python")
+    cfg["base"]["figures_dir"] = str(tmp_path / "figures")
+    cfg["base"]["output_dir"] = str(tmp_path / "layers")
+    return cfg

@@ -32,6 +32,7 @@ MLFLOW_TRACKING_URI = "sqlite:///data/silver/dbs/mlflow.db"
 class ModelTrainer:
     def __init__(self, config: dict):
         self.config = config
+        self._validate_cv_config()
         self._ensure_mlflow_backend()
         mlflow.set_experiment(config["modeling"]["mlflow_experiment"])
 
@@ -46,6 +47,16 @@ class ModelTrainer:
         self.search = HyperparamSearch(config, self.fold_strategy)
         self.evaluator = PostTrainingEvaluator(config)
         self.dataset_prep = DatasetPrep(config)
+
+    def _validate_cv_config(self) -> None:
+        cv_strategy = self.config["modeling"].get("cv_strategy", "both")
+        if cv_strategy in ("spatial", "both"):
+            block_size = self.config["modeling"].get("spatial_block_size_m", 5000.0)
+            if not block_size or block_size <= 0:
+                raise ValueError(
+                    f"cv_strategy='{cv_strategy}' requires a positive "
+                    f"modeling.spatial_block_size_m, got {block_size!r}."
+                )
 
     @staticmethod
     def _ensure_mlflow_backend() -> None:
@@ -90,6 +101,14 @@ class ModelTrainer:
         if model_name not in MODELS:
             raise ValueError(f"Model '{model_name}' not found in MODELS registry: {list(MODELS)}")
         model_cls = MODELS[model_name]
+
+        cv_strategy = self.config["modeling"].get("cv_strategy", "both")
+        if cv_strategy in ("spatial", "both") and groups_train is None:
+            raise ValueError(
+                f"[{season}][{model_name}] cv_strategy='{cv_strategy}' requires groups_train "
+                f"(spatial blocks), but None was passed. Call DatasetPrep.assign_spatial_blocks() "
+                f"first, or set cv_strategy='standard' if spatial CV isn't needed here."
+            )
 
         X_tr, X_va = self._scale_features(model_cls, X_train, X_val)
         X_search, y_search = self._subsample_for_search(X_tr, y_train, season, model_name)
@@ -147,9 +166,8 @@ class ModelTrainer:
     def _subsample_for_search(self, X_tr, y_train, season, model_name):
         from sklearn.model_selection import train_test_split
 
-        # n = self.config["modeling"].get("optuna_search_subsample_by_model", {}).get(model_name) \
-        #     or self.config["modeling"].get("optuna_search_subsample")
-        n = self.config["modeling"].get("optuna_search_subsample")
+        n = self.config["modeling"].get("optuna_search_subsample_by_model", {}).get(model_name) \
+            or self.config["modeling"].get("optuna_search_subsample")
         if not n or len(X_tr) <= n:
             return X_tr, y_train
 

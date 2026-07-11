@@ -33,15 +33,18 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-app = ["streamlit", "plotly"]
 modeling = ["xgboost", "torch", "mlflow", "optuna", "shap", "imbalanced-learn"]
 dev = ["pytest", "pytest-cov", "ruff"]
 
 [tool.setuptools.packages.find]
+where = ["src"]
 include = ["wildfire_susceptibility*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "slow: marks tests that hit mlflow/optuna/real model fits (deselect with '-m \"not slow\"')",
+]
 
 [tool.ruff]
 line-length = 100

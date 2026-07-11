@@ -37,7 +37,7 @@ def tiny_dataset():
     y = pd.Series(rng.integers(0, 4, size=n))
     return X, y
 
-
+@pytest.mark.slow
 def test_train_one_runs_end_to_end(tiny_training_config, tiny_dataset, tmp_path, monkeypatch):
     """train_one() must complete without raising, and MODELS must resolve
     'random_forest' — this is the exact call path that failed with
@@ -63,7 +63,7 @@ def test_train_one_runs_end_to_end(tiny_training_config, tiny_dataset, tmp_path,
     assert 0.0 <= result["cv_auc_standard"] <= 1.0
     assert result["val_auc"] is not None
 
-
+@pytest.mark.slow
 def test_train_one_raises_clear_error_for_unregistered_model(tiny_training_config, tiny_dataset):
     """If someone breaks the registry import again, this should fail loudly
     with the model name, not silently produce garbage."""
@@ -78,8 +78,6 @@ def test_train_one_raises_clear_error_for_unregistered_model(tiny_training_confi
             season="test_season", model_name="totally_not_a_model",
             X_train=X, y_train=y, X_val=X, y_val=y,
         )
-
-# tests/test_pipeline/test_train_smoke.py — fixture change only
 
 @pytest.fixture
 def tiny_training_config(tmp_path):
@@ -97,7 +95,7 @@ def tiny_training_config(tmp_path):
         "labels": {"random_state": 42},
     }
 
-
+@pytest.mark.slow
 def test_train_one_runs_end_to_end(tiny_training_config, tiny_dataset, tmp_path, monkeypatch):
     """train_one() must complete without raising, and MODELS must resolve
     'random_forest' — this is the exact call path that failed with
@@ -131,7 +129,7 @@ def test_train_one_runs_end_to_end(tiny_training_config, tiny_dataset, tmp_path,
     assert 0.0 <= result["cv_auc_standard"] <= 1.0
     assert result["val_auc"] is not None
 
-
+@pytest.mark.slow
 def test_train_one_raises_clear_error_for_unregistered_model(tiny_training_config, tiny_dataset, tmp_path, monkeypatch):
     """If someone breaks the registry import again, this should fail loudly
     with the model name, not silently produce garbage."""
