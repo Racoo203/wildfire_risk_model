@@ -11,6 +11,7 @@ seasons/features/search settings land in different artifact dirs.
 import hashlib
 import json
 from typing import Any, Dict
+from pathlib import Path
 
 # Top-level sections and keys excluded from the hash — infra/bookkeeping
 # fields that don't affect what gets trained or how.
@@ -44,17 +45,16 @@ def _prune(config: Dict[str, Any]) -> Dict[str, Any]:
 
     return pruned
 
+def _json_default(value: Any) -> str:
+    """Normalize non-JSON-native values for canonical hashing.
+    Path objects are rendered as POSIX strings so cfg_sig is identical
+    across Windows/Linux/Docker regardless of which OS computed it."""
+    if isinstance(value, Path):
+        return value.as_posix()
+    return str(value)
+
 
 def compute_cfg_sig(config: Dict[str, Any]) -> str:
-    """
-    Deterministic 8-character SHA1 hex digest of the training-relevant
-    subset of `config`. Same convention as HyperparamSearch's param-space
-    signature: short hash, not full digest, since this is a cache key,
-    not a security boundary.
-
-    Dict key order in the input doesn't affect the result — canonical
-    JSON serialization (sort_keys=True) is used before hashing.
-    """
     pruned = _prune(config)
-    canonical = json.dumps(pruned, sort_keys=True, default=str)
+    canonical = json.dumps(pruned, sort_keys=True, default=_json_default)
     return hashlib.sha1(canonical.encode()).hexdigest()[:8]
