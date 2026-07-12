@@ -1,0 +1,15 @@
+processing:
+  cell_size_m: 30.0
+  crs: "EPSG:27700"
+  training_years: [2009, 2022]    # [start, end)
+  test_years: [2022, 2026]        # [start, end)
+  force_recompute: false          # Set true to bypass caches and force feature generation
+
+seasons:
+  active: ["spring", "summer", "fall"] # Seasons calculated this iteration
+  seasonal_ndvi: false                 # Recompute NDVI per season if true; else compute static
+  definitions:
+    spring: [3, 4, 5]
+    summer: [6, 7, 8]
+    fall: [9, 10, 11]
+    winter: [12, 1, 2]

@@ -22,7 +22,7 @@ def big_dataset():
     return X, y
 
 
-def _make_trainer(tmp_path, monkeypatch, subsample_by_model=None):
+def _make_trainer(tmp_path, monkeypatch, fast_modeling_config, subsample_by_model=None):
     from wildfire_susceptibility.modeling.training import ModelTrainer
 
     test_db = tmp_path / "mlflow_test.db"
@@ -30,31 +30,25 @@ def _make_trainer(tmp_path, monkeypatch, subsample_by_model=None):
         "wildfire_susceptibility.modeling.training.trainer.MLFLOW_TRACKING_URI",
         f"sqlite:///{test_db}",
     )
-    config = {
-        "modeling": {
-            "mlflow_experiment": "test-svm-scaling",
-            "cv_folds": 2,
-            "optuna_n_trials": 1,
-            "use_smote": False,
-            "smote_k_neighbors": 5,
-            "optuna_search_subsample": 50000,
-            "optuna_search_subsample_by_model": subsample_by_model or {"svm": 2000},
-        },
-    }
+    config = fast_modeling_config
+    config["modeling"]["mlflow_experiment"] = "test-svm-scaling"
+    config["modeling"]["optuna_search_subsample"] = 50000
+    config["modeling"]["optuna_search_subsample_by_model"] = subsample_by_model or {"svm": 2000}
     return ModelTrainer(config)
 
 
-def test_svm_uses_per_model_subsample_override(tmp_path, monkeypatch, big_dataset):
+def test_svm_uses_per_model_subsample_override(tmp_path, monkeypatch, big_dataset, fast_modeling_config):
     X, y = big_dataset
-    trainer = _make_trainer(tmp_path, monkeypatch, subsample_by_model={"svm": 2000})
+    trainer = _make_trainer(tmp_path, monkeypatch, fast_modeling_config, subsample_by_model={"svm": 2000})
 
     X_search, y_search = trainer._subsample_for_search(X, y, "test_season", "svm")
     assert len(X_search) == 2000  # not the generic 50000
 
 
-def test_random_forest_ignores_svm_override(tmp_path, monkeypatch, big_dataset):
+
+def test_random_forest_ignores_svm_override(tmp_path, monkeypatch, big_dataset, fast_modeling_config):
     X, y = big_dataset
-    trainer = _make_trainer(tmp_path, monkeypatch, subsample_by_model={"svm": 2000})
+    trainer = _make_trainer(tmp_path, monkeypatch, fast_modeling_config, subsample_by_model={"svm": 2000})
 
     X_search, y_search = trainer._subsample_for_search(X, y, "test_season", "random_forest")
     assert len(X_search) == len(X)  # falls back to generic (bigger than dataset, so no-op)

@@ -1,0 +1,8 @@
+seasons:
+  active: ["spring", "summer", "fall", "winter"]
+
+labels:
+  include_d_fires_as_feature: true
+
+modeling:
+  mlflow_experiment: "wildfire-all-seasons-leaky-dfires"

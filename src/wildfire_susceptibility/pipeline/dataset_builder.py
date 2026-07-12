@@ -1,4 +1,3 @@
-import yaml
 from pathlib import Path
 from typing import Union, Tuple, Dict, Optional
 
@@ -34,9 +33,8 @@ class DatasetBuilder:
     dataset_test_<season>.csv exist.
     """
 
-    def __init__(self, config_path: Union[str, Path]):
-        self.config_path = Path(config_path)
-        self.config = self._load_config()
+    def __init__(self, config: dict):
+        self.config = config
         self.output_dir = Path(self.config["base"]["output_dir"])
         self.model_data_dir = Path(self.config["base"]["model_data_dir"])
         self.model_data_dir.mkdir(parents=True, exist_ok=True)
@@ -44,10 +42,6 @@ class DatasetBuilder:
             log_file=self.config["logging"]["log_path"],
             level=self.config["logging"]["level"],
         )
-
-    def _load_config(self) -> dict:
-        with open(self.config_path) as f:
-            return yaml.safe_load(f)
 
     def run_full_pipeline(self) -> Dict[str, Dict[str, Path]]:
         """Returns {season: {"train": path, "test": path}}."""

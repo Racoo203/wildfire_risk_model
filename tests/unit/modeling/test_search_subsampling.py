@@ -21,7 +21,7 @@ def big_dataset():
     return X, y
 
 
-def _make_trainer(tmp_path, monkeypatch, subsample=None):
+def _make_trainer(tmp_path, monkeypatch, fast_modeling_config, subsample=None):
     from wildfire_susceptibility.modeling.training import ModelTrainer
 
     test_db = tmp_path / "mlflow_test.db"
@@ -30,61 +30,55 @@ def _make_trainer(tmp_path, monkeypatch, subsample=None):
         f"sqlite:///{test_db}",
     )
 
-    config = {
-        "base": {
-            "figures_dir": tmp_path
-        },
-        "modeling": {
-            "mlflow_experiment": "test-subsample",
-            "cv_folds": 2,
-            "optuna_n_trials": 1,
-            "cv_strategy": "standard",   # ← add this; test is about subsampling, not spatial CV
-            "use_smote": False,
-            "smote_k_neighbors": 5,
-        },
-    }
+    config = fast_modeling_config
+    config["base"]["figures_dir"] = tmp_path
+    config["modeling"]["mlflow_experiment"] = "test-subsample"
+    config["modeling"]["cv_strategy"] = "standard"   # test is about subsampling, not spatial CV
     if subsample is not None:
         config["modeling"]["optuna_search_subsample"] = subsample
+    else:
+        config["modeling"].pop("optuna_search_subsample", None)
     return ModelTrainer(config)
 
 
-def test_subsample_for_search_shrinks_when_configured(tmp_path, monkeypatch, big_dataset):
+def test_subsample_for_search_shrinks_when_configured(tmp_path, monkeypatch, big_dataset, fast_modeling_config):
     X, y = big_dataset
-    trainer = _make_trainer(tmp_path, monkeypatch, subsample=500)
+    trainer = _make_trainer(tmp_path, monkeypatch, fast_modeling_config, subsample=500)
 
     X_search, y_search = trainer._subsample_for_search(X, y, "test_season", "random_forest")
 
     assert len(X_search) == 500
     assert len(y_search) == 500
-    # stratified split shouldn't wildly distort class proportions
     original_props = y.value_counts(normalize=True).sort_index()
     search_props = y_search.value_counts(normalize=True).sort_index()
     assert np.allclose(original_props.values, search_props.values, atol=0.05)
 
 
-def test_subsample_for_search_noop_when_unconfigured(tmp_path, monkeypatch, big_dataset):
+
+def test_subsample_for_search_noop_when_unconfigured(tmp_path, monkeypatch, big_dataset, fast_modeling_config):
     X, y = big_dataset
-    trainer = _make_trainer(tmp_path, monkeypatch, subsample=None)
-
-    X_search, y_search = trainer._subsample_for_search(X, y, "test_season", "random_forest")
-
-    assert len(X_search) == len(X)  # documents current no-op behavior when unset
-
-
-def test_subsample_for_search_noop_when_smaller_than_n(tmp_path, monkeypatch, big_dataset):
-    X, y = big_dataset
-    trainer = _make_trainer(tmp_path, monkeypatch, subsample=999_999)  # bigger than dataset
+    trainer = _make_trainer(tmp_path, monkeypatch, fast_modeling_config, subsample=None)
 
     X_search, y_search = trainer._subsample_for_search(X, y, "test_season", "random_forest")
 
     assert len(X_search) == len(X)
 
-def test_train_one_uses_subsample_for_search_but_full_data_for_refit(tmp_path, monkeypatch, big_dataset, caplog):
+
+def test_subsample_for_search_noop_when_smaller_than_n(tmp_path, monkeypatch, big_dataset, fast_modeling_config):
+    X, y = big_dataset
+    trainer = _make_trainer(tmp_path, monkeypatch, fast_modeling_config, subsample=999_999)
+
+    X_search, y_search = trainer._subsample_for_search(X, y, "test_season", "random_forest")
+
+    assert len(X_search) == len(X)
+
+
+def test_train_one_uses_subsample_for_search_but_full_data_for_refit(tmp_path, monkeypatch, big_dataset, fast_modeling_config, caplog):
     import logging
     caplog.set_level(logging.INFO)
 
     X, y = big_dataset
-    trainer = _make_trainer(tmp_path, monkeypatch, subsample=200)
+    trainer = _make_trainer(tmp_path, monkeypatch, fast_modeling_config, subsample=200)
 
     trainer.train_one(
         season="test_season",

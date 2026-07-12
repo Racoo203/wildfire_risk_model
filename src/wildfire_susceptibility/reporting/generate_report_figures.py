@@ -31,22 +31,20 @@ import argparse
 import logging
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
 import numpy as np
 import pandas as pd
 import rasterio
 
-from wildfire_susceptibility.config.loader import ConfigLoader
+from wildfire_susceptibility.config.loader import ConfigLoader, DEFAULT_CONFIG_DIR, DEFAULT_CONFIG_FILES
 from wildfire_susceptibility.core.registry import MODELS
 from wildfire_susceptibility.modeling import models as _models  # noqa: F401 — registers wrappers
 from wildfire_susceptibility import viz
 
 logger = logging.getLogger("wildfire_susceptibility.scripts.generate_report_figures")
 
-DEFAULT_CONFIG_PATH = Path("./wildfire_susceptibility/config/defaults.yaml")
 ALL_CATEGORIES = ("factor_maps", "susceptibility_maps", "eda", "models")
-
 
 # --------------------------------------------------------------------------
 # Path discovery — mirrors the naming conventions used by the feature
@@ -255,8 +253,12 @@ CATEGORY_FUNCS = {
 }
 
 
+
+...
+
 def generate_all(
-    config_path: Path = DEFAULT_CONFIG_PATH,
+    config_dir: Union[str, Path] = DEFAULT_CONFIG_DIR,
+    config_files: List[str] = DEFAULT_CONFIG_FILES,
     seasons: Optional[List[str]] = None,
     categories: Optional[List[str]] = None,
     skip_models: bool = False,
@@ -265,7 +267,7 @@ def generate_all(
     Main entry point — importable directly (e.g. from a notebook or the
     control panel) as an alternative to shelling out to this script.
     """
-    cfg_obj = ConfigLoader.load(config_path)
+    cfg_obj = ConfigLoader.load(config_dir=config_dir, files=config_files)
     cfg = cfg_obj.model_dump(mode="python")
 
     active_seasons = seasons or cfg["seasons"]["active"]
@@ -291,14 +293,50 @@ def generate_all(
 
 def _parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG_PATH, help="Path to config YAML.")
-    parser.add_argument("--season", action="append", dest="seasons", default=None,
-                         help="Season to process (repeatable). Defaults to config.seasons.active.")
-    parser.add_argument("--only", type=str, default=None,
-                         help=f"Comma-separated subset of {ALL_CATEGORIES}. Defaults to all.")
-    parser.add_argument("--skip-models", action="store_true",
-                         help="Skip the 'models' category (useful when mlflow has no runs yet).")
-    parser.add_argument("-v", "--verbose", action="store_true", help="Debug-level logging.")
+    parser.add_argument(
+        "--config-dir", 
+        type=Path, 
+        default=DEFAULT_CONFIG_DIR,
+        help="Directory containing config YAML files."
+    
+    )
+
+    parser.add_argument(
+        "--config-file", 
+        action="append", 
+        dest="config_files", 
+        default=None,
+        help=f"Config YAML filename within --config-dir (repeatable). Defaults to {DEFAULT_CONFIG_FILES}."
+    )
+
+    parser.add_argument(
+        "--season", 
+        action="append", 
+        dest="seasons", 
+        default=None,
+        help="Season to process (repeatable). Defaults to config.seasons.active."
+    )
+
+    parser.add_argument(
+        "--only", 
+        type=str, 
+        default=None,
+        help=f"Comma-separated subset of {ALL_CATEGORIES}. Defaults to all."
+    )
+
+    parser.add_argument(
+        "--skip-models", 
+        action="store_true",
+        help="Skip the 'models' category (useful when mlflow has no runs yet)."
+    )
+    
+    parser.add_argument(
+        "-v", 
+        "--verbose", 
+        action="store_true", 
+        help="Debug-level logging."
+    )
+
     return parser.parse_args(argv)
 
 
@@ -313,7 +351,8 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     categories = args.only.split(",") if args.only else None
     generate_all(
-        config_path=args.config,
+        config_dir=args.config_dir,
+        config_files=args.config_files or DEFAULT_CONFIG_FILES,
         seasons=args.seasons,
         categories=categories,
         skip_models=args.skip_models,
