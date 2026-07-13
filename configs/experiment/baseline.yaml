@@ -10,3 +10,4 @@ labels:
 
 modeling:
   mlflow_experiment: "wildfire-summer-jenks-baseline"
+  models: ["random_forest", "xgboost", "neural_net"]

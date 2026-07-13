@@ -19,7 +19,8 @@
         "rainfall": "data\\silver\\layers\\meteo_rainfall_summer_train.tif",
         "sfcWind": "data\\silver\\layers\\meteo_sfcWind_summer_train.tif",
         "hurs": "data\\silver\\layers\\meteo_hurs_summer_train.tif",
-        "diurnal_range": "data\\silver\\layers\\meteo_diurnal_range_summer_train.tif"
+        "diurnal_range": "data\\silver\\layers\\meteo_diurnal_range_summer_train.tif",
+        "ndvi": "data\\silver\\layers\\ndvi_summer_train.tif"
       },
       "test": {
         "tas": "data\\silver\\layers\\meteo_tas_summer_test.tif",
@@ -28,7 +29,8 @@
         "rainfall": "data\\silver\\layers\\meteo_rainfall_summer_test.tif",
         "sfcWind": "data\\silver\\layers\\meteo_sfcWind_summer_test.tif",
         "hurs": "data\\silver\\layers\\meteo_hurs_summer_test.tif",
-        "diurnal_range": "data\\silver\\layers\\meteo_diurnal_range_summer_test.tif"
+        "diurnal_range": "data\\silver\\layers\\meteo_diurnal_range_summer_test.tif",
+        "ndvi": "data\\silver\\layers\\ndvi_summer_test.tif"
       }
     }
   },
@@ -48,6 +50,12 @@
     "summer": {
       "train": "data\\silver\\model_datasets\\dataset_train_summer.csv",
       "test": "data\\silver\\model_datasets\\dataset_test_summer.csv"
+    }
+  },
+  "preprocessing": {
+    "summer": {
+      "train": "data\\gold\\dataset_train_summer_clean.csv",
+      "test": "data\\gold\\dataset_test_summer_clean.csv"
     }
   }
 }

@@ -24,13 +24,13 @@ from ..utils.logger import setup_logger
 
 
 def stage_preprocessing(config: dict, input_paths: dict) -> Dict[str, dict]:
-    # logger = setup_logger(log_file=config["logging"]["log_path"], level=config["logging"]["level"])
     logger = setup_logger()
     ref_path = input_paths["ref_path"]
     prep = DatasetPrep(config)
     climate_vars = tuple(config["data_sources"]["haduk"]["sources"]) + ("diurnal_range",)
 
-    gold_dir = Path(config["base"]["model_data_dir"]) / "gold"
+    print(config)
+    gold_dir = Path(config["base"]["gold_dir"])
     gold_dir.mkdir(parents=True, exist_ok=True)
 
     out: Dict[str, dict] = {}

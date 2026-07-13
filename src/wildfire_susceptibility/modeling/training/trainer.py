@@ -9,9 +9,11 @@ from pathlib import Path
 import logging
 
 import numpy as np
+import pandas as pd
 import geopandas as gpd
 import mlflow
 from sklearn.metrics import roc_auc_score, f1_score
+from sklearn.model_selection import train_test_split
 
 from ...core.registry import MODELS
 from .. import models  # noqa: F401 — registers model wrappers (two dots: training/ -> modeling/)
@@ -23,12 +25,8 @@ from .evaluation import PostTrainingEvaluator
 
 logger = logging.getLogger(__name__)
 
-# wildfire_susceptibility/modeling/training/trainer.py — __init__
-
-import mlflow
-from pathlib import Path
-
 MLFLOW_TRACKING_URI = "sqlite:///data/silver/dbs/mlflow.db"
+
 class ModelTrainer:
     def __init__(self, config: dict):
         self.config = config
@@ -60,12 +58,6 @@ class ModelTrainer:
 
     @staticmethod
     def _ensure_mlflow_backend() -> None:
-        """
-        mlflow's plain filesystem store ('./mlruns') is deprecated in newer
-        mlflow versions and raises unless explicitly opted into. Use the
-        same sqlite-backed pattern as Optuna instead, so both trackers are
-        consistent, persistent, and compatible with the mlflow UI / dashboard.
-        """
         db_path = Path("data/silver/dbs/mlflow.db")
         db_path.parent.mkdir(parents=True, exist_ok=True)
         mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
@@ -112,25 +104,42 @@ class ModelTrainer:
             )
 
         X_tr, X_va = self._scale_features(model_cls, X_train, X_val)
-        X_search, y_search = self._subsample_for_search(X_tr, y_train, season, model_name)
+
+        study = self.search.get_or_create_study(season, model_name)
+        search_metric_is_spatial = cv_strategy in ("spatial", "both")
+
+        if search_metric_is_spatial:
+            X_search, y_search, groups_search = self._subsample_for_search_spatial(
+                X_tr, y_train, groups_train, season, model_name
+            )
+            search_folds = self.fold_strategy.make_folds(X_search, y_search, groups_search, "spatial")
+        else:
+            X_search, y_search = self._subsample_for_search(X_tr, y_train, season, model_name)
+            search_folds = self.fold_strategy.make_folds(X_search, y_search, None, "standard")
 
         logger.info(
-            f"[{season}][{model_name}] train shape={X_tr.shape} | search shape={X_search.shape} | "
+            f"[{season}][{model_name}] train shape={X_tr.shape} | search shape={X_search.shape} "
+            f"({'spatial' if search_metric_is_spatial else 'standard'} CV) | "
             f"class counts={y_train.value_counts().to_dict()}"
         )
 
-        study = self.search.get_or_create_study(season, model_name)
-        standard_folds = self.fold_strategy.make_folds(X_search, y_search, groups_train, "standard")
-        self.search.run(study, model_cls, X_search, y_search, standard_folds, season, model_name, progress_callback)
-
+        self.search.run(study, model_cls, X_search, y_search, search_folds, season, model_name, progress_callback)
         best_params, best_value = study.best_params, study.best_value
 
         with mlflow.start_run(run_name=f"{season}_{model_name}"):
-            self._log_run_setup(season, model_name, best_params, best_value)
+            self._log_run_setup(season, model_name, best_params, best_value, search_metric_is_spatial)
 
-            cv_auc_spatial, cv_auc_spatial_folds = self._spatial_cv_check(
-                model_cls, best_params, X_tr, y_train, groups_train, season, model_name, best_value,
-            )
+            if search_metric_is_spatial:
+                cv_auc_spatial = best_value
+                cv_auc_spatial_folds = None  # per-fold detail not retained from the winning Optuna trial itself
+                cv_auc_standard = self._diagnostic_cv_check(
+                    model_cls, best_params, X_tr, y_train, None, "standard", season, model_name, best_value,
+                )
+            else:
+                cv_auc_standard = best_value
+                cv_auc_spatial, cv_auc_spatial_folds = self._spatial_diagnostic_with_folds(
+                    model_cls, best_params, X_tr, y_train, groups_train, season, model_name, best_value,
+                ) if cv_strategy == "both" else (None, None)
 
             final_model, val_auc, val_f1 = self._fit_final_and_validate(
                 model_cls, best_params, X_tr, y_train, X_va, y_val, season, model_name,
@@ -149,7 +158,7 @@ class ModelTrainer:
         return {
             "model": final_model,
             "best_params": best_params,
-            "cv_auc_standard": best_value,
+            "cv_auc_standard": cv_auc_standard,
             "cv_auc_spatial": cv_auc_spatial,
             "cv_auc_spatial_folds": cv_auc_spatial_folds,
             "val_auc": val_auc,
@@ -168,8 +177,6 @@ class ModelTrainer:
         return X_tr, X_va
 
     def _subsample_for_search(self, X_tr, y_train, season, model_name):
-        from sklearn.model_selection import train_test_split
-
         n = self.config["modeling"].get("optuna_search_subsample_by_model", {}).get(model_name) \
             or self.config["modeling"].get("optuna_search_subsample")
         if not n or len(X_tr) <= n:
@@ -181,33 +188,77 @@ class ModelTrainer:
         logger.info(f"[{season}][{model_name}] search subsample: {len(X_search):,}/{len(X_tr):,} rows")
         return X_search, y_search
 
-    def _log_run_setup(self, season, model_name, best_params, best_value):
+    def _subsample_for_search_spatial(self, X_tr, y_train, groups_train, season, model_name):
+        """
+        Subsample by whole spatial block, not individual row — a plain
+        row-level subsample would sever the block structure GroupKFold
+        depends on, silently invalidating spatial CV on the subsample.
+        Greedily fills blocks (in random order) until the row budget is
+        reached, so the resulting subsample still has enough distinct
+        blocks for GroupKFold to split meaningfully.
+        """
+        n = self.config["modeling"].get("optuna_search_subsample_by_model", {}).get(model_name) \
+            or self.config["modeling"].get("optuna_search_subsample")
+        if not n or len(X_tr) <= n:
+            return X_tr, y_train, groups_train
+
+        groups_series = pd.Series(groups_train, index=X_tr.index) if not isinstance(groups_train, pd.Series) else groups_train
+        block_sizes = groups_series.value_counts().sample(frac=1.0, random_state=42)
+        cumulative = block_sizes.cumsum()
+        selected_blocks = cumulative[cumulative <= n].index
+
+        if len(selected_blocks) == 0:
+            selected_blocks = block_sizes.index[:1]  # smallest block alone exceeds n; take it anyway
+
+        mask = groups_series.isin(selected_blocks)
+        logger.info(
+            f"[{season}][{model_name}] spatial search subsample: "
+            f"{int(mask.sum()):,}/{len(X_tr):,} rows across {len(selected_blocks)} block(s)"
+        )
+        return X_tr[mask.values], y_train[mask.values], groups_series[mask.values]
+
+    def _log_run_setup(self, season, model_name, best_params, best_value, search_metric_is_spatial):
         mlflow.set_tags({
             "season": season,
             "model": model_name,
             "cv_strategy": self.config["modeling"].get("cv_strategy", "both"),
+            "search_metric": "spatial" if search_metric_is_spatial else "standard",
             "use_smote": self.config["modeling"].get("use_smote", False),
         })
         mlflow.log_params(best_params)
-        mlflow.log_metric("cv_auc_standard", best_value)
+        metric_key = "cv_auc_spatial" if search_metric_is_spatial else "cv_auc_standard"
+        mlflow.log_metric(metric_key, best_value)
 
-    def _spatial_cv_check(
-        self, 
-        model_cls, 
-        best_params, 
-        X_tr, 
-        y_train, 
-        groups_train, 
-        season, 
-        model_name, 
-        standard_auc
-    ):
-        cv_strategy = self.config["modeling"].get("cv_strategy", "both")
-        if cv_strategy not in ("spatial", "both"):
-            return None, None
+    def _diagnostic_cv_check(self, model_cls, best_params, X_tr, y_train, groups_train, strategy, season, model_name, primary_value):
+        """
+        Post-hoc, non-selection diagnostic: score the winning (spatially-
+        selected) hyperparameters under standard K-fold, purely to report
+        the optimism gap. Never influences which params were chosen.
+        """
+        folds = self.fold_strategy.make_folds(X_tr, y_train, groups_train, strategy)
+        context = f"[{season}][{model_name}] standard CV (diagnostic)"
+        auc = self.fold_strategy.mean_auc_across_folds(model_cls, best_params, X_tr, y_train, folds, context=context)
 
+        gap = auc - primary_value
+        mlflow.log_metric("cv_auc_standard", auc)
+        mlflow.log_metric("cv_auc_optimism_gap", gap)
+        logger.info(
+            f"[{season}][{model_name}] spatial CV AUC={primary_value:.4f} (search objective) vs "
+            f"standard CV AUC={auc:.4f} (diagnostic; gap={gap:.4f})"
+        )
+        return auc
+
+    def _spatial_diagnostic_with_folds(self, model_cls, best_params, X_tr, y_train, groups_train, season, model_name, standard_auc):
+        """
+        Used only when cv_strategy='standard' but 'both' diagnostics were
+        requested at a higher level in the original design — kept for
+        completeness, but note: when cv_strategy='standard' outright (not
+        'both'), groups_train is None and this is never called (see
+        train_one's branch: cv_auc_spatial stays (None, None) unless
+        cv_strategy == 'both').
+        """
         spatial_folds = self.fold_strategy.make_folds(X_tr, y_train, groups_train, "spatial")
-        context = f"[{season}][{model_name}] spatial CV"
+        context = f"[{season}][{model_name}] spatial CV (diagnostic)"
 
         fold_scores = []
         for i, (train_idx, test_idx) in enumerate(spatial_folds):
@@ -222,8 +273,8 @@ class ModelTrainer:
         mlflow.log_metric("cv_auc_spatial", cv_auc_spatial)
         mlflow.log_metric("cv_auc_optimism_gap", gap)
         logger.info(
-            f"[{season}][{model_name}] standard CV AUC={standard_auc:.4f} vs "
-            f"spatial CV AUC={cv_auc_spatial:.4f} (optimism gap={gap:.4f})"
+            f"[{season}][{model_name}] standard CV AUC={standard_auc:.4f} (search objective) vs "
+            f"spatial CV AUC={cv_auc_spatial:.4f} (diagnostic; gap={gap:.4f})"
         )
         return cv_auc_spatial, fold_scores
 

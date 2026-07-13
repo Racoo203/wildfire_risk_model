@@ -2,5 +2,6 @@ base:
   region: "Essex"
   boundary_shapefile: "./data/silver/layers/boundary.shp"
   output_dir: "./data/silver/layers"
+  gold_dir: "./data/gold"
   model_data_dir: "./data/silver/model_datasets"
   figures_dir: "./figures"

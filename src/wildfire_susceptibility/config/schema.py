@@ -6,6 +6,7 @@ class BaseConfig(BaseModel):
     region: str = Field(default="Essex")
     boundary_shapefile: Path = Field(default=Path("./data/silver/layers/boundary.shp"))
     output_dir: Path = Field(default=Path("./data/silver/layers"))
+    gold_dir: Path = Field(default=Path("./data/gold"))
     model_data_dir: Path = Field(default=Path("./data/silver/model_datasets"))
     figures_dir: Path = Field(default=Path("./figures"))
 
