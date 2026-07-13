@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Union, List, Tuple
+from typing import Dict
 import numpy as np
 import geopandas as gpd
 
@@ -12,7 +12,7 @@ from ..core.registry import FEATURE_BUILDERS
 class BoundaryBuilder(VarBuilder):
     """From the boundaries of all historic counties of the UK, save only the boundary of Essex."""
 
-    def process(self) -> None:
+    def process(self) -> Dict[str, Path]:
         data_config = self.config["data_sources"]["cua"]
 
         output_paths = {
@@ -32,4 +32,4 @@ class BoundaryBuilder(VarBuilder):
         essex_bng = essex.to_crs(self.config["processing"]["crs"])
         essex_bng.to_file(output_paths["boundary"])
 
-        return None
+        return output_paths

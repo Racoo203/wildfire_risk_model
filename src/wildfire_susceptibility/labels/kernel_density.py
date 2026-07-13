@@ -145,16 +145,15 @@ class KernelDensityClassifier(VarBuilder):
         }
         fit_path = self.output_dir / f"{self._seasonal_name(f'risk_labels_{method}_{classify_method}_fit', season)}.pkl"
 
-        # Cache is only valid if BOTH the raster and its fit artifact exist —
-        # this also auto-invalidates any pre-existing cache from before this
-        # fix, so you don't need to manually delete stale label rasters.
         if self._check_cache(f"KDClassifier[{method}][{classify_method}][{season}]", {**out_paths, "_fit": fit_path}):
             with rasterio.open(out_paths["risk_labels"]) as src:
                 labels = src.read(1)
             with open(fit_path, "rb") as f:
                 fit_artifact = pickle.load(f)
+            fit_artifact = dict(fit_artifact)
+            fit_artifact["label_path"] = out_paths["risk_labels"]
             return labels, fit_artifact
-
+        
         zero_threshold = self.config["labels"].get("kde_zero_threshold", 0.0) if method == "kde" else 0.0
         valid = density[density > zero_threshold].copy()
         valid = valid[~np.isnan(valid)]
@@ -166,7 +165,7 @@ class KernelDensityClassifier(VarBuilder):
 
         if fitted is not None:
             labels = self._apply_fitted(density, mask, fitted, classify_method)
-            fit_artifact = fitted
+            fit_artifact = dict(fitted)
             self.logger.info(f"[{season}][{method}][{classify_method}] applied FROZEN fit from paired split (no refit).")
         else:
             dispatch = {
@@ -202,6 +201,8 @@ class KernelDensityClassifier(VarBuilder):
         with open(fit_path, "wb") as f:
             pickle.dump(fit_artifact, f)
 
+        fit_artifact = dict(fit_artifact)
+        fit_artifact["label_path"] = out_paths["risk_labels"]
         return labels, fit_artifact
     
     def _apply_fitted(self, density, mask, fitted, classify_method):

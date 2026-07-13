@@ -1,0 +1,131 @@
+"""Stage: model selection.
+
+Aggregates every (season, model) manifest + eval result into one
+comparison table, applies config.modeling.selection_rule to pick a
+winner per season, and runs a Kruskal-Wallis test across models'
+spatial-CV fold scores per season to report whether the differences are
+statistically significant — not just numerically different.
+
+    stage_selection(config, input_paths) -> {
+        "comparison_table": Path,      # csv
+        "selection_summary": Path,     # json
+        "kruskal_results": Path,       # json
+    }
+
+`input_paths` must contain:
+    "train": {"<season>": {"<model_name>": Path}}          # artifact dirs
+    "evaluate": {"<season>": {"<model_name>": dict}}        # eval results
+"""
+import json
+from pathlib import Path
+from typing import Dict
+
+import pandas as pd
+from scipy.stats import kruskal
+
+from ..utils.logger import setup_logger
+
+
+def stage_selection(config: dict, input_paths: dict) -> Dict[str, Path]:
+    logger = setup_logger(log_file=config["logging"]["log_path"], level=config["logging"]["level"])
+    train_artifacts = input_paths["train"]
+    eval_results = input_paths["evaluate"]
+    selection_rule = config["modeling"].get("selection_rule", "best_auc")
+
+    rows = []
+    manifests: Dict[str, Dict[str, dict]] = {}
+    for season, models in train_artifacts.items():
+        manifests[season] = {}
+        for model_name, artifact_dir in models.items():
+            manifest = json.loads((Path(artifact_dir) / "manifest.json").read_text())
+            manifests[season][model_name] = manifest
+            eval_result = eval_results.get(season, {}).get(model_name, {})
+            rows.append({
+                "season": season,
+                "model": model_name,
+                "cv_auc_standard": manifest["cv_auc_standard"],
+                "cv_auc_spatial": manifest["cv_auc_spatial"],
+                "val_auc": manifest["val_auc"],
+                "val_f1": manifest["val_f1"],
+                "tf_pct_medium_plus": (eval_result.get("time_forward_validation") or {}).get("pct_medium_plus"),
+            })
+
+    comparison_df = pd.DataFrame(rows).sort_values(["season", "cv_auc_standard"], ascending=[True, False])
+    figures_dir = Path(config["base"]["figures_dir"])
+    figures_dir.mkdir(parents=True, exist_ok=True)
+    comparison_path = figures_dir / "model_comparison.csv"
+    comparison_df.to_csv(comparison_path, index=False)
+
+    selection_summary = _select_best_per_season(manifests, selection_rule)
+    selection_path = figures_dir / "selection_summary.json"
+    selection_path.write_text(json.dumps(selection_summary, indent=2))
+
+    kruskal_results = _kruskal_wallis_per_season(manifests)
+    kruskal_path = figures_dir / "kruskal_wallis.json"
+    kruskal_path.write_text(json.dumps(kruskal_results, indent=2))
+
+    logger.info(f"[stage_selection] Comparison table -> {comparison_path.name}")
+    logger.info(f"[stage_selection] Selection summary -> {selection_path.name}")
+    logger.info(f"[stage_selection] Kruskal-Wallis results -> {kruskal_path.name}")
+
+    return {"comparison_table": comparison_path, "selection_summary": selection_path, "kruskal_results": kruskal_path}
+
+
+def _select_best_per_season(manifests: Dict[str, Dict[str, dict]], selection_rule: str) -> Dict[str, dict]:
+    summary = {}
+    for season, models in manifests.items():
+        if selection_rule == "best_auc":
+            best_model = max(models, key=lambda m: models[m]["val_auc"])
+        elif selection_rule == "most_conservative":
+            # smallest optimism gap (standard - spatial CV AUC) among models
+            # within 1% of the best standard AUC — favors generalizable models
+            best_standard = max(m["cv_auc_standard"] for m in models.values())
+            candidates = {
+                name: m for name, m in models.items()
+                if m["cv_auc_standard"] >= best_standard - 0.01
+            }
+            best_model = min(candidates, key=lambda m: candidates[m]["cv_auc_standard"] - candidates[m]["cv_auc_spatial"])
+        else:
+            raise ValueError(f"Unknown selection_rule '{selection_rule}'")
+
+        summary[season] = {"selected_model": best_model, "selection_rule": selection_rule, **models[best_model]}
+    return summary
+
+
+def _kruskal_wallis_per_season(manifests: Dict[str, Dict[str, dict]]) -> Dict[str, dict]:
+    """
+    Kruskal-Wallis H-test across models' spatial-CV fold AUCs, per season.
+
+    ASSUMPTION: kruskal() treats each model's fold-score list as an
+    independent sample — it does NOT require fold i in model A to
+    correspond to fold i in model B (unlike a paired test). This holds
+    regardless of fold alignment, so no assumption about matching fold
+    splits across models is actually required here. What IS assumed is
+    that within a single (season, model) pair, cv_auc_spatial_folds was
+    produced by ModelTrainer._spatial_cv_check's FoldStrategy.make_folds
+    call — i.e. every fold score in the list came from the same spatial
+    block partition for that model's search space. Since all models for
+    a given season currently share one FoldStrategy instance and one
+    groups_train assignment (see stage_train.py), fold counts are in
+    practice equal across models within a season, but Kruskal-Wallis
+    doesn't require this — it tolerates unequal group sizes.
+    """
+    results = {}
+    for season, models in manifests.items():
+        groups = {
+            name: m["cv_auc_spatial_folds"]
+            for name, m in models.items()
+            if m.get("cv_auc_spatial_folds")
+        }
+        if len(groups) < 2:
+            results[season] = {"skipped": "fewer than 2 models with fold-level scores"}
+            continue
+
+        stat, p_value = kruskal(*groups.values())
+        results[season] = {
+            "statistic": float(stat),
+            "p_value": float(p_value),
+            "significant_at_0.05": bool(p_value < 0.05),
+            "models_compared": list(groups.keys()),
+        }
+    return results

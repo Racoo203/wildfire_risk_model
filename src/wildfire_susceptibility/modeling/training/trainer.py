@@ -97,6 +97,7 @@ class ModelTrainer:
         fire_test_gdf: Optional[gpd.GeoDataFrame] = None,
         x_coords: Optional[np.ndarray] = None,
         y_coords: Optional[np.ndarray] = None,
+        run_post_training_evaluation: bool = True,
     ) -> dict:
         if model_name not in MODELS:
             raise ValueError(f"Model '{model_name}' not found in MODELS registry: {list(MODELS)}")
@@ -127,7 +128,7 @@ class ModelTrainer:
         with mlflow.start_run(run_name=f"{season}_{model_name}"):
             self._log_run_setup(season, model_name, best_params, best_value)
 
-            cv_auc_spatial = self._spatial_cv_check(
+            cv_auc_spatial, cv_auc_spatial_folds = self._spatial_cv_check(
                 model_cls, best_params, X_tr, y_train, groups_train, season, model_name, best_value,
             )
 
@@ -138,16 +139,19 @@ class ModelTrainer:
             mlflow.log_metric("val_f1", val_f1)
             self._log_model_artifact(model_name, final_model)
 
-            eval_results = self.evaluator.evaluate(
-                final_model, X_va, y_val, season, model_name,
-                ref_path, fire_test_gdf, x_coords, y_coords,
-            )
+            eval_results = {}
+            if run_post_training_evaluation:
+                eval_results = self.evaluator.evaluate(
+                    final_model, X_va, y_val, season, model_name,
+                    ref_path, fire_test_gdf, x_coords, y_coords,
+                )
 
         return {
             "model": final_model,
             "best_params": best_params,
             "cv_auc_standard": best_value,
             "cv_auc_spatial": cv_auc_spatial,
+            "cv_auc_spatial_folds": cv_auc_spatial_folds,
             "val_auc": val_auc,
             "val_f1": val_f1,
             "study": study,
@@ -187,16 +191,32 @@ class ModelTrainer:
         mlflow.log_params(best_params)
         mlflow.log_metric("cv_auc_standard", best_value)
 
-    def _spatial_cv_check(self, model_cls, best_params, X_tr, y_train, groups_train, season, model_name, standard_auc):
+    def _spatial_cv_check(
+        self, 
+        model_cls, 
+        best_params, 
+        X_tr, 
+        y_train, 
+        groups_train, 
+        season, 
+        model_name, 
+        standard_auc
+    ):
         cv_strategy = self.config["modeling"].get("cv_strategy", "both")
         if cv_strategy not in ("spatial", "both"):
-            return None
+            return None, None
 
         spatial_folds = self.fold_strategy.make_folds(X_tr, y_train, groups_train, "spatial")
         context = f"[{season}][{model_name}] spatial CV"
-        cv_auc_spatial = self.fold_strategy.mean_auc_across_folds(
-            model_cls, best_params, X_tr, y_train, spatial_folds, context=context,
-        )
+
+        fold_scores = []
+        for i, (train_idx, test_idx) in enumerate(spatial_folds):
+            fold_context = f"{context} fold {i + 1}/{len(spatial_folds)}"
+            auc = self.fold_strategy.fit_and_score(model_cls, best_params, X_tr, y_train, train_idx, test_idx, context=fold_context)
+            logger.info(f"{fold_context} AUC={auc:.4f}")
+            fold_scores.append(auc)
+
+        cv_auc_spatial = float(np.mean(fold_scores))
         gap = standard_auc - cv_auc_spatial
 
         mlflow.log_metric("cv_auc_spatial", cv_auc_spatial)
@@ -205,7 +225,7 @@ class ModelTrainer:
             f"[{season}][{model_name}] standard CV AUC={standard_auc:.4f} vs "
             f"spatial CV AUC={cv_auc_spatial:.4f} (optimism gap={gap:.4f})"
         )
-        return cv_auc_spatial
+        return cv_auc_spatial, fold_scores
 
     def _fit_final_and_validate(self, model_cls, best_params, X_tr, y_train, X_va, y_val, season, model_name):
         X_fit, y_fit = self.final_resampler.resample(
