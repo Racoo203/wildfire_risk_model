@@ -33,10 +33,11 @@ from ..utils.logger import setup_logger
 
 
 def stage_train(config: dict, input_paths: dict) -> Dict[str, Dict[str, Path]]:
-    logger = setup_logger(
-        log_file=config["logging"]["log_path"],
-        level=config["logging"]["level"],
-    )
+    # logger = setup_logger(
+    #     log_file=config["logging"]["log_path"],
+    #     level=config["logging"]["level"],
+    # )
+    logger = setup_logger()
     ref_path = input_paths["ref_path"]
     prep = DatasetPrep(config)
     trainer = ModelTrainer(config)

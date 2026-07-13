@@ -27,7 +27,8 @@ from ..utils.logger import setup_logger
 
 
 def stage_selection(config: dict, input_paths: dict) -> Dict[str, Path]:
-    logger = setup_logger(log_file=config["logging"]["log_path"], level=config["logging"]["level"])
+    # logger = setup_logger(log_file=config["logging"]["log_path"], level=config["logging"]["level"])
+    logger = setup_logger()
     train_artifacts = input_paths["train"]
     eval_results = input_paths["evaluate"]
     selection_rule = config["modeling"].get("selection_rule", "best_auc")

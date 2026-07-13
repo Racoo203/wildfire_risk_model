@@ -25,7 +25,8 @@ _NON_RASTER_STATIC_KEYS = {"ref_path", "boundary"}
 
 
 def stage_integration(config: dict, input_paths: dict) -> Dict[str, dict]:
-    logger = setup_logger(log_file=config["logging"]["log_path"], level=config["logging"]["level"])
+    # logger = setup_logger(log_file=config["logging"]["log_path"], level=config["logging"]["level"])
+    logger = setup_logger()
     ref_path = input_paths["ref_path"]
     static_features = {k: v for k, v in input_paths["static"].items() if k not in _NON_RASTER_STATIC_KEYS}
     seasonal = input_paths["seasonal"]

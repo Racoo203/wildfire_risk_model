@@ -1,0 +1,53 @@
+{
+  "static": {
+    "ref_path": "data\\silver\\layers\\topo_elevation.tif",
+    "boundary": "data\\silver\\layers\\boundary.shp",
+    "elevation": "data\\silver\\layers\\topo_elevation.tif",
+    "slope": "data\\silver\\layers\\topo_slope.tif",
+    "aspect": "data\\silver\\layers\\topo_aspect.tif",
+    "d_roads": "data\\silver\\layers\\dist_roads.tif",
+    "d_rivers": "data\\silver\\layers\\dist_rivers.tif",
+    "d_buildings": "data\\silver\\layers\\dist_buildings.tif",
+    "landuse_class": "data\\silver\\layers\\landuse_class.tif"
+  },
+  "seasonal": {
+    "summer": {
+      "train": {
+        "tas": "data\\silver\\layers\\meteo_tas_summer_train.tif",
+        "tasmax": "data\\silver\\layers\\meteo_tasmax_summer_train.tif",
+        "tasmin": "data\\silver\\layers\\meteo_tasmin_summer_train.tif",
+        "rainfall": "data\\silver\\layers\\meteo_rainfall_summer_train.tif",
+        "sfcWind": "data\\silver\\layers\\meteo_sfcWind_summer_train.tif",
+        "hurs": "data\\silver\\layers\\meteo_hurs_summer_train.tif",
+        "diurnal_range": "data\\silver\\layers\\meteo_diurnal_range_summer_train.tif"
+      },
+      "test": {
+        "tas": "data\\silver\\layers\\meteo_tas_summer_test.tif",
+        "tasmax": "data\\silver\\layers\\meteo_tasmax_summer_test.tif",
+        "tasmin": "data\\silver\\layers\\meteo_tasmin_summer_test.tif",
+        "rainfall": "data\\silver\\layers\\meteo_rainfall_summer_test.tif",
+        "sfcWind": "data\\silver\\layers\\meteo_sfcWind_summer_test.tif",
+        "hurs": "data\\silver\\layers\\meteo_hurs_summer_test.tif",
+        "diurnal_range": "data\\silver\\layers\\meteo_diurnal_range_summer_test.tif"
+      }
+    }
+  },
+  "labels": {
+    "summer": {
+      "train": {
+        "raw_labels": "data\\silver\\layers\\risk_labels_convolution_gmm_summer_train.tif"
+      },
+      "test": {
+        "raw_labels": "data\\silver\\layers\\risk_labels_convolution_gmm_summer_test.tif"
+      },
+      "fire_train": "data\\silver\\layers\\fire_points_train_summer.gpkg",
+      "fire_test": "data\\silver\\layers\\fire_points_test_summer.gpkg"
+    }
+  },
+  "integration": {
+    "summer": {
+      "train": "data\\silver\\model_datasets\\dataset_train_summer.csv",
+      "test": "data\\silver\\model_datasets\\dataset_test_summer.csv"
+    }
+  }
+}

@@ -1,26 +1,24 @@
-"""Stage: post-training evaluation.
-
-Reloads model artifacts from stage_train and evaluates against the
-CLEANED test set (stage_preprocessing's output) — never retrains.
-
-`input_paths` must contain:
-    "ref_path": Path
-    "<season>": {"test": Path, "fire_test": Path, "artifacts": {"<model_name>": Path}}
-"""
 from pathlib import Path
 from typing import Dict
 
 import geopandas as gpd
 import joblib
+import mlflow
 import pandas as pd
 
 from ..modeling.training.evaluation import PostTrainingEvaluator
+from ..modeling.training.trainer import ModelTrainer
 from ..utils.logger import setup_logger
 
 
 def stage_evaluate(config: dict, input_paths: dict) -> Dict[str, Dict[str, dict]]:
-    logger = setup_logger(log_file=config["logging"]["log_path"], level=config["logging"]["level"])
+    # logger = setup_logger(log_file=config["logging"]["log_path"], level=config["logging"]["level"])
+    logger = setup_logger()
     ref_path = input_paths["ref_path"]
+
+    ModelTrainer._ensure_mlflow_backend()
+    mlflow.set_experiment(config["modeling"]["mlflow_experiment"])
+
     evaluator = PostTrainingEvaluator(config)
     excluded = set(config["modeling"].get("excluded_features", []))
 

@@ -28,7 +28,8 @@ from ..utils.logger import setup_logger
 
 
 def stage_train(config: dict, input_paths: dict) -> Dict[str, Dict[str, Path]]:
-    logger = setup_logger(log_file=config["logging"]["log_path"], level=config["logging"]["level"])
+    # logger = setup_logger(log_file=config["logging"]["log_path"], level=config["logging"]["level"])
+    logger = setup_logger()
     prep = DatasetPrep(config)
     trainer = ModelTrainer(config)
     block_size = config["modeling"].get("spatial_block_size_m", 5000.0)

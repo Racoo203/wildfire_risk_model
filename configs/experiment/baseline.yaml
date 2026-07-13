@@ -1,9 +1,12 @@
+preprocessing:
+  force_recompute: true
+
 seasons:
   active: ["summer"]
 
 labels:
-  density_method: "kde"
-  classify_method: "jenks"
+  density_method: "convolution"
+  classify_method: "gmm"
 
 modeling:
   mlflow_experiment: "wildfire-summer-jenks-baseline"

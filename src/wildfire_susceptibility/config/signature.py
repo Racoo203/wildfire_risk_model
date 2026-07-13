@@ -11,7 +11,7 @@ seasons/features/search settings land in different artifact dirs.
 import hashlib
 import json
 from typing import Any, Dict
-from pathlib import Path
+from pathlib import PurePath
 
 # Top-level sections and keys excluded from the hash — infra/bookkeeping
 # fields that don't affect what gets trained or how.
@@ -24,6 +24,15 @@ _EXCLUDED_NESTED_PATTERNS = {
     ("data_sources", "*", "data_dir"),
 }
 
+
+
+def _json_default(value: Any) -> str:
+    """Normalize non-JSON-native values for canonical hashing.
+    Path objects are rendered as POSIX strings so cfg_sig is identical
+    across Windows/Linux/Docker regardless of which OS computed it."""
+    if isinstance(value, PurePath):
+        return value.as_posix()
+    return str(value)
 
 def _prune(config: Dict[str, Any]) -> Dict[str, Any]:
     """Return a copy of config with excluded sections/keys removed."""
@@ -44,15 +53,6 @@ def _prune(config: Dict[str, Any]) -> Dict[str, Any]:
         }
 
     return pruned
-
-def _json_default(value: Any) -> str:
-    """Normalize non-JSON-native values for canonical hashing.
-    Path objects are rendered as POSIX strings so cfg_sig is identical
-    across Windows/Linux/Docker regardless of which OS computed it."""
-    if isinstance(value, Path):
-        return value.as_posix()
-    return str(value)
-
 
 def compute_cfg_sig(config: Dict[str, Any]) -> str:
     pruned = _prune(config)

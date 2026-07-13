@@ -73,7 +73,7 @@ class ClimateBuilder(VarBuilder):
             native_bng = self._write_native_bng(mean_grid, lons, lats, var_name, f"{season}_{split}")
             self._to_reference(native_bng, out_path, tmp_stem=f"_tmp_clip_{var_name}_{season}_{split}")
             native_bng.unlink()
-            self.logger.info(f"[{season}][{split}] Climate feature ready: {var_name} → {out_path.name}")
+            self.logger.info(f"[{season}][{split}] Climate feature ready: {var_name}: {out_path.name}")
 
         if derive_diurnal_range:
             self._write_diurnal_range(diurnal_inputs, output_paths["diurnal_range"], season, split)

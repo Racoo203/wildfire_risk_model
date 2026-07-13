@@ -19,7 +19,8 @@ from ..utils.logger import setup_logger
 
 
 def stage_seasonal(config: dict, input_paths: Dict[str, Path]) -> Dict[str, dict]:
-    logger = setup_logger(log_file=config["logging"]["log_path"], level=config["logging"]["level"])
+    # logger = setup_logger(log_file=config["logging"]["log_path"], level=config["logging"]["level"])
+    logger = setup_logger()
     ref_path = input_paths["ref_path"]
     season_defs = config["seasons"]["definitions"]
 

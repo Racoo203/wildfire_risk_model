@@ -1,0 +1,42 @@
+2026-07-13 17:06:46 - wildfire_susceptibility - INFO - Logger initialized: wildfire_susceptibility
+2026-07-13 17:06:46 - wildfire_susceptibility - INFO - [stage_static] Building static features...
+2026-07-13 17:06:46 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] BoundaryBuilder: outputs already exist, skipping computation
+2026-07-13 17:06:46 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] TopographyBuilder: outputs already exist, skipping computation
+2026-07-13 17:06:46 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] ProximityBuilder: outputs already exist, skipping computation
+2026-07-13 17:06:46 - wildfire_susceptibility - INFO - [stage_static] Complete — 9 output path(s).
+2026-07-13 17:06:46 - wildfire_susceptibility - INFO - [stage_seasonal] [summer] Building seasonal features...
+2026-07-13 17:06:46 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] ClimateBuilder[summer][train]: outputs already exist, skipping computation
+2026-07-13 17:06:46 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] ClimateBuilder[summer][test]: outputs already exist, skipping computation
+2026-07-13 17:06:46 - wildfire_susceptibility - INFO - [stage_labels] [summer] Building fire labels...
+2026-07-13 17:06:46 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] FireBuilder[summer]: outputs already exist, skipping computation
+2026-07-13 17:06:46 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[conv][summer_train]: outputs already exist, skipping computation
+2026-07-13 17:06:46 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[convolution][gmm][summer_train]: outputs already exist, skipping computation
+2026-07-13 17:06:46 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[conv][summer_test]: outputs already exist, skipping computation
+2026-07-13 17:06:47 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[convolution][gmm][summer_test]: outputs already exist, skipping computation
+2026-07-13 17:06:47 - wildfire_susceptibility - INFO - [stage_integration] [CACHED] summer/train -> dataset_train_summer.csv
+2026-07-13 17:06:47 - wildfire_susceptibility - INFO - [stage_integration] [CACHED] summer/test -> dataset_test_summer.csv
+2026-07-13 17:10:08 - wildfire_susceptibility - INFO - Logger initialized: wildfire_susceptibility
+2026-07-13 17:10:08 - wildfire_susceptibility - INFO - === Running stage: static ===
+2026-07-13 17:10:08 - wildfire_susceptibility - INFO - [stage_static] Building static features...
+2026-07-13 17:10:08 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] BoundaryBuilder: outputs already exist, skipping computation
+2026-07-13 17:10:08 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] TopographyBuilder: outputs already exist, skipping computation
+2026-07-13 17:10:08 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] ProximityBuilder: outputs already exist, skipping computation
+2026-07-13 17:10:08 - wildfire_susceptibility - INFO - [stage_static] Complete — 9 output path(s).
+2026-07-13 17:10:08 - wildfire_susceptibility - INFO - === Stage complete: static ===
+2026-07-13 17:10:08 - wildfire_susceptibility - INFO - === Running stage: seasonal ===
+2026-07-13 17:10:08 - wildfire_susceptibility - INFO - [stage_seasonal] [summer] Building seasonal features...
+2026-07-13 17:10:08 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] ClimateBuilder[summer][train]: outputs already exist, skipping computation
+2026-07-13 17:10:08 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] ClimateBuilder[summer][test]: outputs already exist, skipping computation
+2026-07-13 17:10:08 - wildfire_susceptibility - INFO - === Stage complete: seasonal ===
+2026-07-13 17:10:08 - wildfire_susceptibility - INFO - === Running stage: labels ===
+2026-07-13 17:10:08 - wildfire_susceptibility - INFO - [stage_labels] [summer] Building fire labels...
+2026-07-13 17:10:08 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] FireBuilder[summer]: outputs already exist, skipping computation
+2026-07-13 17:10:08 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[conv][summer_train]: outputs already exist, skipping computation
+2026-07-13 17:10:09 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[convolution][gmm][summer_train]: outputs already exist, skipping computation
+2026-07-13 17:10:09 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[conv][summer_test]: outputs already exist, skipping computation
+2026-07-13 17:10:09 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[convolution][gmm][summer_test]: outputs already exist, skipping computation
+2026-07-13 17:10:09 - wildfire_susceptibility - INFO - === Stage complete: labels ===
+2026-07-13 17:10:09 - wildfire_susceptibility - INFO - === Running stage: integration ===
+2026-07-13 17:10:09 - wildfire_susceptibility - INFO - [stage_integration] [CACHED] summer/train -> dataset_train_summer.csv
+2026-07-13 17:10:09 - wildfire_susceptibility - INFO - [stage_integration] [CACHED] summer/test -> dataset_test_summer.csv
+2026-07-13 17:10:09 - wildfire_susceptibility - INFO - === Stage complete: integration ===

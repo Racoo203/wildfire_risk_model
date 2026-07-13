@@ -16,28 +16,39 @@ from __future__ import annotations
 import argparse
 import json
 import logging
-import sys
+# import sys
 from pathlib import Path
 from typing import List, Optional
 
-from ..config.loader import ConfigLoader, DEFAULT_CONFIG_DIR, DEFAULT_CONFIG_FILES
-from .stage_static import stage_static
-from .stage_seasonal import stage_seasonal
-from .stage_labels import stage_labels
-from .stage_integration import stage_integration
+from wildfire_susceptibility.config.loader import ConfigLoader, DEFAULT_CONFIG_DIR, DEFAULT_CONFIG_FILES
+from wildfire_susceptibility.pipeline.stage_static import stage_static
+from wildfire_susceptibility.pipeline.stage_seasonal import stage_seasonal
+from wildfire_susceptibility.pipeline.stage_labels import stage_labels
+from wildfire_susceptibility.pipeline.stage_integration import stage_integration
 
-from .stage_preprocessing import stage_preprocessing
-from .stage_eda import stage_eda
-from .stage_train import stage_train
-from .stage_evaluate import stage_evaluate
+from wildfire_susceptibility.pipeline.stage_preprocessing import stage_preprocessing
+from wildfire_susceptibility.pipeline.stage_eda import stage_eda
+from wildfire_susceptibility.pipeline.stage_train import stage_train
+from wildfire_susceptibility.pipeline.stage_evaluate import stage_evaluate
 
-from .stage_selection import stage_selection
+from wildfire_susceptibility.pipeline.stage_selection import stage_selection
 
-logger = logging.getLogger("wildfire_susceptibility.pipeline.run_pipeline")
+from wildfire_susceptibility.utils.logger import setup_logger
+
+
+logger = logging.getLogger()
 
 STAGE_ORDER = [
     "static", "seasonal", "labels", "integration",
     "preprocessing", "eda", "train", "evaluate", "selection",
+]
+
+GEN_ONLY = [
+    "static", "seasonal", "labels", "integration",
+]
+
+TRAIN_ONLY = [
+    "preprocessing", "train", "evaluate", "selection",
 ]
 
 STATE_PATH = Path("models/.pipeline_state.json")
@@ -111,23 +122,37 @@ def run_stage(stage: str, config: dict, state: dict) -> dict:
 
 def main(argv: Optional[List[str]] = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--stage", choices=[*STAGE_ORDER, "all"], default="all")
+    parser.add_argument("--stage", choices=[*STAGE_ORDER, "dataset", "train", "all"], default="all")
     parser.add_argument("--config-dir", type=Path, default=DEFAULT_CONFIG_DIR)
     parser.add_argument("--config-file", action="append", dest="config_files", default=None)
+    parser.add_argument("--experiment", default=None)
     parser.add_argument("-v", "--verbose", action="store_true")
     args = parser.parse_args(argv)
 
-    logging.basicConfig(
-        level=logging.DEBUG if args.verbose else logging.INFO,
-        format="%(levelname)s: %(message)s",
-        stream=sys.stdout,
-    )
+    # logging.basicConfig(
+    #     level=logging.DEBUG if args.verbose else logging.INFO,
+    #     format="%(levelname)s: %(message)s",
+    #     stream=sys.stdout,
+    # )
+    logger = setup_logger()
 
-    cfg_obj = ConfigLoader.load(config_dir=args.config_dir, files=args.config_files or DEFAULT_CONFIG_FILES)
-    config = cfg_obj.model_dump(mode="python")
+    if args.experiment:
+        cfg_obj = ConfigLoader.load_experiment(name=args.experiment)
+        config = cfg_obj.model_dump(mode="python")
+    else:
+        cfg_obj = ConfigLoader.load(config_dir=args.config_dir, files=args.config_files or DEFAULT_CONFIG_FILES)
+        config = cfg_obj.model_dump(mode="python")
 
     state = _load_state()
-    stages = STAGE_ORDER if args.stage == "all" else [args.stage]
+
+    if args.stage == "all":
+        stages = STAGE_ORDER
+    elif args.stage == "dataset":
+        stages = GEN_ONLY
+    elif args.stage == "train":
+        stages = TRAIN_ONLY
+    else: 
+        stages = [args.stage]
 
     for stage in stages:
         logger.info(f"=== Running stage: {stage} ===")

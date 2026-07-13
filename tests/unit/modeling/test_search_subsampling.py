@@ -108,7 +108,7 @@ def test_optuna_search_subsample_survives_config_roundtrip(tmp_path):
         },
     }))
 
-    cfg_obj = ConfigLoader.load(cfg_path)
+    cfg_obj = ConfigLoader.load(config_dir=tmp_path, files=[cfg_path.name])
     cfg = cfg_obj.model_dump(mode="python")
 
     assert "optuna_search_subsample" in cfg["modeling"], (
@@ -127,7 +127,7 @@ def test_optuna_search_subsample_defaults_to_none(tmp_path):
     cfg_path = tmp_path / "test_config.yaml"
     cfg_path.write_text(yaml.safe_dump({"modeling": {}}))
 
-    cfg_obj = ConfigLoader.load(cfg_path)
+    cfg_obj = ConfigLoader.load(config_dir=tmp_path, files=[cfg_path.name])
     cfg = cfg_obj.model_dump(mode="python")
 
     assert cfg["modeling"].get("optuna_search_subsample") is None

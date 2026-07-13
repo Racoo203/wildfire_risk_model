@@ -136,3 +136,14 @@ def fast_modeling_config(minimal_modeling_config):
         "use_smote": False,
     })
     return cfg
+
+@pytest.fixture(autouse=True)
+def _end_dangling_mlflow_runs():
+    """Safety net: if a test leaves an mlflow run active (e.g. via an
+    exception raised inside a `with mlflow.start_run():` block, or a
+    bug that auto-starts a run without closing it), don't let it leak
+    into the next test's mlflow.start_run() call."""
+    yield
+    import mlflow
+    while mlflow.active_run() is not None:
+        mlflow.end_run()

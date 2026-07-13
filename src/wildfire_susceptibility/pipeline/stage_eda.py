@@ -30,7 +30,8 @@ def stage_eda(config: dict, input_paths: dict) -> Dict[str, dict]:
     docstring), so a train-vs-clean comparison is the only one that's
     meaningful; test labels are never mutated and would show 0% change.
     """
-    logger = setup_logger(log_file=config["logging"]["log_path"], level=config["logging"]["level"])
+    # logger = setup_logger(log_file=config["logging"]["log_path"], level=config["logging"]["level"])
+    logger = setup_logger()
     figures_dir = config["base"]["figures_dir"]
 
     raw = input_paths["raw"]

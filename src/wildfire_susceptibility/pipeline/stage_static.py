@@ -21,7 +21,8 @@ from ..utils.logger import setup_logger
 
 
 def stage_static(config: dict, input_paths: Dict[str, Path]) -> Dict[str, Path]:
-    logger = setup_logger(log_file=config["logging"]["log_path"], level=config["logging"]["level"])
+    # logger = setup_logger(log_file=config["logging"]["log_path"], level=config["logging"]["level"])
+    logger = setup_logger()
     logger.info("[stage_static] Building static features...")
 
     boundary_builder = BoundaryBuilder(config)

@@ -89,7 +89,7 @@ class TopographyBuilder(VarBuilder):
             for ds in datasets:
                 ds.close()
 
-        self.logger.info(f"Merged {len(tile_paths)} SRTM tiles → {out_path.name}")
+        self.logger.info(f"Merged {len(tile_paths)} SRTM tiles: {out_path.name}")
 
     def _derive_slope_and_aspect(
         self,
