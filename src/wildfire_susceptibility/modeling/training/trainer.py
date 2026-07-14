@@ -2,9 +2,21 @@
 """ModelTrainer: coordinates dataset prep, hyperparameter search, final
 refit, mlflow logging, and post-training evaluation for one (season,
 model) pair. Delegates every actual mechanism to a focused collaborator
-class rather than implementing it inline."""
+class rather than implementing it inline:
 
-from typing import Callable, Dict, Optional, Tuple
+    - CVStrategy (cv/)         : how folds are built and how a fold is
+                                  fit/scored (standard / spatial /
+                                  stratified_spatial_block)
+    - HyperparamSearch         : search-time subsampling, fold building on
+                                  the subsample, and the Optuna study itself
+    - SMOTEResampler           : in-fold / final-refit class balancing
+    - DatasetPrep              : scaling, spatial block assignment
+    - PostTrainingEvaluator    : metrics, figures, susceptibility raster
+
+trainer.py itself should only ever be orchestration glue.
+"""
+
+from typing import Dict, Optional, Tuple
 from pathlib import Path
 import logging
 
@@ -13,19 +25,19 @@ import pandas as pd
 import geopandas as gpd
 import mlflow
 from sklearn.metrics import roc_auc_score, f1_score
-from sklearn.model_selection import train_test_split
 
 from ...core.registry import MODELS
 from .. import models  # noqa: F401 — registers model wrappers (two dots: training/ -> modeling/)
 from ..dataset_prep import DatasetPrep
 from .resampling import SMOTEResampler
-from .cv import FoldStrategy
+from ..cv import get_cv_strategy, requires_spatial_groups
 from .search import HyperparamSearch
 from .evaluation import PostTrainingEvaluator
 
 logger = logging.getLogger(__name__)
 
 MLFLOW_TRACKING_URI = "sqlite:///data/silver/dbs/mlflow.db"
+
 
 class ModelTrainer:
     def __init__(self, config: dict):
@@ -34,21 +46,38 @@ class ModelTrainer:
         self._ensure_mlflow_backend()
         mlflow.set_experiment(config["modeling"]["mlflow_experiment"])
 
-        no_smote_config = {
-            **config,
-            "modeling": {**config["modeling"], "use_smote": False},
-        }
-        search_resampler = SMOTEResampler(no_smote_config)
+        cv_strategy_name = config["modeling"].get("cv_strategy", "both")
+        primary_strategy_name = "spatial" if cv_strategy_name == "both" else cv_strategy_name
+
+        smote_during_search = config["modeling"].get("smote_during_search", False)
+        search_target_size = config["modeling"].get("search_resample_target_size")
+        no_smote_config = {**config, "modeling": {**config["modeling"], "use_smote": False}}
+
+        # stratified_spatial_block always resamples in-fold by design; other
+        # strategies only resample during search if smote_during_search is
+        # explicitly enabled. Either way, if search_resample_target_size is
+        # set, search resampling targets a FIXED TOTAL split evenly across
+        # classes rather than majority-relative auto/dict targets — this is
+        # the knob that controls "how big/balanced is the fold the model
+        # actually gets fit on during HPO", independent of the final refit.
+        if primary_strategy_name == "stratified_spatial_block" or smote_during_search:
+            search_resampler = SMOTEResampler(config, target_size=search_target_size)
+        else:
+            search_resampler = SMOTEResampler(no_smote_config)
+
+        # Final refit is untouched by target_size — it keeps using whatever
+        # smote_sampling_strategy/auto behavior was configured for the
+        # full-scale training set.
         self.final_resampler = SMOTEResampler(config)
 
-        self.fold_strategy = FoldStrategy(config, search_resampler)
-        self.search = HyperparamSearch(config, self.fold_strategy)
+        self.cv_strategy = get_cv_strategy(primary_strategy_name, config, search_resampler)
+        self.search = HyperparamSearch(config, self.cv_strategy)
         self.evaluator = PostTrainingEvaluator(config)
         self.dataset_prep = DatasetPrep(config)
 
     def _validate_cv_config(self) -> None:
         cv_strategy = self.config["modeling"].get("cv_strategy", "both")
-        if cv_strategy in ("spatial", "both"):
+        if cv_strategy in ("spatial", "stratified_spatial_block", "both"):
             block_size = self.config["modeling"].get("spatial_block_size_m", 5000.0)
             if not block_size or block_size <= 0:
                 raise ValueError(
@@ -62,29 +91,13 @@ class ModelTrainer:
         db_path.parent.mkdir(parents=True, exist_ok=True)
         mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
 
-    def train_all(
-        self,
-        season: str,
-        X_train, y_train, X_val, y_val,
-        groups_train=None,
-        progress_callback: Optional[Callable[[str, int, float], None]] = None,
-        **evaluate_kwargs,
-    ) -> Dict[str, dict]:
-        return {
-            model_name: self.train_one(
-                season, model_name, X_train, y_train, X_val, y_val,
-                groups_train, progress_callback=progress_callback, **evaluate_kwargs,
-            )
-            for model_name in self.config["modeling"]["models"]
-        }
-
     def train_one(
         self,
         season: str,
         model_name: str,
         X_train, y_train, X_val, y_val,
         groups_train=None,
-        progress_callback: Optional[Callable[[str, int, float], None]] = None,
+        progress_callback=None,
         ref_path: Optional[Path] = None,
         fire_test_gdf: Optional[gpd.GeoDataFrame] = None,
         x_coords: Optional[np.ndarray] = None,
@@ -96,7 +109,8 @@ class ModelTrainer:
         model_cls = MODELS[model_name]
 
         cv_strategy = self.config["modeling"].get("cv_strategy", "both")
-        if cv_strategy in ("spatial", "both") and groups_train is None:
+        search_uses_groups = requires_spatial_groups(self.cv_strategy.name)
+        if search_uses_groups and groups_train is None:
             raise ValueError(
                 f"[{season}][{model_name}] cv_strategy='{cv_strategy}' requires groups_train "
                 f"(spatial blocks), but None was passed. Call DatasetPrep.assign_spatial_blocks() "
@@ -105,41 +119,43 @@ class ModelTrainer:
 
         X_tr, X_va = self._scale_features(model_cls, X_train, X_val)
 
-        study = self.search.get_or_create_study(season, model_name)
-        search_metric_is_spatial = cv_strategy in ("spatial", "both")
-
-        if search_metric_is_spatial:
-            X_search, y_search, groups_search = self._subsample_for_search_spatial(
-                X_tr, y_train, groups_train, season, model_name
-            )
-            search_folds = self.fold_strategy.make_folds(X_search, y_search, groups_search, "spatial")
-        else:
-            X_search, y_search = self._subsample_for_search(X_tr, y_train, season, model_name)
-            search_folds = self.fold_strategy.make_folds(X_search, y_search, None, "standard")
+        # --- Hyperparameter search: subsampling, fold building, and the
+        # Optuna study itself all live inside HyperparamSearch now. ---
+        search_result = self.search.run_search_and_report(
+            model_cls, model_name, season, X_tr, y_train, groups_train, progress_callback,
+        )
+        best_params, best_value, study = (
+            search_result["best_params"], search_result["best_value"], search_result["study"]
+        )
 
         logger.info(
-            f"[{season}][{model_name}] train shape={X_tr.shape} | search shape={X_search.shape} "
-            f"({'spatial' if search_metric_is_spatial else 'standard'} CV) | "
+            f"[{season}][{model_name}] train shape={X_tr.shape} | "
+            f"search shape={search_result['X_search'].shape} ({self.cv_strategy.name} CV) | "
             f"class counts={y_train.value_counts().to_dict()}"
         )
 
-        self.search.run(study, model_cls, X_search, y_search, search_folds, season, model_name, progress_callback)
-        best_params, best_value = study.best_params, study.best_value
-
         with mlflow.start_run(run_name=f"{season}_{model_name}"):
-            self._log_run_setup(season, model_name, best_params, best_value, search_metric_is_spatial)
+            self._log_run_setup(season, model_name, best_params, best_value, search_uses_groups)
 
-            if search_metric_is_spatial:
+            cv_auc_spatial, cv_auc_standard, cv_auc_spatial_folds = None, None, None
+            if search_uses_groups:
                 cv_auc_spatial = best_value
-                cv_auc_spatial_folds = None  # per-fold detail not retained from the winning Optuna trial itself
-                cv_auc_standard = self._diagnostic_cv_check(
-                    model_cls, best_params, X_tr, y_train, None, "standard", season, model_name, best_value,
-                )
             else:
                 cv_auc_standard = best_value
-                cv_auc_spatial, cv_auc_spatial_folds = self._spatial_diagnostic_with_folds(
-                    model_cls, best_params, X_tr, y_train, groups_train, season, model_name, best_value,
-                ) if cv_strategy == "both" else (None, None)
+
+            if cv_strategy == "both":
+                diagnostic_strategy_name = "standard" if search_uses_groups else "spatial"
+                diagnostic_strategy = get_cv_strategy(
+                    diagnostic_strategy_name, self.config, self.cv_strategy.resampler
+                )
+                diagnostic_value, diagnostic_folds = self._run_diagnostic(
+                    diagnostic_strategy, model_cls, best_params, X_tr, y_train, groups_train,
+                    season, model_name, best_value,
+                )
+                if search_uses_groups:
+                    cv_auc_standard = diagnostic_value
+                else:
+                    cv_auc_spatial, cv_auc_spatial_folds = diagnostic_value, diagnostic_folds
 
             final_model, val_auc, val_f1 = self._fit_final_and_validate(
                 model_cls, best_params, X_tr, y_train, X_va, y_val, season, model_name,
@@ -168,7 +184,7 @@ class ModelTrainer:
         }
 
     # -------------------------------------------------------------
-    # Small private helpers — feature scaling, subsampling, logging
+    # Small private helpers — feature scaling, logging, diagnostics
     # -------------------------------------------------------------
 
     def _scale_features(self, model_cls, X_train, X_val) -> Tuple:
@@ -176,107 +192,52 @@ class ModelTrainer:
         X_tr, X_va, _ = self.dataset_prep.scale_for_model_family(X_train, X_val, needs_scaling)
         return X_tr, X_va
 
-    def _subsample_for_search(self, X_tr, y_train, season, model_name):
-        n = self.config["modeling"].get("optuna_search_subsample_by_model", {}).get(model_name) \
-            or self.config["modeling"].get("optuna_search_subsample")
-        if not n or len(X_tr) <= n:
-            return X_tr, y_train
-
-        X_search, _, y_search, _ = train_test_split(
-            X_tr, y_train, train_size=n, stratify=y_train, random_state=42
-        )
-        logger.info(f"[{season}][{model_name}] search subsample: {len(X_search):,}/{len(X_tr):,} rows")
-        return X_search, y_search
-
-    def _subsample_for_search_spatial(self, X_tr, y_train, groups_train, season, model_name):
-        """
-        Subsample by whole spatial block, not individual row — a plain
-        row-level subsample would sever the block structure GroupKFold
-        depends on, silently invalidating spatial CV on the subsample.
-        Greedily fills blocks (in random order) until the row budget is
-        reached, so the resulting subsample still has enough distinct
-        blocks for GroupKFold to split meaningfully.
-        """
-        n = self.config["modeling"].get("optuna_search_subsample_by_model", {}).get(model_name) \
-            or self.config["modeling"].get("optuna_search_subsample")
-        if not n or len(X_tr) <= n:
-            return X_tr, y_train, groups_train
-
-        groups_series = pd.Series(groups_train, index=X_tr.index) if not isinstance(groups_train, pd.Series) else groups_train
-        block_sizes = groups_series.value_counts().sample(frac=1.0, random_state=42)
-        cumulative = block_sizes.cumsum()
-        selected_blocks = cumulative[cumulative <= n].index
-
-        if len(selected_blocks) == 0:
-            selected_blocks = block_sizes.index[:1]  # smallest block alone exceeds n; take it anyway
-
-        mask = groups_series.isin(selected_blocks)
-        logger.info(
-            f"[{season}][{model_name}] spatial search subsample: "
-            f"{int(mask.sum()):,}/{len(X_tr):,} rows across {len(selected_blocks)} block(s)"
-        )
-        return X_tr[mask.values], y_train[mask.values], groups_series[mask.values]
-
-    def _log_run_setup(self, season, model_name, best_params, best_value, search_metric_is_spatial):
+    def _log_run_setup(self, season, model_name, best_params, best_value, search_uses_groups):
         mlflow.set_tags({
             "season": season,
             "model": model_name,
             "cv_strategy": self.config["modeling"].get("cv_strategy", "both"),
-            "search_metric": "spatial" if search_metric_is_spatial else "standard",
+            "search_cv_strategy": self.cv_strategy.name,
+            "search_metric": "spatial" if search_uses_groups else "standard",
             "use_smote": self.config["modeling"].get("use_smote", False),
         })
         mlflow.log_params(best_params)
-        metric_key = "cv_auc_spatial" if search_metric_is_spatial else "cv_auc_standard"
+        metric_key = "cv_auc_spatial" if search_uses_groups else "cv_auc_standard"
         mlflow.log_metric(metric_key, best_value)
 
-    def _diagnostic_cv_check(self, model_cls, best_params, X_tr, y_train, groups_train, strategy, season, model_name, primary_value):
-        """
-        Post-hoc, non-selection diagnostic: score the winning (spatially-
-        selected) hyperparameters under standard K-fold, purely to report
-        the optimism gap. Never influences which params were chosen.
-        """
-        folds = self.fold_strategy.make_folds(X_tr, y_train, groups_train, strategy)
-        context = f"[{season}][{model_name}] standard CV (diagnostic)"
-        auc = self.fold_strategy.mean_auc_across_folds(model_cls, best_params, X_tr, y_train, folds, context=context)
+    def _run_diagnostic(
+        self, diagnostic_strategy, model_cls, best_params, X_tr, y_train, groups_train,
+        season, model_name, primary_value,
+    ) -> Tuple[float, Optional[list]]:
+        """Post-hoc, non-selection diagnostic: score the winning params under
+        the *other* CV strategy purely to report the optimism gap. Never
+        influences which hyperparameters were chosen. Returns (mean_auc,
+        per-fold scores) — per-fold scores are only retained when the
+        diagnostic uses spatial groups (needed by stage_selection's
+        Kruskal-Wallis test)."""
+        groups_for_diag = groups_train if requires_spatial_groups(diagnostic_strategy.name) else None
+        folds = diagnostic_strategy.make_folds(X_tr, y_train, groups_for_diag)
+        context = f"[{season}][{model_name}] {diagnostic_strategy.name} CV (diagnostic)"
 
-        gap = auc - primary_value
-        mlflow.log_metric("cv_auc_standard", auc)
-        mlflow.log_metric("cv_auc_optimism_gap", gap)
-        logger.info(
-            f"[{season}][{model_name}] spatial CV AUC={primary_value:.4f} (search objective) vs "
-            f"standard CV AUC={auc:.4f} (diagnostic; gap={gap:.4f})"
+        fold_scores = [
+            diagnostic_strategy.fit_and_score(
+                model_cls, best_params, X_tr, y_train, train_idx, test_idx,
+                context=f"{context} fold {i + 1}/{len(folds)}",
+            )
+            for i, (train_idx, test_idx) in enumerate(folds)
+        ]
+        auc = float(np.mean(fold_scores))
+        gap = (
+            primary_value - auc if requires_spatial_groups(diagnostic_strategy.name)
+            else auc - primary_value
         )
-        return auc
 
-    def _spatial_diagnostic_with_folds(self, model_cls, best_params, X_tr, y_train, groups_train, season, model_name, standard_auc):
-        """
-        Used only when cv_strategy='standard' but 'both' diagnostics were
-        requested at a higher level in the original design — kept for
-        completeness, but note: when cv_strategy='standard' outright (not
-        'both'), groups_train is None and this is never called (see
-        train_one's branch: cv_auc_spatial stays (None, None) unless
-        cv_strategy == 'both').
-        """
-        spatial_folds = self.fold_strategy.make_folds(X_tr, y_train, groups_train, "spatial")
-        context = f"[{season}][{model_name}] spatial CV (diagnostic)"
-
-        fold_scores = []
-        for i, (train_idx, test_idx) in enumerate(spatial_folds):
-            fold_context = f"{context} fold {i + 1}/{len(spatial_folds)}"
-            auc = self.fold_strategy.fit_and_score(model_cls, best_params, X_tr, y_train, train_idx, test_idx, context=fold_context)
-            logger.info(f"{fold_context} AUC={auc:.4f}")
-            fold_scores.append(auc)
-
-        cv_auc_spatial = float(np.mean(fold_scores))
-        gap = standard_auc - cv_auc_spatial
-
-        mlflow.log_metric("cv_auc_spatial", cv_auc_spatial)
+        mlflow.log_metric(f"cv_auc_{diagnostic_strategy.name}", auc)
         mlflow.log_metric("cv_auc_optimism_gap", gap)
-        logger.info(
-            f"[{season}][{model_name}] standard CV AUC={standard_auc:.4f} (search objective) vs "
-            f"spatial CV AUC={cv_auc_spatial:.4f} (diagnostic; gap={gap:.4f})"
-        )
-        return cv_auc_spatial, fold_scores
+        logger.info(f"{context}: AUC={auc:.4f} (search primary={primary_value:.4f}, gap={gap:.4f})")
+
+        retained_folds = fold_scores if requires_spatial_groups(diagnostic_strategy.name) else None
+        return auc, retained_folds
 
     def _fit_final_and_validate(self, model_cls, best_params, X_tr, y_train, X_va, y_val, season, model_name):
         X_fit, y_fit = self.final_resampler.resample(

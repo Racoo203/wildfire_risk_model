@@ -9,5 +9,9 @@ labels:
   classify_method: "gmm"
 
 modeling:
-  mlflow_experiment: "wildfire-summer-jenks-baseline"
+  mlflow_experiment: "wildfire-summer-gmm-baseline"
+  cv_strategy: "stratified_spatial_block"
   models: ["random_forest", "xgboost", "neural_net"]
+  use_smote: false
+  search_resample_target_size: 80_000
+  smote_during_search: true

@@ -122,14 +122,38 @@ class ModelingConfig(BaseModel):
     cv_folds: int = 5
     mlflow_experiment: str = "wildfire-susceptibility-essex"
     selection_rule: Literal["best_auc", "most_conservative"] = "best_auc"
-    cv_strategy: Literal["standard", "spatial", "both"] = "both"
+    cv_strategy: Literal["standard", "spatial", "stratified_spatial_block", "both"] = "both"
     spatial_block_size_m: float = 5000.0
-    optuna_search_subsample: Optional[int] = None
-    use_smote: bool = False
+    use_smote: Optional[bool] = Field(
+        default=None,
+        description="Explicit override. If left unset (None) and "
+                     "search_resample_target_size is configured, resampling "
+                     "is enabled implicitly — see SMOTEResampler. Set to "
+                     "False explicitly to force resampling off even when "
+                     "a target size is configured.",
+    )
+    smote_during_search: bool = True
+    search_resample_target_size: Optional[float] = Field(
+        default=None,
+        description="If set, search-time resampling targets this TOTAL "
+                     "row count, split evenly across present classes "
+                     "(over+under sampling to hit the target), instead of "
+                     "the auto/dict majority-relative behavior used for "
+                     "the final refit. <=1.0 is a fraction of the fold's "
+                     "own row count; >1.0 is an absolute total.",
+    )
     smote_k_neighbors: int = 5
     smote_sampling_strategy: Optional[Dict[int, int]] = None
-    optuna_search_subsample_by_model: Dict[str, int] = Field(
-        default_factory=lambda: {"svm": 6000}
+    optuna_search_subsample: Optional[float] = Field(
+        default=None,
+        description="Search-time subsample size: values <= 1.0 are treated "
+                     "as a fraction of the training population, values > 1.0 "
+                     "as an absolute row count.",
+    )
+    optuna_search_subsample_by_model: Dict[str, float] = Field(
+        default_factory=lambda: {"svm": 6000},
+        description="Per-model override, same fraction-vs-absolute convention "
+                     "as optuna_search_subsample.",
     )
     excluded_features: List[str] = Field(
         default_factory=lambda: ["tas", "tasmin"],

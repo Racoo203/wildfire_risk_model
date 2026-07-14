@@ -1,13 +1,18 @@
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Callable, Optional, Tuple
 import logging
 
 import numpy as np
+import pandas as pd
 import optuna
 import hashlib
+from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 
-from .cv import FoldStrategy
+from ..cv.base import CVStrategy
+from ..cv.factory import requires_spatial_groups
+
+from .balance import log_class_balance
 
 logger = logging.getLogger(__name__)
 
@@ -16,30 +21,122 @@ FINISHED_STATES = {optuna.trial.TrialState.COMPLETE, optuna.trial.TrialState.PRU
 
 
 class HyperparamSearch:
-    def __init__(self, config: dict, fold_strategy: FoldStrategy):
+    """Owns everything needed to run an efficient Optuna search: subsampling
+    the training data down to a searchable size, building CV folds on that
+    subsample via the configured CVStrategy, and running/resuming the study.
+    `trainer.py` should never need to touch subsampling or fold-building
+    directly — call prepare_search_data() then run_search_and_report()."""
+
+    def __init__(self, config: dict, cv_strategy: CVStrategy):
+        self.config = config
         self.n_trials = config["modeling"]["optuna_n_trials"]
-        self.fold_strategy = fold_strategy
+        self.cv_strategy = cv_strategy
         self._ensure_storage_dir()
+
+    # -----------------------------------------------------------------
+    # Search-data preparation (subsampling + fold construction)
+    # -----------------------------------------------------------------
+
+    def prepare_search_data(self, X_tr, y_train, groups_train, season, model_name):
+        n = self._resolve_subsample_size(model_name, population_size=len(X_tr))
+
+        if requires_spatial_groups(self.cv_strategy.name):
+            X_search, y_search, groups_search = self._subsample_blocks(
+                X_tr, y_train, groups_train, n, season, model_name
+            )
+            folds = self.cv_strategy.make_folds(X_search, y_search, groups_search)
+        else:
+            X_search, y_search = self._subsample_rows(X_tr, y_train, n, season, model_name)
+            folds = self.cv_strategy.make_folds(X_search, y_search)
+
+        return X_search, y_search, folds
+
+    def _resolve_subsample_size(self, model_name: str, population_size: int) -> Optional[int]:
+        """Resolves optuna_search_subsample(_by_model) to an absolute row
+        count. A configured value <= 1.0 is interpreted as a fraction of
+        `population_size`; > 1.0 is an absolute row count (unchanged
+        legacy behavior)."""
+        raw = (
+            self.config["modeling"].get("optuna_search_subsample_by_model", {}).get(model_name)
+            or self.config["modeling"].get("optuna_search_subsample")
+        )
+        if not raw:
+            return None
+        if raw <= 1.0:
+            n = int(round(raw * population_size))
+            logger.info(
+                f"[{model_name}] resolved subsample fraction {raw} of {population_size:,} rows -> {n:,}"
+            )
+            return n
+        return int(raw)
+
+    def _subsample_rows(self, X_tr, y_train, n, season, model_name):
+        if not n or len(X_tr) <= n:
+            return X_tr, y_train
+        X_search, _, y_search, _ = train_test_split(
+            X_tr, y_train, train_size=n, stratify=y_train, random_state=42
+        )
+        log_class_balance(logger, f"[{season}][{model_name}] search subsample", y_search)
+        logger.info(f"[{season}][{model_name}] search subsample: {len(X_search):,}/{len(X_tr):,} rows")
+        return X_search, y_search
+
+    def _subsample_blocks(self, X_tr, y_train, groups_train, n, season, model_name):
+        if not n or len(X_tr) <= n:
+            return X_tr, y_train, groups_train
+
+        groups_series = (
+            groups_train if isinstance(groups_train, pd.Series)
+            else pd.Series(groups_train, index=X_tr.index)
+        )
+        y_series = pd.Series(y_train).reset_index(drop=True)
+        groups_series = groups_series.reset_index(drop=True)
+
+        # Always keep every block that contains the rarest class(es), so a
+        # random block-fill can never accidentally drop the only evidence
+        # of the minority label from the search subsample entirely.
+        class_totals = y_series.value_counts()
+        rarest_class = class_totals.idxmin()
+        must_keep_blocks = set(groups_series[y_series == rarest_class].unique())
+
+        block_sizes = groups_series.value_counts()
+        must_keep_rows = int(block_sizes[list(must_keep_blocks)].sum()) if must_keep_blocks else 0
+
+        remaining_budget = max(n - must_keep_rows, 0)
+        candidate_blocks = block_sizes.drop(index=list(must_keep_blocks), errors="ignore").sample(
+            frac=1.0, random_state=42
+        )
+        cumulative = candidate_blocks.cumsum()
+        fill_blocks = cumulative[cumulative <= remaining_budget].index
+
+        selected_blocks = set(must_keep_blocks) | set(fill_blocks)
+        if not selected_blocks:
+            selected_blocks = set(block_sizes.index[:1])
+
+        mask = groups_series.isin(selected_blocks)
+        logger.info(
+            f"[{season}][{model_name}] block search subsample: "
+            f"{int(mask.sum()):,}/{len(X_tr):,} rows across {len(selected_blocks)} block(s) "
+            f"({len(must_keep_blocks)} force-kept for rarest class {rarest_class})"
+        )
+        log_class_balance(logger, f"[{season}][{model_name}] block search subsample", y_series[mask.values])
+        return X_tr.iloc[np.where(mask.values)[0]], y_series[mask.values], groups_series[mask.values]
+
+    # -----------------------------------------------------------------
+    # Study lifecycle
+    # -----------------------------------------------------------------
 
     @staticmethod
     def _param_space_signature(model_cls) -> str:
         """
         A short hash capturing the *shape* of param_space — distribution
         types and, for categoricals, their choices — so that changing a
-        model's search space (e.g. dropping 'poly' from SVM's kernel
-        choices) produces a new study name instead of colliding with an
-        old study's incompatible persisted distributions.
-
-        Uses a dummy optuna trial to introspect what suggest_* calls the
-        model's param_space() makes, without needing a live study.
+        model's search space produces a new study name instead of colliding
+        with an old study's incompatible persisted distributions.
         """
-        import optuna
-
         probe_study = optuna.create_study()
         probe_trial = probe_study.ask()
         space = model_cls().param_space(probe_trial)
 
-        # Capture each param's distribution signature from the probe trial.
         parts = []
         for name in sorted(space.keys()):
             dist = probe_trial.distributions[name]
@@ -113,6 +210,27 @@ class HyperparamSearch:
 
             study.optimize(objective, n_trials=n_remaining, callbacks=[_callback])
 
+    def run_search_and_report(
+        self, model_cls, model_name: str, season: str,
+        X_tr: pd.DataFrame, y_train: pd.Series, groups_train: Optional[pd.Series],
+        progress_callback: Optional[Callable[[str, int, float], None]] = None,
+    ) -> dict:
+        """Single entry point trainer.py calls: subsample -> build folds ->
+        get/resume the study -> run remaining trials -> return everything
+        the caller needs (best params/value, the study, and the search
+        subsample actually used, for shape logging)."""
+        X_search, y_search, folds = self.prepare_search_data(X_tr, y_train, groups_train, season, model_name)
+
+        study = self.get_or_create_study(season, model_name)
+        self.run(study, model_cls, X_search, y_search, folds, season, model_name, progress_callback)
+
+        return {
+            "study": study,
+            "best_params": study.best_params,
+            "best_value": study.best_value,
+            "X_search": X_search,
+        }
+
     def _make_objective(self, model_cls, X_search, y_search, folds, season, model_name):
         def objective(trial):
             params = model_cls().param_space(trial)
@@ -120,7 +238,7 @@ class HyperparamSearch:
 
             for fold_idx, (train_idx, test_idx) in enumerate(folds):
                 context = f"[{season}][{model_name}] trial {trial.number} fold {fold_idx + 1}"
-                auc = self.fold_strategy.fit_and_score(
+                auc = self.cv_strategy.fit_and_score(
                     model_cls, params, X_search, y_search, train_idx, test_idx, context=context,
                 )
                 fold_aucs.append(auc)

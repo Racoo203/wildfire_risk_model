@@ -22,6 +22,7 @@ import pandas as pd
 
 from ..config.signature import compute_cfg_sig
 from ..modeling.training.trainer import ModelTrainer
+from ..modeling.cv import requires_spatial_groups
 from ..modeling.training.artifacts import artifact_dir
 from ..modeling.dataset_prep import DatasetPrep
 from ..utils.logger import setup_logger
@@ -32,6 +33,12 @@ def stage_train(config: dict, input_paths: dict) -> Dict[str, Dict[str, Path]]:
     prep = DatasetPrep(config)
     trainer = ModelTrainer(config)
     block_size = config["modeling"].get("spatial_block_size_m", 5000.0)
+
+    # Whether spatial blocks need to be assigned at all is now determined
+    # by the *active* CV strategy on the trainer (which already resolved
+    # cv_strategy="both" down to a concrete primary strategy), not by
+    # re-deriving it from the raw config string here.
+    needs_groups = requires_spatial_groups(trainer.cv_strategy.name) or config["modeling"].get("cv_strategy") == "both"
 
     out: Dict[str, Dict[str, Path]] = {}
     for season, season_paths in input_paths.items():
@@ -48,11 +55,9 @@ def stage_train(config: dict, input_paths: dict) -> Dict[str, Dict[str, Path]]:
         excluded = set(config["modeling"].get("excluded_features", []))
         feature_cols = [c for c in X_train.columns if not c.startswith("_") and c not in excluded]
 
-
-        # prep or cv should handle it
         cv_groups = (
             prep.assign_spatial_blocks(X_train, block_size_m=block_size)
-            if config["modeling"].get("cv_strategy") in ("spatial", "both")
+            if needs_groups
             else None
         )
 
@@ -63,7 +68,7 @@ def stage_train(config: dict, input_paths: dict) -> Dict[str, Dict[str, Path]]:
                 season, model_name,
                 X_train[feature_cols], y_train,
                 X_test[feature_cols], y_test,
-                cv_groups = cv_groups,
+                groups_train=cv_groups,
             )
             out[season][model_name] = _write_artifact(config, season, model_name, result)
 

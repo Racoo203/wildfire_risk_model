@@ -129,11 +129,6 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser.add_argument("-v", "--verbose", action="store_true")
     args = parser.parse_args(argv)
 
-    # logging.basicConfig(
-    #     level=logging.DEBUG if args.verbose else logging.INFO,
-    #     format="%(levelname)s: %(message)s",
-    #     stream=sys.stdout,
-    # )
     logger = setup_logger()
 
     if args.experiment:
@@ -150,7 +145,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     elif args.stage == "dataset":
         stages = GEN_ONLY
     elif args.stage == "train":
-        stages = TRAIN_ONLY
+        stages = GEN_ONLY + TRAIN_ONLY
     else: 
         stages = [args.stage]
 
