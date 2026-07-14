@@ -28,7 +28,6 @@ from ..utils.logger import setup_logger
 
 
 def stage_train(config: dict, input_paths: dict) -> Dict[str, Dict[str, Path]]:
-    # logger = setup_logger(log_file=config["logging"]["log_path"], level=config["logging"]["level"])
     logger = setup_logger()
     prep = DatasetPrep(config)
     trainer = ModelTrainer(config)
@@ -49,7 +48,9 @@ def stage_train(config: dict, input_paths: dict) -> Dict[str, Dict[str, Path]]:
         excluded = set(config["modeling"].get("excluded_features", []))
         feature_cols = [c for c in X_train.columns if not c.startswith("_") and c not in excluded]
 
-        groups_train = (
+
+        # prep or cv should handle it
+        cv_groups = (
             prep.assign_spatial_blocks(X_train, block_size_m=block_size)
             if config["modeling"].get("cv_strategy") in ("spatial", "both")
             else None
@@ -62,8 +63,7 @@ def stage_train(config: dict, input_paths: dict) -> Dict[str, Dict[str, Path]]:
                 season, model_name,
                 X_train[feature_cols], y_train,
                 X_test[feature_cols], y_test,
-                groups_train=groups_train,
-                run_post_training_evaluation=False,  # deferred to stage_evaluate
+                cv_groups = cv_groups,
             )
             out[season][model_name] = _write_artifact(config, season, model_name, result)
 

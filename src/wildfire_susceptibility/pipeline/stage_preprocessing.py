@@ -29,7 +29,6 @@ def stage_preprocessing(config: dict, input_paths: dict) -> Dict[str, dict]:
     prep = DatasetPrep(config)
     climate_vars = tuple(config["data_sources"]["haduk"]["sources"]) + ("diurnal_range",)
 
-    print(config)
     gold_dir = Path(config["base"]["gold_dir"])
     gold_dir.mkdir(parents=True, exist_ok=True)
 

@@ -1,23 +1,3 @@
-"""
-Model-ready dataset preparation (the 'Gold' layer, Section 7.3).
-
-Three responsibilities, run in this order:
-    1. Missing-data resolution — per the three documented NaN sources:
-       sea/estuary pixels outside the HadUK land mask (drop), flat SRTM
-       no-data cells affecting slope/aspect (impute zero), NDVI cloud
-       contamination (spatial nearest-neighbor fill).
-    2. Per-model-family scaling — tree models (RF/XGBoost) get the raw
-       imputed table; SVM/NN get a StandardScaler-transformed copy.
-    3. Stratified 70/30 train/test split matching the paper's methodology.
-
-NOTE: this module does NOT currently sit in front of LabelCleaner in
-WildfirePreprocessor.run_full_pipeline() — wiring that ordering fix into
-the live pipeline is deliberately deferred to Phase 3 so it can be reviewed
-as its own change rather than folded into this one. Today, this module is
-usable standalone (e.g. from a notebook) against an already-assembled
-dataset_clean_<season>.csv.
-"""
-
 from pathlib import Path
 from typing import Dict, Optional, Tuple
 
@@ -109,8 +89,7 @@ class DatasetPrep:
         follows raster row-major order (as RasterManager.stack_to_dataframe
         produces via a fixed valid_mask). For a stricter 2-D spatial fill,
         apply distance_transform_edt's `return_indices` on the raster
-        directly before stacking — this 1-D approximation is a reasonable
-        and much cheaper stand-in at this stage of the pipeline.
+        directly before stacking.
         """
         values = series.to_numpy()
         nan_mask = np.isnan(values)
@@ -175,58 +154,3 @@ class DatasetPrep:
     def load_train_test(self, dataset_paths: Dict[str, Path]) -> Dict[str, pd.DataFrame]:
         """dataset_paths = {"train": path, "test": path} for one season."""
         return {split: pd.read_csv(p) for split, p in dataset_paths.items()}
-
-    def prepare_train(
-        self,
-        df_train: pd.DataFrame,
-        season: str,
-        ref_path: Path,
-        climate_vars: Tuple[str, ...],
-    ) -> pd.DataFrame:
-        """
-        Model-ready prep for the TRAINING split only:
-            1. resolve_missing (slope/aspect zero-fill, NDVI/climate NN-fill)
-            2. LabelCleaner.clean_flat() — pairwise k-means Low-cleaning
-
-        Label cleaning only ever runs on train: it defines "ambiguous Low"
-        using the training feature distribution, and mutating test labels
-        based on training-fitted clusters would contaminate the held-out
-        evaluation.
-        """
-        feature_cols = [c for c in df_train.columns if c not in ("label", "_x", "_y")]
-
-        domain_mask = df_train["elevation"].notna().to_numpy()
-        df_train = self.resolve_missing(
-            df_train,
-            nearest_neighbor_cols=("ndvi", *climate_vars),
-            drop_if_any_nan_in=("label",),
-            domain_mask=domain_mask,
-        )
-
-
-        if self.config["labels"].get("clean_labels", True):
-            cleaner = LabelCleaner(self.config, ref_path)
-            df_train = cleaner.clean_flat(
-                df_train, feature_cols=feature_cols, season=f"{season}_train"
-            )
-        
-        return df_train
-
-    def prepare_test(
-        self,
-        df_test: pd.DataFrame,
-        season: str,
-        climate_vars: Tuple[str, ...],
-    ) -> pd.DataFrame:
-        """
-        Model-ready prep for the TEST split: imputation only, no label
-        cleaning — test labels stay exactly as classified, so evaluation
-        reflects genuine held-out performance.
-        """
-        domain_mask = df_test["elevation"].notna().to_numpy()
-        return self.resolve_missing(
-            df_test,
-            nearest_neighbor_cols=("ndvi", *climate_vars),
-            drop_if_any_nan_in=("label",),
-            domain_mask=domain_mask,
-        )
