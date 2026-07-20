@@ -15,38 +15,37 @@ logger = logging.getLogger(__name__)
 
 
 class SMOTEResampler:
-    """
-    Applies resampling to a single training fold/refit, never to a held-out
-    fold or the test set — call this only on data you're about to fit on.
-
-    Two modes, chosen at construction:
-      - target_size=None (default): the original majority-relative
-        behavior — "auto" (oversample minorities up to the majority's own
-        count) or an absolute per-class dict from smote_sampling_strategy.
-        Used for the final refit, and for search when no target size is set.
-      - target_size set: resamples to a FIXED TOTAL row count, split evenly
-        across classes present in the batch — undersampling any class
-        above its share, oversampling (SMOTE) any class below it. This is
-        what search-time subsampling actually needs: a small, balanced,
-        fast-to-fit dataset, independent of the batch's own majority size.
-    """
-
-    def __init__(self, config: dict, target_size: Optional[float] = None):
+    def __init__(
+        self,
+        config: dict,
+        target_size: Optional[float] = None,
+        is_final: bool = False,
+    ):
         modeling_cfg = config["modeling"]
         self.k_neighbors = modeling_cfg.get("smote_k_neighbors", 5)
         self.sampling_strategy = modeling_cfg.get("smote_sampling_strategy", "auto")
-        # Explicit constructor arg wins; falls back to config only if the
-        # caller didn't pass one (keeps final_resampler's construction
-        # simple — it just never passes target_size).
-        self.target_size = target_size if target_size is not None else modeling_cfg.get("search_resample_target_size")
+        self.is_final = is_final
 
-        # A target_size is a specific, deliberate resampling instruction —
-        # requiring use_smote:true *as well* is a trap (target_size gets
-        # set, nothing visibly happens, and there's no error to explain
-        # why). Explicit use_smote still wins if set; otherwise a
-        # configured target_size turns resampling on by itself.
+        # Final refit NEVER inherits search_resample_target_size, regardless
+        # of whether it's set in config — that knob controls "how big/balanced
+        # is the fold the model gets fit on during HPO", not the final refit.
+        # Only a caller that explicitly passes target_size (search-time callers)
+        # can enable fixed-size resampling.
+        if is_final:
+            self.target_size = None
+        else:
+            self.target_size = (
+                target_size if target_size is not None
+                else modeling_cfg.get("search_resample_target_size")
+            )
+
         use_smote_explicit = modeling_cfg.get("use_smote")
-        self.enabled = bool(use_smote_explicit) or (use_smote_explicit is None and self.target_size is not None)
+        implicit_enable = (
+            (not is_final) and use_smote_explicit is None and self.target_size is not None
+        ) or (
+            is_final and use_smote_explicit is None and modeling_cfg.get("smote_sampling_strategy") is not None
+        )
+        self.enabled = bool(use_smote_explicit) or implicit_enable
 
         if self.enabled and not use_smote_explicit and self.target_size is not None:
             logger.info(

@@ -61,13 +61,13 @@ def plot_roc_curves(
     return _save_and_log(fig, out_path, figures_dir, "roc_curve", "viz.charts.plot_roc_curves", season)
 
 
-def plot_shap_summary(shap_values, feature_names: List[str], figures_dir: Path,
-                       season: Optional[str] = None, model_name: Optional[str] = None) -> Path:
-    """SHAP beeswarm summary plot for the selected best model."""
-    import shap  # local import — heavy, optional dependency
+def plot_shap_summary(shap_values, feature_names, figures_dir, season=None, model_name=None):
+    import shap
+    import matplotlib.pyplot as plt
 
-    fig = plt.figure(figsize=(8, 6))
     shap.summary_plot(shap_values, feature_names=feature_names, show=False)
+    fig = plt.gcf()          # capture AFTER the call, not before
+    fig.set_size_inches(8, 6)
 
     fname = f"shap_summary_{model_name or 'model'}.png"
     out_path = Path(figures_dir) / (season or "static") / "models" / fname

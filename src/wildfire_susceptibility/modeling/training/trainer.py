@@ -46,8 +46,8 @@ class ModelTrainer:
         self._ensure_mlflow_backend()
         mlflow.set_experiment(config["modeling"]["mlflow_experiment"])
 
-        cv_strategy_name = config["modeling"].get("cv_strategy", "both")
-        primary_strategy_name = "spatial" if cv_strategy_name == "both" else cv_strategy_name
+        cv_strategy_name = self.config["modeling"].get("cv_strategy", "stratified_spatial_block")
+        primary_strategy_name = "stratified_spatial_block" if cv_strategy_name == "both" else cv_strategy_name
 
         smote_during_search = config["modeling"].get("smote_during_search", False)
         search_target_size = config["modeling"].get("search_resample_target_size")
@@ -68,7 +68,7 @@ class ModelTrainer:
         # Final refit is untouched by target_size — it keeps using whatever
         # smote_sampling_strategy/auto behavior was configured for the
         # full-scale training set.
-        self.final_resampler = SMOTEResampler(config)
+        self.final_resampler = SMOTEResampler(config, is_final = True)
 
         self.cv_strategy = get_cv_strategy(primary_strategy_name, config, search_resampler)
         self.search = HyperparamSearch(config, self.cv_strategy)

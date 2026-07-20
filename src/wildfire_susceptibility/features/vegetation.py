@@ -56,7 +56,31 @@ class VegetationBuilder(VarBuilder):
         self.logger.info(f"[{season}][{split}] NDVI ready -> {output_paths['ndvi'].name}")
         return output_paths
 
-    def _find_files(self, modis_dir, year_range, months):
+    def eda_debug(self):
+        """
+        Helper function to quickly grab whatever EDA needs.
+        """
+        data_config = self.config["data_sources"]["modis_nvdi"]
+        modis_dir = Path(data_config["data_dir"])
+
+        tif_files = self._find_files(modis_dir = modis_dir, year_range = None, months = None)
+        arrays = []
+
+        for fpath in tif_files:
+            ndvi, _ = self._load_and_scale(fpath)
+            if ndvi is not None:
+                arrays.append(ndvi)
+        
+
+        return np.stack(arrays, axis=0)
+
+
+    def _find_files(
+        self, 
+        modis_dir, 
+        year_range = None, 
+        months = None
+    ):
         all_files = sorted(modis_dir.glob("**/*.tif"))
         if not all_files:
             raise FileNotFoundError(f"No MODIS .tif files found under {modis_dir}")

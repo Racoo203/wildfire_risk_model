@@ -7,7 +7,7 @@ import logging
 
 import numpy as np
 import pandas as pd
-from sklearn.metrics import roc_auc_score
+from sklearn.metrics import roc_auc_score, precision_recall_curve, auc
 
 from ..training.resampling import SMOTEResampler
 
@@ -54,11 +54,14 @@ class CVStrategy(ABC):
         proba = model.predict_proba(X.iloc[test_idx].values)
 
         try:
-            all_classes = sorted(y.unique())
+            # all_classes = sorted(y.unique())
+            precision, recall, _ = precision_recall_curve(y.iloc[test_idx].values, proba)
+            score = auc(recall, precision)
             return float(
-                roc_auc_score(
-                    y.iloc[test_idx].values, proba, multi_class="ovr", labels=all_classes,
-                )
+                # roc_auc_score(
+                #     y.iloc[test_idx].values, proba, multi_class="ovr", labels=all_classes,
+                # )
+                score   
             )
         except Exception as exc:
             logger.warning(f"{context}: AUC scoring failed on this fold ({exc}); scoring as 0.0")
