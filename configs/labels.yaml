@@ -1,27 +1,34 @@
 labels:
+  # --- General & Reproducibility ---
   random_state: 42
-  max_sample_per_class: 200000
-  percentiles: [60, 75, 90]
-  density_method: "convolution"             # options: "convolution" | "kde"
+  max_sample: 200000                     # Max samples for GMM, Jenks, and clustering fits
+
+  # --- Density Estimation ---
+  density_method: "convolution"          # Options: "convolution" | "kde"
   conv_sigma_cells: 3
   kde_bandwidth_m: 500
   kde_zero_threshold: 1.0e-12
+  trim_bottom_pct: 0.1                   # Trims lower 0.1% of valid densities (replaces hard zero)
   include_d_fires_as_feature: false
 
-  classify_method: "gmm"                    # options: "percentile" | "jenks" | "gmm"
+  # --- Risk Classification & Dynamic K ---
+  classify_method: "gmm"                 # Options: "percentile" | "jenks" | "gmm"
   compare_classify_methods: ["percentile", "jenks", "gmm"]
-  jenks_n_classes: 4
-  jenks_max_sample: 200000
-  gmm_n_components: 4
-  gmm_max_sample: 200000
-  gmm_random_state: 42
+  
+  # Class Count & Silhouette Tuning
+  auto_find_k: true                      # Enables Silhouette Score optimal K search
+  k_search_range: [2, 6]                 # Range of K to evaluate if auto_find_k is true
+  n_classes: 4                           # Fallback fixed class count (used if auto_find_k is false)
+  percentiles: [60, 75, 90]              # Fallback cutoffs if classify_method: "percentile" and auto_find_k is false
 
+  # --- K-Means Clustering Settings ---
   kmeans_k: 2
   kmeans_n_init: 10
   kmeans_max_iter: 300
 
-  clean_labels: true                        # Run label cleanup operations after classification
-  run_sensitivity: true                     # Run k-means cluster sensitivity parallel to cleaning
+  # --- Label Post-Processing & Sensitivity Analysis ---
+  clean_labels: true                     # Post-process label maps after classification
+  run_sensitivity: true                  # Run parallel clustering stability/sensitivity checks
   sensitivity_n_inits: [10, 20]
   sensitivity_seeds: [7, 123]
   sensitivity_n_reweight_trials: 3

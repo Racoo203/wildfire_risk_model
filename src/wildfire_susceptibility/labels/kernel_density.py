@@ -1,8 +1,8 @@
 """
 Density-based fire labelling: bin fire points into the grid, smooth
-with a Gaussian filter, and classify into 4 susceptibility classes.
+with a Gaussian filter, and classify into dynamic susceptibility classes.
 
-Uses a binning + convolution approach. 
+Uses a binning + convolution or KDE approach. 
 """
 
 import numpy as np
@@ -14,17 +14,18 @@ from rasterio.enums import MergeAlg
 
 from scipy.ndimage import gaussian_filter
 from sklearn.neighbors import KernelDensity
+from sklearn.mixture import GaussianMixture
+from sklearn.metrics import silhouette_score
+from sklearn.cluster import KMeans
 
 from pathlib import Path
 from typing import Union, Optional, Tuple
-
-from sklearn.neighbors import KernelDensity
-from sklearn.mixture import GaussianMixture
 
 import jenkspy
 import pickle
 
 from ..core.base import VarBuilder
+
 
 class KernelDensityClassifier(VarBuilder):
 
@@ -46,7 +47,6 @@ class KernelDensityClassifier(VarBuilder):
         else:
             raise ValueError(f"Unknown density_method '{method}' (use 'convolution' or 'kde')")
 
-    # --- existing approach, renamed -----------------------------------
     def _density_convolution(self, fire_gdf, season=None, sigma_cell: float = 3.0) -> np.ndarray:
         out_paths = {"density": self.output_dir / f"{self._seasonal_name('fire_density_conv', season)}.tif"}
         if self._check_cache(f"KDClassifier[conv][{season}]", out_paths):
@@ -74,7 +74,6 @@ class KernelDensityClassifier(VarBuilder):
             dst.write(density[np.newaxis, :, :])
         return density
 
-    # --- new: proper Gaussian KDE over fire point coordinates ---------
     def _density_kde(self, fire_gdf, season=None) -> np.ndarray:
         out_paths = {"density": self.output_dir / f"{self._seasonal_name('fire_density_kde', season)}.tif"}
         if self._check_cache(f"KDClassifier[kde][{season}]", out_paths):
@@ -94,7 +93,6 @@ class KernelDensityClassifier(VarBuilder):
         kde = KernelDensity(kernel="gaussian", bandwidth=bandwidth)
         kde.fit(coords)
 
-        # Evaluate only on valid (non-NaN) land-mask cells, chunked to bound memory.
         valid_rows, valid_cols = np.where(~np.isnan(land_mask))
         xs, ys = rasterio.transform.xy(transform, valid_rows, valid_cols)
         grid_coords = np.column_stack([xs, ys])
@@ -112,6 +110,41 @@ class KernelDensityClassifier(VarBuilder):
             dst.write(density[np.newaxis, :, :])
         return density
 
+    def find_optimal_k(
+        self, 
+        valid_density: np.ndarray, 
+        k_range: Tuple[int, int] = (2, 7), 
+        max_samples: int = 10_000,
+        random_state: int = 42
+    ) -> int:
+        """
+        Uses Silhouette Score on subsampled positive densities (in log-space) 
+        to find the optimal number of risk classes K.
+        """
+        sample = self._subsample(valid_density, max_samples)
+        log_sample = np.log1p(sample).reshape(-1, 1)
+
+        best_k = k_range[0]
+        best_score = -1.0
+
+        for k in range(k_range[0], k_range[1] + 1):
+            gmm = GaussianMixture(n_components=k, random_state=random_state)
+            cluster_labels = gmm.fit_predict(log_sample)
+            
+            # Check for empty or single-cluster results
+            if len(np.unique(cluster_labels)) < 2:
+                continue
+
+            score = silhouette_score(log_sample, cluster_labels)
+            self.logger.info(f"[Silhouette] K={k} Score={score:.4f}")
+
+            if score > best_score:
+                best_score = score
+                best_k = k
+
+        self.logger.info(f"Selected optimal K={best_k} (Silhouette Score: {best_score:.4f})")
+        return best_k
+
     def classify(
         self,
         density: np.ndarray,
@@ -120,22 +153,6 @@ class KernelDensityClassifier(VarBuilder):
         classify_method: Optional[str] = None,
         fitted: Optional[dict] = None,
     ):
-        """
-        Bin continuous fire density into 4 ordinal susceptibility classes.
-
-        CRITICAL: `fitted` lets a caller reuse a classifier already fit on train
-        density, so test labels are drawn from the SAME class boundaries as
-        train rather than a fresh boundary refit on test's own (different)
-        density distribution. Passing `fitted=None` fits a new classifier and
-        returns the fit artifact so the caller can pass it back in for the
-        paired split.
-
-        Returns:
-            (labels, fit_artifact) — fit_artifact is a dict with at least a
-            "thresholds" key (used only for logging); for classify_method="gmm"
-            it also holds the fitted GaussianMixture + class-index remap needed
-            to reproduce identical class assignments without refitting.
-        """
         method = method or self.config["labels"].get("density_method", "convolution")
         classify_method = classify_method or self.config["labels"].get("classify_method", "percentile")
 
@@ -153,21 +170,34 @@ class KernelDensityClassifier(VarBuilder):
             fit_artifact = dict(fit_artifact)
             fit_artifact["label_path"] = out_paths["risk_labels"]
             return labels, fit_artifact
-        
-        zero_threshold = self.config["labels"].get("kde_zero_threshold", 0.0) if method == "kde" else 0.0
-        valid = density[density > zero_threshold].copy()
-        valid = valid[~np.isnan(valid)]
 
-        if len(valid) == 0:
+        # --- Trimming Step: Cut off lower 0.1% instead of absolute zero cutoff ---
+        trim_pct = self.config["labels"].get("trim_bottom_pct", 0.1)
+        zero_threshold = self.config["labels"].get("kde_zero_threshold", 0.0) if method == "kde" else 0.0
+        
+        # Valid cells: non-NaN and greater than base threshold
+        base_valid = density[(density > zero_threshold) & (~np.isnan(density))]
+        if len(base_valid) == 0:
             raise ValueError(f"[{season}] No positive density values to classify")
 
-        mask = (density > zero_threshold) & (~np.isnan(density))
+        # Trim lower percentile (e.g., bottom 0.1%)
+        cutoff_val = np.percentile(base_valid, trim_pct)
+        mask = (density >= cutoff_val) & (~np.isnan(density))
+        valid = density[mask]
 
         if fitted is not None:
             labels = self._apply_fitted(density, mask, fitted, classify_method)
             fit_artifact = dict(fitted)
             self.logger.info(f"[{season}][{method}][{classify_method}] applied FROZEN fit from paired split (no refit).")
         else:
+            # Determine dynamic K if configured
+            auto_k = self.config["labels"].get("auto_find_k", False)
+            if auto_k:
+                k_range = self.config["labels"].get("k_search_range", (2, 7))
+                n_classes = self.find_optimal_k(valid, k_range=tuple(k_range))
+            else:
+                n_classes = self.config["labels"].get("n_classes", 4)
+
             dispatch = {
                 "percentile": self._classify_percentile,
                 "jenks": self._classify_jenks,
@@ -176,21 +206,18 @@ class KernelDensityClassifier(VarBuilder):
             if classify_method not in dispatch:
                 raise ValueError(f"Unknown classify_method '{classify_method}' (use one of {list(dispatch)})")
 
-            labels, fit_artifact = dispatch[classify_method](density, valid, mask)
+            labels, fit_artifact = dispatch[classify_method](density, valid, mask, n_classes=n_classes)
 
         n_total = int(np.isfinite(density).sum())
-        counts = {int(c): int(np.sum(labels == c)) for c in [0, 1, 2, 3]}
+        counts = {int(c): int(np.sum(labels == c)) for c in range(int(np.nanmax(labels)) + 1) if not np.isnan(c)}
         n_nan_domain = int(np.isnan(density).sum())
 
         self.logger.info(
             f"[{season}][{method}][{classify_method}] class counts: {counts} | "
-            f"zero-density (unlabelled) cells: {n_total - sum(counts.values())} | "
+            f"unlabelled/trimmed cells: {n_total - sum(counts.values())} | "
             f"out-of-domain NaN cells: {n_nan_domain} | "
             f"thresholds: {np.round(fit_artifact['thresholds'], 4).tolist()}"
         )
-        for c, n in counts.items():
-            if n == 0:
-                self.logger.warning(f"[{season}][{method}][{classify_method}] class {c} has 0 samples!")
 
         with rasterio.open(self.ref_path) as ref:
             meta = ref.meta.copy()
@@ -204,11 +231,8 @@ class KernelDensityClassifier(VarBuilder):
         fit_artifact = dict(fit_artifact)
         fit_artifact["label_path"] = out_paths["risk_labels"]
         return labels, fit_artifact
-    
+
     def _apply_fitted(self, density, mask, fitted, classify_method):
-        """Apply an already-fit classifier (from the paired train split) to a
-        new density array — never refits, so class boundaries stay identical
-        between train and test."""
         if classify_method in ("percentile", "jenks"):
             return self._apply_thresholds(density, mask, fitted["thresholds"])
         elif classify_method == "gmm":
@@ -224,14 +248,13 @@ class KernelDensityClassifier(VarBuilder):
 
     # --- classify_method implementations -------------------------------
 
-    def _classify_percentile(self, density, valid, mask):
-        p_low, p_mid, p_high = np.percentile(valid, self.config["labels"]["percentiles"])
-        thresholds = np.array([p_low, p_mid, p_high])
+    def _classify_percentile(self, density, valid, mask, n_classes: int = 4):
+        pcts = np.linspace(0, 100, n_classes + 1)[1:-1]
+        thresholds = np.percentile(valid, pcts)
         labels = self._apply_thresholds(density, mask, thresholds)
         return labels, {"thresholds": thresholds}
 
-    def _classify_jenks(self, density, valid, mask):
-        n_classes = self.config["labels"].get("jenks_n_classes", 4)
+    def _classify_jenks(self, density, valid, mask, n_classes: int = 4):
         max_sample = self.config["labels"].get("jenks_max_sample", 200_000)
         sample = self._subsample(valid, max_sample)
 
@@ -241,13 +264,12 @@ class KernelDensityClassifier(VarBuilder):
         labels = self._apply_thresholds(density, mask, thresholds)
         return labels, {"thresholds": thresholds}
 
-    def _classify_gmm(self, density, valid, mask):
-        n_components = self.config["labels"].get("gmm_n_components", 4)
+    def _classify_gmm(self, density, valid, mask, n_classes: int = 4):
         max_sample = self.config["labels"].get("gmm_max_sample", 200_000)
         random_state = self.config["labels"].get("gmm_random_state", 42)
         sample = self._subsample(valid, max_sample)
 
-        gmm = GaussianMixture(n_components=n_components, random_state=random_state)
+        gmm = GaussianMixture(n_components=n_classes, random_state=random_state)
         gmm.fit(sample.reshape(-1, 1))
 
         means = gmm.means_.flatten()
@@ -265,9 +287,11 @@ class KernelDensityClassifier(VarBuilder):
         test_preds = np.vectorize(remap.get)(gmm.predict(test_grid))
 
         thresholds = []
-        for c in range(n_components - 1):
-            transition_idx = np.where(test_preds == c)[0][-1]
-            thresholds.append(test_grid[transition_idx][0])
+        for c in range(n_classes - 1):
+            matches = np.where(test_preds == c)[0]
+            if len(matches) > 0:
+                transition_idx = matches[-1]
+                thresholds.append(test_grid[transition_idx][0])
 
         fit_artifact = {"thresholds": np.array(thresholds), "gmm": gmm, "remap": remap}
         return labels, fit_artifact
@@ -276,14 +300,12 @@ class KernelDensityClassifier(VarBuilder):
 
     @staticmethod
     def _subsample(values: np.ndarray, max_n: int) -> np.ndarray:
-        """Randomly subsample large arrays for O(n log n)-or-worse fitting steps."""
         if len(values) <= max_n:
             return values
         return np.random.choice(values, max_n, replace=False)
 
     @staticmethod
     def _apply_thresholds(density: np.ndarray, mask: np.ndarray, thresholds) -> np.ndarray:
-        """Bin masked density values into ordinal classes using ascending thresholds."""
         labels = np.full(density.shape, np.nan, dtype="float32")
         labels[mask] = np.digitize(density[mask], thresholds).astype("float32")
         return labels

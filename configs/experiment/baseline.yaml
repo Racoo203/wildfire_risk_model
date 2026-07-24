@@ -5,8 +5,8 @@ seasons:
   active: ["summer"]
 
 labels:
-  density_method: "convolution"
-  classify_method: "gmm"
+  density_method: "kde"
+  classify_method: "jenks"
 
 modeling:
   mlflow_experiment: "wildfire-summer-gmm-baseline"
