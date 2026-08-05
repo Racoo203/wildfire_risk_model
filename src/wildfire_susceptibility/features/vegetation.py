@@ -6,6 +6,7 @@ from typing import Dict, List, Optional, Tuple
 import re
 
 import numpy as np
+import pandas as pd
 import rasterio
 
 from ..core.base import VarBuilder
@@ -70,9 +71,15 @@ class VegetationBuilder(VarBuilder):
             ndvi, _ = self._load_and_scale(fpath)
             if ndvi is not None:
                 arrays.append(ndvi)
-        
 
-        return np.stack(arrays, axis=0)
+        arrays = np.stack(arrays, axis=0)
+        ndvi_flat_df = pd.DataFrame(arrays.reshape((arrays.shape[0], -1))).dropna(how="any", axis=1)
+        ndvi_long = (
+            ndvi_flat_df.reset_index(drop=False, names="time")
+            .melt(id_vars="time", var_name="pixel", value_name="ndvi")
+        )
+        
+        return ndvi_long
 
 
     def _find_files(

@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Dict, Optional, Tuple
 
 import numpy as np
+import pandas as pd
 import xarray as xr
 import rasterio
 from rasterio.transform import Affine
@@ -79,6 +80,21 @@ class ClimateBuilder(VarBuilder):
             self._write_diurnal_range(diurnal_inputs, output_paths["diurnal_range"], season, split)
 
         return output_paths
+    
+    def eda_debug(self, var_name):
+        data_config = self.config["data_sources"]["haduk"]
+        haduk_dir = Path(data_config["data_dir"])
+        
+        files = sorted((haduk_dir / var_name).glob("*.nc"))
+        ds = xr.open_mfdataset(files, combine="by_coords", data_vars="all")
+        data = ds[var_name].values
+
+        var_flat_df = pd.DataFrame(data.reshape((data.shape[0], -1))).dropna(how="any", axis=1)
+        var_long = (
+            var_flat_df.reset_index(drop=False, names="time")
+            .melt(id_vars="time", var_name="pixel", value_name=var_name)
+        )
+        return var_long
 
     def _write_diurnal_range(
         self,
