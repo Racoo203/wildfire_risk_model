@@ -5,13 +5,14 @@ seasons:
   active: ["summer"]
 
 labels:
-  density_method: "kde"
-  classify_method: "jenks"
+  density_method: "convolution"
+  classify_method: "gmm"
+  auto_find_k: false
 
 modeling:
   mlflow_experiment: "wildfire-summer-gmm-baseline"
   cv_strategy: "both"                       # was stratified_spatial_block — needed for Kruskal-Wallis + standard-vs-stratified comparison
-  models: ["random_forest", "xgboost", "neural_net"]
+  models: ["xgboost"]
   use_smote: true                           # was false — was silently disabling everything below
   smote_during_search: true
   search_resample_target_size: 100_000       # now actually takes effect (search-time only)

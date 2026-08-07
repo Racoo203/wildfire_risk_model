@@ -38,11 +38,6 @@ from wildfire_susceptibility.utils.logger import setup_logger
 
 logger = logging.getLogger()
 
-STAGE_ORDER = [
-    "static", "seasonal", "labels", "integration",
-    "preprocessing", "eda", "train", "evaluate", "selection",
-]
-
 GEN_ONLY = [
     "static", "seasonal", "labels", "integration",
 ]
@@ -50,6 +45,8 @@ GEN_ONLY = [
 TRAIN_ONLY = [
     "preprocessing", "train", "evaluate", "selection",
 ]
+
+STAGE_ORDER = GEN_ONLY + TRAIN_ONLY
 
 STATE_PATH = Path("models/.pipeline_state.json")
 
@@ -134,8 +131,12 @@ def main(argv: Optional[List[str]] = None) -> int:
     if args.experiment:
         cfg_obj = ConfigLoader.load_experiment(name=args.experiment)
         config = cfg_obj.model_dump(mode="python")
+        # print(config)
     else:
-        cfg_obj = ConfigLoader.load(config_dir=args.config_dir, files=args.config_files or DEFAULT_CONFIG_FILES)
+        cfg_obj = ConfigLoader.load(
+            config_dir=args.config_dir, 
+            files=args.config_files or DEFAULT_CONFIG_FILES
+        )
         config = cfg_obj.model_dump(mode="python")
 
     state = _load_state()

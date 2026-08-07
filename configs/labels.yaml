@@ -7,7 +7,7 @@ labels:
   density_method: "convolution"          # Options: "convolution" | "kde"
   conv_sigma_cells: 3
   kde_bandwidth_m: 500
-  kde_zero_threshold: 1.0e-12
+  kde_zero_threshold: 1.0e-9
   trim_bottom_pct: 0.1                   # Trims lower 0.1% of valid densities (replaces hard zero)
   include_d_fires_as_feature: false
 
