@@ -40,7 +40,12 @@ def test_trainer_disables_smote_for_search_but_not_final_refit(tmp_path, monkeyp
     config["modeling"]["mlflow_experiment"] = "test-smote-split"
     config["modeling"]["use_smote"] = True
     config["modeling"]["smote_sampling_strategy"] = {1: 400000}
+    # stratified_spatial_block (the "both"/default primary strategy) always
+    # resamples in-fold by design, and smote_during_search defaults to True —
+    # pin both off so this test actually exercises the search/refit SMOTE split.
+    config["modeling"]["cv_strategy"] = "standard"
+    config["modeling"]["smote_during_search"] = False
     trainer = ModelTrainer(config)
 
-    assert trainer.fold_strategy.resampler.enabled is False  # search/CV: SMOTE off
+    assert trainer.cv_strategy.resampler.enabled is False     # search/CV: SMOTE off
     assert trainer.final_resampler.enabled is True            # final refit: SMOTE on

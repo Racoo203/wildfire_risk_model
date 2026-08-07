@@ -39,7 +39,7 @@ def test_param_space_signature_stable_for_unchanged_space():
 def test_get_or_create_study_survives_param_space_change(tmp_path, monkeypatch, fast_modeling_config):
     """..."""
     from wildfire_susceptibility.modeling.training.search import HyperparamSearch
-    from wildfire_susceptibility.modeling.training.cv import FoldStrategy
+    from wildfire_susceptibility.modeling.cv import FoldStrategy
     from wildfire_susceptibility.modeling.training.resampling import SMOTEResampler
     from wildfire_susceptibility.core.registry import MODELS
     from wildfire_susceptibility.modeling import models  # noqa: F401 — registers svm

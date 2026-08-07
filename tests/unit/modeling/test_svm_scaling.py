@@ -41,7 +41,8 @@ def test_svm_uses_per_model_subsample_override(tmp_path, monkeypatch, big_datase
     X, y = big_dataset
     trainer = _make_trainer(tmp_path, monkeypatch, fast_modeling_config, subsample_by_model={"svm": 2000})
 
-    X_search, y_search = trainer._subsample_for_search(X, y, "test_season", "svm")
+    n = trainer.search._resolve_subsample_size("svm", population_size=len(X))
+    X_search, y_search = trainer.search._subsample_rows(X, y, n, "test_season", "svm")
     assert len(X_search) == 2000  # not the generic 50000
 
 
@@ -50,7 +51,8 @@ def test_random_forest_ignores_svm_override(tmp_path, monkeypatch, big_dataset, 
     X, y = big_dataset
     trainer = _make_trainer(tmp_path, monkeypatch, fast_modeling_config, subsample_by_model={"svm": 2000})
 
-    X_search, y_search = trainer._subsample_for_search(X, y, "test_season", "random_forest")
+    n = trainer.search._resolve_subsample_size("random_forest", population_size=len(X))
+    X_search, y_search = trainer.search._subsample_rows(X, y, n, "test_season", "random_forest")
     assert len(X_search) == len(X)  # falls back to generic (bigger than dataset, so no-op)
 
 
