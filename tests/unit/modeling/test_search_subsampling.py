@@ -45,7 +45,8 @@ def test_subsample_for_search_shrinks_when_configured(tmp_path, monkeypatch, big
     X, y = big_dataset
     trainer = _make_trainer(tmp_path, monkeypatch, fast_modeling_config, subsample=500)
 
-    X_search, y_search = trainer._subsample_for_search(X, y, "test_season", "random_forest")
+    n = trainer.search._resolve_subsample_size("random_forest", population_size=len(X))
+    X_search, y_search = trainer.search._subsample_rows(X, y, n, "test_season", "random_forest")
 
     assert len(X_search) == 500
     assert len(y_search) == 500
@@ -59,7 +60,8 @@ def test_subsample_for_search_noop_when_unconfigured(tmp_path, monkeypatch, big_
     X, y = big_dataset
     trainer = _make_trainer(tmp_path, monkeypatch, fast_modeling_config, subsample=None)
 
-    X_search, y_search = trainer._subsample_for_search(X, y, "test_season", "random_forest")
+    n = trainer.search._resolve_subsample_size("random_forest", population_size=len(X))
+    X_search, y_search = trainer.search._subsample_rows(X, y, n, "test_season", "random_forest")
 
     assert len(X_search) == len(X)
 
@@ -68,7 +70,8 @@ def test_subsample_for_search_noop_when_smaller_than_n(tmp_path, monkeypatch, bi
     X, y = big_dataset
     trainer = _make_trainer(tmp_path, monkeypatch, fast_modeling_config, subsample=999_999)
 
-    X_search, y_search = trainer._subsample_for_search(X, y, "test_season", "random_forest")
+    n = trainer.search._resolve_subsample_size("random_forest", population_size=len(X))
+    X_search, y_search = trainer.search._subsample_rows(X, y, n, "test_season", "random_forest")
 
     assert len(X_search) == len(X)
 
