@@ -61,7 +61,7 @@ labels:
   density_method: "convolution"
   conv_sigma_cells: 3
   kde_bandwidth_m: 500
-  kde_zero_threshold: 1.0e-12
+  kde_zero_percentile: 90.0
   include_d_fires_as_feature: false
 
   classify_method: "gmm"

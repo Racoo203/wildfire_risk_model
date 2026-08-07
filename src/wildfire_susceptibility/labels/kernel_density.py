@@ -173,8 +173,20 @@ class KernelDensityClassifier(VarBuilder):
 
         # --- Trimming Step: Cut off lower 0.1% instead of absolute zero cutoff ---
         trim_pct = self.config["labels"].get("trim_bottom_pct", 0.1)
-        zero_threshold = self.config["labels"].get("kde_zero_threshold", 0.0) if method == "kde" else 0.0
-        
+
+        # KDE has infinite-support tails, so density is essentially never exactly
+        # zero -- an absolute cutoff doesn't transfer across bandwidths/fire-point
+        # densities the way it does for convolution (whose finite kernel gives true
+        # zeros far from any fire point). Use a percentile of the raster's own
+        # density distribution instead, so the cutoff self-calibrates to whatever
+        # this run's density actually looks like.
+        domain_density = density[~np.isnan(density)]
+        if method == "kde":
+            zero_pct = self.config["labels"].get("kde_zero_percentile", 90.0)
+            zero_threshold = np.percentile(domain_density, zero_pct)
+        else:
+            zero_threshold = 0.0
+
         # Valid cells: non-NaN and greater than base threshold
         base_valid = density[(density > zero_threshold) & (~np.isnan(density))]
         if len(base_valid) == 0:
@@ -212,11 +224,15 @@ class KernelDensityClassifier(VarBuilder):
         counts = {int(c): int(np.sum(labels == c)) for c in range(int(np.nanmax(labels)) + 1) if not np.isnan(c)}
         n_nan_domain = int(np.isnan(density).sum())
 
+        # 4 significant figures in fixed or scientific notation, whichever fits --
+        # a fixed np.round(x, 4) silently displays KDE-scale thresholds (~1e-6) as
+        # 0.0, which looks like a classification collapse even when it isn't one.
+        thresholds_display = [f"{t:.4g}" for t in fit_artifact["thresholds"]]
         self.logger.info(
             f"[{season}][{method}][{classify_method}] class counts: {counts} | "
             f"unlabelled/trimmed cells: {n_total - sum(counts.values())} | "
             f"out-of-domain NaN cells: {n_nan_domain} | "
-            f"thresholds: {np.round(fit_artifact['thresholds'], 4).tolist()}"
+            f"thresholds: {thresholds_display}"
         )
 
         with rasterio.open(self.ref_path) as ref:
