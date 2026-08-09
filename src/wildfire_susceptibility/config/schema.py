@@ -90,7 +90,7 @@ class LabelsConfig(BaseModel):
     percentiles: List[int] = Field(default_factory=lambda: [60, 75, 90])
     conv_sigma_cells: int = 3
     kde_bandwidth_m: int = 500
-    kde_zero_threshold: float = 1.0e-12
+    kde_zero_percentile: float = 90.0
 
     jenks_n_classes: int = 4
     jenks_max_sample: int = 200_000

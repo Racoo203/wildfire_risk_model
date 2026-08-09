@@ -7,7 +7,14 @@ labels:
   density_method: "convolution"          # Options: "convolution" | "kde"
   conv_sigma_cells: 3
   kde_bandwidth_m: 500
-  kde_zero_threshold: 1.0e-9
+  kde_zero_percentile: 90.0              # KDE-only: cells below this percentile of the raster's own
+                                          # density distribution are treated as background/zero. KDE has
+                                          # infinite-support tails (unlike convolution's finite kernel, which
+                                          # gives true zeros far from any fire point), so an absolute cutoff
+                                          # doesn't transfer across bandwidths/fire-point densities -- this is
+                                          # self-calibrating to whatever the run's actual density distribution
+                                          # looks like. 90.0 is a starting default; validate against the real
+                                          # Essex KDE distribution and tune if the class split still looks off.
   trim_bottom_pct: 0.1                   # Trims lower 0.1% of valid densities (replaces hard zero)
   include_d_fires_as_feature: false
 
