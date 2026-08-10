@@ -1,7 +1,6 @@
 labels:
   # --- General & Reproducibility ---
   random_state: 42
-  max_sample: 200000                     # Max samples for GMM, Jenks, and clustering fits
 
   # --- Density Estimation ---
   density_method: "convolution"          # Options: "convolution" | "kde"
