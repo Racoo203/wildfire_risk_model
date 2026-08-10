@@ -7,7 +7,9 @@ seasons:
 labels:
   density_method: "convolution"
   classify_method: "gmm"
+  compare_classify_methods: ["jenks", "gmm"]
   auto_find_k: false
+  include_d_fires_as_feature: false
 
 modeling:
   mlflow_experiment: "wildfire-summer-gmm-baseline"

@@ -99,6 +99,44 @@ def test_compare_classify_methods_logs_one_nested_run_per_method(
     assert parent_runs.iloc[0]["tags.compared_methods"] == "percentile,jenks,gmm"
 
 
+def test_compare_classify_methods_handles_two_method_list(
+    comparison_config, comparison_reference_raster
+):
+    """Regression guard for the labels-config-drift close-out: the final
+    decision dropped 'percentile' from compare_classify_methods (now
+    ['jenks', 'gmm'] in both labels.yaml and baseline.yaml). Confirms
+    _run_classify_comparison() has no baked-in assumption of exactly 3
+    methods or of a 'percentile' entry specifically -- it must produce
+    exactly 2 distinct nested runs, no crash, no stray percentile tag."""
+    import mlflow
+
+    two_methods = ["jenks", "gmm"]
+    comparison_config["labels"]["compare_classify_methods"] = two_methods
+    comparison_config["modeling"]["mlflow_experiment"] = "test-classify-comparison-two-methods"
+
+    fire_train = _fire_points(seed=1)
+    fire_test = _fire_points(seed=2)
+
+    _run_classify_comparison(
+        comparison_config, "cmpseason", fire_train, fire_test,
+        comparison_reference_raster, two_methods,
+    )
+
+    runs = mlflow.search_runs(experiment_names=["test-classify-comparison-two-methods"])
+    method_runs = runs[runs["tags.classify_method"].notna()]
+
+    assert sorted(method_runs["tags.classify_method"].tolist()) == ["gmm", "jenks"]
+    assert "percentile" not in method_runs["tags.classify_method"].tolist()
+
+    for _, run in method_runs.iterrows():
+        assert run["metrics.train_n_total"] > 0
+        assert run["metrics.test_n_total"] > 0
+
+    parent_runs = runs[runs["tags.comparison"] == "classify_method"]
+    assert len(parent_runs) == 1
+    assert parent_runs.iloc[0]["tags.compared_methods"] == "jenks,gmm"
+
+
 def test_compare_classify_methods_artifacts_logged_per_method(
     comparison_config, comparison_reference_raster
 ):
