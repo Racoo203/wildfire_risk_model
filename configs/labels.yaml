@@ -1,29 +1,22 @@
 labels:
   # --- General & Reproducibility ---
   random_state: 42
-  max_sample: 200000                     # Max samples for GMM, Jenks, and clustering fits
 
   # --- Density Estimation ---
   density_method: "convolution"          # Options: "convolution" | "kde"
   conv_sigma_cells: 3
   kde_bandwidth_m: 500
-  kde_zero_percentile: 90.0              # KDE-only: cells below this percentile of the raster's own
-                                          # density distribution are treated as background/zero. KDE has
-                                          # infinite-support tails (unlike convolution's finite kernel, which
-                                          # gives true zeros far from any fire point), so an absolute cutoff
-                                          # doesn't transfer across bandwidths/fire-point densities -- this is
-                                          # self-calibrating to whatever the run's actual density distribution
-                                          # looks like. 90.0 is a starting default; validate against the real
-                                          # Essex KDE distribution and tune if the class split still looks off.
+  kde_zero_percentile: 90.0              # KDE-only: percentile of the raster's own density
+                                          # distribution treated as background/zero (see kernel_density.py).
   trim_bottom_pct: 0.1                   # Trims lower 0.1% of valid densities (replaces hard zero)
   include_d_fires_as_feature: false
 
   # --- Risk Classification & Dynamic K ---
   classify_method: "gmm"                 # Options: "percentile" | "jenks" | "gmm"
-  compare_classify_methods: ["percentile", "jenks", "gmm"]
+  compare_classify_methods: ["jenks", "gmm"]
   
   # Class Count & Silhouette Tuning
-  auto_find_k: true                      # Enables Silhouette Score optimal K search
+  auto_find_k: false                      # Enables Silhouette Score optimal K search
   k_search_range: [2, 6]                 # Range of K to evaluate if auto_find_k is true
   n_classes: 4                           # Fallback fixed class count (used if auto_find_k is false)
   percentiles: [60, 75, 90]              # Fallback cutoffs if classify_method: "percentile" and auto_find_k is false

@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from pathlib import Path
 from typing import Literal, List, Dict, Tuple, Optional
 
@@ -78,6 +78,8 @@ class DataSourceConfig(BaseModel):
     incidents: Incidents = Incidents()
 
 class LabelsConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     density_method: Literal["convolution", "kde"] = "convolution"
     classify_method: Literal["percentile", "jenks", "gmm"] = "gmm"
     compare_classify_methods: List[str] = Field(default_factory=lambda: ["percentile", "jenks", "gmm"])
@@ -91,6 +93,23 @@ class LabelsConfig(BaseModel):
     conv_sigma_cells: int = 3
     kde_bandwidth_m: int = 500
     kde_zero_percentile: float = 90.0
+    trim_bottom_pct: float = 0.1
+
+    n_classes: int = Field(
+        default=4,
+        description="Class count actually used by KernelDensityClassifier.classify() "
+                     "for whichever classify_method is dispatched (percentile/jenks/gmm "
+                     "all read this single generic field, not a per-method one) when "
+                     "auto_find_k is False. See auto_find_k for the K-selection axis.",
+    )
+    auto_find_k: bool = Field(
+        default=False,
+        description="If true, KernelDensityClassifier.find_optimal_k() picks n_classes "
+                     "via silhouette score over k_search_range instead of using the "
+                     "fixed n_classes value. K-selection behavior itself is out of scope "
+                     "for this change -- see CLAUDE.md known bug #2.",
+    )
+    k_search_range: Tuple[int, int] = (2, 6)
 
     jenks_n_classes: int = 4
     jenks_max_sample: int = 200_000
