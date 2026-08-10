@@ -253,8 +253,10 @@ class KernelDensityClassifier(VarBuilder):
             return self._apply_thresholds(density, mask, fitted["thresholds"])
         elif classify_method == "gmm":
             gmm, remap = fitted["gmm"], fitted["remap"]
+            mean, std = fitted["mean"], fitted["std"]
             valid_vals = density[mask]
-            raw = gmm.predict(valid_vals.reshape(-1, 1))
+            valid_vals_std = (valid_vals - mean) / std
+            raw = gmm.predict(valid_vals_std.reshape(-1, 1))
             ordinal = np.vectorize(remap.get)(raw).astype("float32")
             labels = np.full(density.shape, np.nan, dtype="float32")
             labels[mask] = ordinal
@@ -285,22 +287,35 @@ class KernelDensityClassifier(VarBuilder):
         random_state = self.config["labels"].get("gmm_random_state", 42)
         sample = self._subsample(valid, max_sample)
 
-        gmm = GaussianMixture(n_components=n_classes, random_state=random_state)
-        gmm.fit(sample.reshape(-1, 1))
+        # GaussianMixture's default reg_covar (1e-6) dominates KDE-scale
+        # density variance (~1e-10 to 1e-12), collapsing every component to
+        # near-identical means/covariances regardless of the underlying
+        # structure. Standardizing to the fit data's own mean/std keeps
+        # variance near O(1) so reg_covar no longer swamps the signal, for
+        # either density_method -- convolution-scale density (O(1e-3-1e-1))
+        # is essentially unaffected by this rescaling in practice.
+        mean = sample.mean()
+        std = sample.std()
+        sample_std = (sample - mean) / std
 
-        means = gmm.means_.flatten()
+        gmm = GaussianMixture(n_components=n_classes, random_state=random_state)
+        gmm.fit(sample_std.reshape(-1, 1))
+
+        means = gmm.means_.flatten() * std + mean
         order = np.argsort(means)
         remap = {old: new for new, old in enumerate(order)}
 
         valid_vals = density[mask]
-        raw = gmm.predict(valid_vals.reshape(-1, 1))
+        valid_vals_std = (valid_vals - mean) / std
+        raw = gmm.predict(valid_vals_std.reshape(-1, 1))
         ordinal = np.vectorize(remap.get)(raw).astype("float32")
 
         labels = np.full(density.shape, np.nan, dtype="float32")
         labels[mask] = ordinal
 
         test_grid = np.linspace(valid.min(), valid.max(), 10000).reshape(-1, 1)
-        test_preds = np.vectorize(remap.get)(gmm.predict(test_grid))
+        test_grid_std = (test_grid - mean) / std
+        test_preds = np.vectorize(remap.get)(gmm.predict(test_grid_std))
 
         thresholds = []
         for c in range(n_classes - 1):
@@ -309,7 +324,13 @@ class KernelDensityClassifier(VarBuilder):
                 transition_idx = matches[-1]
                 thresholds.append(test_grid[transition_idx][0])
 
-        fit_artifact = {"thresholds": np.array(thresholds), "gmm": gmm, "remap": remap}
+        fit_artifact = {
+            "thresholds": np.array(thresholds),
+            "gmm": gmm,
+            "remap": remap,
+            "mean": mean,
+            "std": std,
+        }
         return labels, fit_artifact
 
     # --- shared helpers --------------------------------------------------
