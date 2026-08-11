@@ -18,19 +18,8 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import adjusted_rand_score
 
-# Import order matters here: `wildfire_susceptibility.modeling.cv` has a
-# circular-import dependency on `wildfire_susceptibility.modeling.training`
-# (cv/base.py imports training.resampling, training/__init__.py imports
-# trainer.py, which imports back from ..cv). It only resolves if
-# `modeling.training` finishes initializing first - which is why every
-# existing test imports `ModelTrainer` before touching `modeling.cv`
-# directly. Importing `modeling.cv` first raises ImportError. This is a
-# pre-existing source fragility, not something this test introduces;
-# flagged separately as a follow-up rather than fixed on this test-only
-# branch.
-from wildfire_susceptibility.modeling.training import ModelTrainer  # noqa: F401
 from wildfire_susceptibility.modeling.cv import get_cv_strategy, requires_spatial_groups
-from wildfire_susceptibility.modeling.training.resampling import SMOTEResampler
+from wildfire_susceptibility.modeling.resampling import SMOTEResampler
 
 N_BLOCKS_PER_AXIS = 8
 BLOCK_SIZE_M = 1000.0

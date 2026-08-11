@@ -12,7 +12,7 @@ from tqdm import tqdm
 from ..cv.base import CVStrategy
 from ..cv.factory import requires_spatial_groups
 
-from .balance import log_class_balance
+from ..balance import log_class_balance
 
 logger = logging.getLogger(__name__)
 

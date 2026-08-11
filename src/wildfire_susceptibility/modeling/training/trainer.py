@@ -29,7 +29,7 @@ from sklearn.metrics import roc_auc_score, f1_score
 from ...core.registry import MODELS
 from .. import models  # noqa: F401 — registers model wrappers (two dots: training/ -> modeling/)
 from ..dataset_prep import DatasetPrep
-from .resampling import SMOTEResampler
+from ..resampling import SMOTEResampler
 from ..cv import get_cv_strategy, requires_spatial_groups
 from .search import HyperparamSearch
 from .evaluation import PostTrainingEvaluator

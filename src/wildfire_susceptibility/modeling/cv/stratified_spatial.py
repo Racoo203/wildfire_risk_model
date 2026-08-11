@@ -24,7 +24,7 @@ import pandas as pd
 from sklearn.metrics import roc_auc_score, f1_score, average_precision_score
 
 from .base import CVStrategy
-from ..training.balance import log_class_balance, warn_if_class_missing
+from ..balance import log_class_balance, warn_if_class_missing
 
 logger = logging.getLogger(__name__)
 

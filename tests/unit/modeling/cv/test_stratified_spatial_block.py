@@ -8,7 +8,7 @@ import pandas as pd
 import pytest
 
 from wildfire_susceptibility.modeling.cv.stratified_spatial import StratifiedSpatialBlockCV
-from wildfire_susceptibility.modeling.training.resampling import SMOTEResampler
+from wildfire_susceptibility.modeling.resampling import SMOTEResampler
 
 
 def _make_strategy(cv_folds=4):

@@ -7,7 +7,7 @@ from .base import CVStrategy
 from .standard import StandardKFoldCV
 from .spatial import SpatialGroupKFoldCV
 from .stratified_spatial import StratifiedSpatialBlockCV
-from ..training.resampling import SMOTEResampler
+from ..resampling import SMOTEResampler
 
 _STRATEGIES: Dict[str, Type[CVStrategy]] = {
     "standard": StandardKFoldCV,

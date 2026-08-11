@@ -1,8 +1,8 @@
 import numpy as np
-from wildfire_susceptibility.modeling.training.resampling import SMOTEResampler
+from wildfire_susceptibility.modeling.resampling import SMOTEResampler
 
 def test_smote_disabled_passthrough(minimal_modeling_config):
-    from wildfire_susceptibility.modeling.training.resampling import SMOTEResampler
+    from wildfire_susceptibility.modeling.resampling import SMOTEResampler
     config = minimal_modeling_config
     config["modeling"]["use_smote"] = False
     resampler = SMOTEResampler(config)
@@ -12,7 +12,7 @@ def test_smote_disabled_passthrough(minimal_modeling_config):
 
 
 def test_smote_skips_on_degenerate_class(minimal_modeling_config):
-    from wildfire_susceptibility.modeling.training.resampling import SMOTEResampler
+    from wildfire_susceptibility.modeling.resampling import SMOTEResampler
     config = minimal_modeling_config
     config["modeling"]["use_smote"] = True
     config["modeling"]["smote_k_neighbors"] = 5
