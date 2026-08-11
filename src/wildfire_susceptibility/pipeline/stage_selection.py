@@ -41,11 +41,19 @@ def stage_selection(config: dict, input_paths: dict) -> Dict[str, Path]:
             manifest = json.loads((Path(artifact_dir) / "manifest.json").read_text())
             manifests[season][model_name] = manifest
             eval_result = eval_results.get(season, {}).get(model_name, {})
+            gap = manifest.get("cv_optimism_gap") or {}
             rows.append({
                 "season": season,
                 "model": model_name,
                 "cv_auc_standard": manifest["cv_auc_standard"],
                 "cv_auc_spatial": manifest["cv_auc_spatial"],
+                "cv_auc_optimism_gap": gap.get("auc"),
+                "cv_f1_macro_standard": manifest.get("cv_f1_macro_standard"),
+                "cv_f1_macro_spatial": manifest.get("cv_f1_macro_spatial"),
+                "cv_f1_macro_optimism_gap": gap.get("f1_macro"),
+                "cv_pr_auc_macro_standard": manifest.get("cv_pr_auc_macro_standard"),
+                "cv_pr_auc_macro_spatial": manifest.get("cv_pr_auc_macro_spatial"),
+                "cv_pr_auc_macro_optimism_gap": gap.get("pr_auc_macro"),
                 "val_auc": manifest["val_auc"],
                 "val_f1": manifest["val_f1"],
                 "tf_pct_medium_plus": (eval_result.get("time_forward_validation") or {}).get("pct_medium_plus"),

@@ -155,6 +155,25 @@ class ModelingConfig(BaseModel):
                      "that fold. 0.0 (default) preserves prior behavior: no "
                      "buffer, fold separation only at the block-ID level.",
     )
+    log_full_cv_diagnostics: bool = Field(
+        default=False,
+        description="Only used when cv_strategy='both'. When True, the "
+                     "PRIMARY CV strategy also gets a full AUC/F1-macro/"
+                     "PR-AUC-macro re-scoring pass on the full training set "
+                     "(not HyperparamSearch's subsample) with the winning "
+                     "hyperparameters fixed — needed to compute the "
+                     "F1-macro/PR-AUC-macro standard-vs-spatial optimism "
+                     "gap and to populate cv_auc_spatial_folds (consumed by "
+                     "stage_selection's Kruskal-Wallis test), neither of "
+                     "which Optuna's search alone can produce. Roughly "
+                     "doubles this stage's extra CV-fold fitting cost, so "
+                     "it defaults False for routine iteration; set True for "
+                     "the run whose numbers are actually being reported "
+                     "(see configs/experiment/baseline.yaml). The "
+                     "diagnostic-side AUC gap (cv_auc_optimism_gap) is "
+                     "always logged regardless of this flag — that pass "
+                     "already existed before this flag was introduced.",
+    )
     use_smote: Optional[bool] = Field(
         default=None,
         description="Explicit override. If left unset (None) and "

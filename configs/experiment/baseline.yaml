@@ -14,6 +14,7 @@ labels:
 modeling:
   mlflow_experiment: "wildfire-summer-gmm-baseline"
   cv_strategy: "both"                       # was stratified_spatial_block — needed for Kruskal-Wallis + standard-vs-stratified comparison
+  log_full_cv_diagnostics: true             # this is the reported run — pays the extra CV pass for the full standard-vs-spatial gap + Kruskal-Wallis fold data
   models: ["xgboost"]
   use_smote: true                           # was false — was silently disabling everything below
   smote_during_search: true

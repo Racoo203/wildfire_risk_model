@@ -8,7 +8,7 @@ import logging
 
 import numpy as np
 import pandas as pd
-from sklearn.metrics import roc_auc_score, precision_recall_curve, auc
+from sklearn.metrics import roc_auc_score, f1_score, average_precision_score
 
 from ..resampling import SMOTEResampler
 
@@ -85,14 +85,19 @@ class CVStrategy(ABC):
             )
         return train_idx[keep_mask]
 
-    def fit_and_score(
+    def fit_and_score_full(
         self, model_cls, params: dict, X: pd.DataFrame, y: pd.Series,
         train_idx: np.ndarray, test_idx: np.ndarray, context: str = "",
-    ) -> float:
-        """Fit on train_idx (resampled per self.resampler), score AUC on
-        test_idx untouched. Shared by every strategy; strategies that need
-        different resampling semantics (e.g. stratified-spatial-block's
-        strict train-only resampling) override this."""
+    ) -> dict:
+        """Fit once on train_idx (resampled per self.resampler), score AUC,
+        F1-macro, and PR-AUC-macro on test_idx untouched — all three
+        multiclass-safe (roc_auc_score/f1_score use ovr/macro averaging,
+        average_precision_score is computed on one-hot-encoded y). Shared by
+        every strategy; strategies that need different resampling semantics
+        (e.g. stratified-spatial-block's extra class-balance logging)
+        override this. `fit_and_score` delegates here so a fold's model is
+        only ever fit once even when both the scalar and the full metric
+        set are needed (see trainer.py's optimism-gap logging)."""
         logger.info(f"{context}: fitting on {len(train_idx):,} rows...")
         X_tr = X.iloc[train_idx].values
         y_tr = y.iloc[train_idx].values
@@ -100,21 +105,37 @@ class CVStrategy(ABC):
 
         model = model_cls(**params)
         model.fit(X_tr, y_tr)
+
+        y_va = y.iloc[test_idx].values
         proba = model.predict_proba(X.iloc[test_idx].values)
+        pred = np.argmax(proba, axis=1)
 
         try:
-            # all_classes = sorted(y.unique())
-            precision, recall, _ = precision_recall_curve(y.iloc[test_idx].values, proba)
-            score = auc(recall, precision)
-            return float(
-                # roc_auc_score(
-                #     y.iloc[test_idx].values, proba, multi_class="ovr", labels=all_classes,
-                # )
-                score   
-            )
+            all_classes = sorted(y.unique())
+            auc_score = float(roc_auc_score(y_va, proba, multi_class="ovr", labels=all_classes))
         except Exception as exc:
             logger.warning(f"{context}: AUC scoring failed on this fold ({exc}); scoring as 0.0")
-            return 0.0
+            auc_score = 0.0
+
+        f1_macro = float(f1_score(y_va, pred, average="macro"))
+
+        try:
+            y_va_bin = np.eye(proba.shape[1])[y_va.astype(int)]
+            pr_auc_macro = float(average_precision_score(y_va_bin, proba, average="macro"))
+        except Exception as exc:
+            logger.warning(f"{context}: PR-AUC scoring failed on this fold ({exc}); scoring as 0.0")
+            pr_auc_macro = 0.0
+
+        return {"auc": auc_score, "f1_macro": f1_macro, "pr_auc_macro": pr_auc_macro}
+
+    def fit_and_score(
+        self, model_cls, params: dict, X: pd.DataFrame, y: pd.Series,
+        train_idx: np.ndarray, test_idx: np.ndarray, context: str = "",
+    ) -> float:
+        """Scalar-AUC convenience wrapper around fit_and_score_full, kept
+        for callers (HyperparamSearch's Optuna objective) that only need
+        the one number."""
+        return self.fit_and_score_full(model_cls, params, X, y, train_idx, test_idx, context=context)["auc"]
 
     def mean_auc_across_folds(
         self, model_cls, params, X, y, folds, context: str = "",

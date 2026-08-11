@@ -153,7 +153,14 @@ class StratifiedSpatialBlockCV(CVStrategy):
 
         return fold_of_block
 
-    def fit_and_score(self, model_cls, params, X, y, train_idx, test_idx, context: str = "") -> float:
+    def fit_and_score_full(
+        self, model_cls, params, X, y, train_idx, test_idx, context: str = "",
+    ) -> dict:
+        """Fit once, return the full metric set the dissertation reports
+        (AUC, F1-macro, PR-AUC-macro). `fit_and_score` delegates here so a
+        fold's model is only ever fit once even when both the scalar and
+        the full metric set are needed (see trainer.py's optimism-gap
+        logging)."""
         y_tr_raw = y.iloc[train_idx]
         log_class_balance(logger, context, y_tr_raw, note="train, pre-resample", level=logging.DEBUG)
 
@@ -178,29 +185,14 @@ class StratifiedSpatialBlockCV(CVStrategy):
             auc = 0.0
 
         f1_macro = float(f1_score(y_va, pred, average="macro"))
-        logger.info(f"{context} AUC={auc:.4f} F1_macro={f1_macro:.4f} (validation fold untouched/imbalanced)")
-        return auc
-
-    def fit_and_score_full(
-        self, model_cls, params, X, y, train_idx, test_idx, context: str = "",
-    ) -> dict:
-        """Extended variant returning the full metric set the dissertation
-        reports (AUC, F1-macro, PR-AUC) rather than just the scalar AUC
-        `fit_and_score` returns for compatibility with HyperparamSearch."""
-        X_tr = X.iloc[train_idx].values
-        y_tr = y.iloc[train_idx].values
-        X_tr, y_tr = self.resampler.resample(X_tr, y_tr, context=context)
-
-        model = model_cls(**params)
-        model.fit(X_tr, y_tr)
-
-        X_va, y_va = X.iloc[test_idx].values, y.iloc[test_idx].values
-        proba = model.predict_proba(X_va)
-        pred = np.argmax(proba, axis=1)
-
         y_va_bin = np.eye(proba.shape[1])[y_va.astype(int)]
-        return {
-            "auc": float(roc_auc_score(y_va, proba, multi_class="ovr")),
-            "f1_macro": float(f1_score(y_va, pred, average="macro")),
-            "pr_auc_macro": float(average_precision_score(y_va_bin, proba, average="macro")),
-        }
+        pr_auc_macro = float(average_precision_score(y_va_bin, proba, average="macro"))
+
+        logger.info(
+            f"{context} AUC={auc:.4f} F1_macro={f1_macro:.4f} PR_AUC_macro={pr_auc_macro:.4f} "
+            f"(validation fold untouched/imbalanced)"
+        )
+        return {"auc": auc, "f1_macro": f1_macro, "pr_auc_macro": pr_auc_macro}
+
+    def fit_and_score(self, model_cls, params, X, y, train_idx, test_idx, context: str = "") -> float:
+        return self.fit_and_score_full(model_cls, params, X, y, train_idx, test_idx, context=context)["auc"]

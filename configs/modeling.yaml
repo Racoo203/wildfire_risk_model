@@ -7,6 +7,7 @@ modeling:
   cv_strategy: "both"             # options: "standard" | "spatial" | "stratified_spatial_block" | "both"
   spatial_block_size_m: 5000.0
   spatial_buffer_m: 0.0           # exclusion-zone width (m) around test blocks for spatial/stratified_spatial_block CV; 0.0 = no buffer (prior behavior)
+  log_full_cv_diagnostics: false  # opt-in, ~2x extra CV-fold fitting cost — set true for the run being reported, not routine iteration; see schema.py
   optuna_search_subsample: 50000
   use_smote: false
   smote_k_neighbors: 5

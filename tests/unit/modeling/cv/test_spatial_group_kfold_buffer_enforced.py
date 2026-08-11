@@ -14,7 +14,7 @@ from wildfire_susceptibility.modeling.dataset_prep import DatasetPrep
 from wildfire_susceptibility.modeling.cv.base import CVStrategy
 from wildfire_susceptibility.modeling.cv.spatial import SpatialGroupKFoldCV
 from wildfire_susceptibility.modeling.cv.stratified_spatial import StratifiedSpatialBlockCV
-from wildfire_susceptibility.modeling.training.resampling import SMOTEResampler
+from wildfire_susceptibility.modeling.resampling import SMOTEResampler
 
 BLOCK_SIZE_M = 1000.0
 N_BLOCKS_PER_AXIS = 6
