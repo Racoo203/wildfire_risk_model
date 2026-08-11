@@ -1,17 +1,23 @@
 # tests/unit/modeling/cv/test_spatial_group_kfold_buffer_gap.py
-"""Documents a known gap in the spatial CV strategies: block assignment
-(DatasetPrep.assign_spatial_blocks) is a plain grid floor-division with no
-distance buffer/exclusion zone between adjacent blocks. A point can sit a
-metre from a block boundary and still land in the opposite CV fold from a
-near-neighbour just across that boundary, so "spatial CV" here only
-guarantees fold separation at the block-ID level, not at any minimum
-physical distance.
+"""Documents the DEFAULT behavior of spatial CV: with spatial_buffer_m left
+at its default (0.0), block assignment (DatasetPrep.assign_spatial_blocks)
+is a plain grid floor-division with no distance buffer/exclusion zone
+between adjacent blocks. A point can sit a metre from a block boundary and
+still land in the opposite CV fold from a near-neighbour just across that
+boundary, so unbuffered "spatial CV" only guarantees fold separation at the
+block-ID level, not at any minimum physical distance.
 
-This is intentionally xfail(strict=True): it documents the gap rather than
-silently accepting it. If a buffered spatial CV strategy lands (tracked as
-a follow-up branch, see CLAUDE.md / PR description), this test should start
-passing - strict=True means an unexpected pass fails the suite so that
-change won't go unnoticed, and the xfail marker should then be removed."""
+Buffered spatial CV (CVStrategy._apply_spatial_buffer, opt-in via
+spatial_buffer_m > 0) now exists and fixes exactly this - see
+test_spatial_group_kfold_buffer_enforced.py for the corresponding passing
+test with a buffer configured. This test intentionally keeps
+spatial_buffer_m unset to prove the *default* stays backward-compatible
+(no buffer, prior behavior/results unaffected) - it should keep xfailing
+forever, not just until a fix lands, since the fix is opt-in by design.
+
+xfail(strict=True): if this ever unexpectedly passes, that means unbuffered
+spatial CV started enforcing a distance guarantee it didn't ask for, which
+would itself be worth investigating as a silent behavior change."""
 
 import numpy as np
 import pandas as pd
@@ -59,13 +65,12 @@ def _build_dataset():
 @pytest.mark.xfail(
     strict=True,
     reason=(
-        "No buffer/exclusion zone exists between spatial blocks "
-        "(dataset_prep.assign_spatial_blocks + cv/spatial.py) - see CLAUDE.md "
-        "known-bugs / CV diagnosis. Remove this xfail once buffered spatial "
-        "CV is implemented."
+        "spatial_buffer_m defaults to 0.0 (no buffer) for backward "
+        "compatibility - see CVStrategy._apply_spatial_buffer in cv/base.py "
+        "and test_spatial_group_kfold_buffer_enforced.py for the opt-in fix."
     ),
 )
-def test_spatial_group_kfold_enforces_minimum_train_test_distance():
+def test_spatial_group_kfold_enforces_minimum_train_test_distance_by_default():
     df, y, boundary_pairs = _build_dataset()
     X = df[["_x", "_y"]]
     coords = df[["_x", "_y"]].to_numpy()

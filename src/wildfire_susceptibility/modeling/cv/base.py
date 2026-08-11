@@ -2,6 +2,7 @@
 mean-AUC convenience wrapper. Subclasses implement only make_folds()."""
 
 from abc import ABC, abstractmethod
+from math import ceil
 from typing import List, Optional, Tuple
 import logging
 
@@ -28,6 +29,8 @@ class CVStrategy(ABC):
         self.config = config
         self.cv_folds = config["modeling"]["cv_folds"]
         self.resampler = resampler
+        self.spatial_buffer_m = config["modeling"].get("spatial_buffer_m", 0.0) or 0.0
+        self.spatial_block_size_m = config["modeling"].get("spatial_block_size_m", 5000.0)
 
     @abstractmethod
     def make_folds(
@@ -35,6 +38,52 @@ class CVStrategy(ABC):
     ) -> List[Tuple[np.ndarray, np.ndarray]]:
         """Return a list of (train_idx, test_idx) positional-index pairs."""
         ...
+
+    def _buffer_radius_blocks(self) -> int:
+        """How many grid cells out from a test block to exclude, so no kept
+        train point can be closer than spatial_buffer_m to a test block's
+        edge. Blocks are spatial_block_size_m squares, so a ring of radius r
+        guarantees a minimum gap of (r-1)*spatial_block_size_m; ceil() rounds
+        up so the configured buffer is always met, never just approached."""
+        if self.spatial_buffer_m <= 0:
+            return 0
+        return ceil(self.spatial_buffer_m / self.spatial_block_size_m)
+
+    def _apply_spatial_buffer(
+        self, train_idx: np.ndarray, test_idx: np.ndarray, groups: pd.Series,
+    ) -> np.ndarray:
+        """Drop from train_idx any row whose (block_x, block_y) falls within
+        the buffer ring around any test block for this fold. test_idx itself
+        is never touched — buffering only removes near-boundary train rows
+        that would otherwise sit right next to a test block with zero
+        enforced separation (see cv/spatial.py, cv/stratified_spatial.py).
+        No-op when spatial_buffer_m is 0 (the default), so existing configs
+        and results are unaffected unless a buffer is explicitly set."""
+        radius = self._buffer_radius_blocks()
+        if radius <= 0:
+            return train_idx
+
+        test_blocks = {groups.iloc[i] for i in test_idx}
+        excluded_blocks = {
+            (bx + dx, by + dy)
+            for bx, by in test_blocks
+            for dx in range(-radius, radius + 1)
+            for dy in range(-radius, radius + 1)
+        }
+
+        train_blocks = groups.iloc[train_idx].to_numpy()
+        keep_mask = np.fromiter(
+            (block not in excluded_blocks for block in train_blocks),
+            dtype=bool, count=len(train_blocks),
+        )
+        dropped = int((~keep_mask).sum())
+        if dropped:
+            logger.info(
+                f"[{self.name}] spatial buffer ({self.spatial_buffer_m:.0f}m, "
+                f"radius={radius} block(s)): dropped {dropped:,}/{len(train_idx):,} "
+                f"train rows within the buffer ring of this fold's test blocks"
+            )
+        return train_idx[keep_mask]
 
     def fit_and_score(
         self, model_cls, params: dict, X: pd.DataFrame, y: pd.Series,

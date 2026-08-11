@@ -5,13 +5,16 @@ are now baselines reported for comparison). Steps, mapped to methods:
 
     1. Grid Partitioning       -> DatasetPrep.assign_spatial_blocks (block_size_m)
     2. Class Stratification    -> _stratify_blocks_into_folds
-    3. Strict Validation       -> make_folds returns held-out fold UNTOUCHED
+    3. Boundary Buffering      -> CVStrategy._apply_spatial_buffer (spatial_buffer_m,
+                                   optional, 0 by default) drops train blocks within
+                                   the buffer ring of each fold's test blocks
+    4. Strict Validation       -> make_folds returns held-out fold UNTOUCHED
        Isolation                 (no resampling ever applied to test_idx)
-    4. In-Fold Training         -> fit_and_score resamples ONLY the training
+    5. In-Fold Training         -> fit_and_score resamples ONLY the training
        Resampling                 side, using self.resampler (never disabled
                                    for this strategy, unlike the plain spatial
                                    baseline's search-time SMOTE-off convention)
-    5. Model Training/Eval      -> fit_and_score reports AUC (pipeline-wide
+    6. Model Training/Eval      -> fit_and_score reports AUC (pipeline-wide
                                     metric) + F1/PR-AUC as documented in the
                                     dissertation methodology
 """
@@ -49,6 +52,7 @@ class StratifiedSpatialBlockCV(CVStrategy):
         for k in range(self.cv_folds):
             test_idx = np.where(row_fold == k)[0]
             train_idx = np.where(row_fold != k)[0]
+            train_idx = self._apply_spatial_buffer(train_idx, test_idx, groups)
             if len(test_idx) == 0 or len(train_idx) == 0:
                 logger.warning(f"[stratified_spatial_block] fold {k} is degenerate (empty split); skipping.")
                 continue

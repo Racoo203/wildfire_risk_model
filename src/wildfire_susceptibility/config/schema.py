@@ -145,6 +145,16 @@ class ModelingConfig(BaseModel):
         "standard", "spatial", "stratified_spatial_block", "both"
     ] = "both"
     spatial_block_size_m: float = 5000.0
+    spatial_buffer_m: float = Field(
+        default=0.0,
+        description="Minimum enforced distance (metres) between any train "
+                     "and test point under 'spatial'/'stratified_spatial_block' "
+                     "CV. Implemented by excluding, from both train and test, "
+                     "every spatial block within ceil(spatial_buffer_m / "
+                     "spatial_block_size_m) grid cells of a test block for "
+                     "that fold. 0.0 (default) preserves prior behavior: no "
+                     "buffer, fold separation only at the block-ID level.",
+    )
     use_smote: Optional[bool] = Field(
         default=None,
         description="Explicit override. If left unset (None) and "
