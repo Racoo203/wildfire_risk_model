@@ -60,6 +60,17 @@ def test_assign_spatial_blocks_smaller_block_size_yields_more_blocks(prep):
     assert fine.nunique() > coarse.nunique()
 
 
+def test_assign_spatial_blocks_returns_integer_grid_tuples(prep):
+    """Group labels are (block_x, block_y) integer tuples, not strings -
+    buffered spatial CV (cv/base.py's _apply_spatial_buffer) relies on this
+    to compute Chebyshev grid-distance between blocks directly."""
+    df = pd.DataFrame({"_x": [4999.0, 5001.0], "_y": [100.0, 100.0]})
+    blocks = prep.assign_spatial_blocks(df, block_size_m=5000.0)
+
+    assert blocks.iloc[0] == (0, 0)
+    assert blocks.iloc[1] == (1, 0)
+
+
 def test_assign_spatial_blocks_two_points_one_metre_apart_can_land_in_different_blocks(prep):
     """Documents the mechanism behind the missing-buffer gap (see
     test_spatial_group_kfold_buffer_gap.py): two points 1m apart, straddling

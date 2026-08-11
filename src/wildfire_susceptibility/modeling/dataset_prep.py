@@ -143,10 +143,17 @@ class DatasetPrep:
         Assign each row to a spatial block on a block_size_m grid, for use as
         the `groups` argument to sklearn's GroupKFold. Blocks are the spatial
         CV unit, not folds themselves — GroupKFold handles the fold assignment.
+
+        Group labels are (block_x, block_y) integer-grid-index tuples rather
+        than a concatenated string, so buffered spatial CV (cv/buffering.py)
+        can compute Chebyshev grid-distance between blocks directly, without
+        parsing an ID back into coordinates. Tuples remain hashable, so
+        every existing consumer (GroupKFold, dict-keyed block/fold maps)
+        works unchanged.
         """
         block_x = (df[x_col] // block_size_m).astype(int)
         block_y = (df[y_col] // block_size_m).astype(int)
-        blocks = (block_x.astype(str) + "_" + block_y.astype(str))
+        blocks = pd.Series(list(zip(block_x, block_y)), index=df.index)
         n_blocks = blocks.nunique()
         logger.info(f"Assigned {len(df):,} rows to {n_blocks} spatial blocks ({block_size_m/1000:.0f} km grid)")
         return blocks

@@ -4,8 +4,9 @@ modeling:
   cv_folds: 5
   mlflow_experiment: "wildfire-susceptibility-essex"
   selection_rule: "best_auc"      # options: "best_auc" | "most_conservative"
-  cv_strategy: "both"             # options: "standard" | "spatial" | "both"
+  cv_strategy: "both"             # options: "standard" | "spatial" | "stratified_spatial_block" | "both"
   spatial_block_size_m: 5000.0
+  spatial_buffer_m: 0.0           # exclusion-zone width (m) around test blocks for spatial/stratified_spatial_block CV; 0.0 = no buffer (prior behavior)
   optuna_search_subsample: 50000
   use_smote: false
   smote_k_neighbors: 5
