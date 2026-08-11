@@ -154,3 +154,57 @@ class DatasetPrep:
     def load_train_test(self, dataset_paths: Dict[str, Path]) -> Dict[str, pd.DataFrame]:
         """dataset_paths = {"train": path, "test": path} for one season."""
         return {split: pd.read_csv(p) for split, p in dataset_paths.items()}
+
+    def prepare_train(
+        self,
+        df_train: pd.DataFrame,
+        season: str,
+        ref_path: Path,
+        climate_vars: Tuple[str, ...],
+    ) -> pd.DataFrame:
+        """
+        Model-ready prep for the TRAINING split only:
+            1. resolve_missing (slope/aspect zero-fill, NDVI/climate NN-fill)
+            2. LabelCleaner.clean_flat() — pairwise k-means Low-cleaning
+
+        Label cleaning only ever runs on train: it defines "ambiguous Low"
+        using the training feature distribution, and mutating test labels
+        based on training-fitted clusters would contaminate the held-out
+        evaluation.
+        """
+        feature_cols = [c for c in df_train.columns if c not in ("label", "_x", "_y")]
+
+        domain_mask = df_train["elevation"].notna().to_numpy()
+        df_train = self.resolve_missing(
+            df_train,
+            nearest_neighbor_cols=("ndvi", *climate_vars),
+            drop_if_any_nan_in=("label",),
+            domain_mask=domain_mask,
+        )
+
+        if self.config["labels"].get("clean_labels", True):
+            cleaner = LabelCleaner(self.config, ref_path)
+            df_train = cleaner.clean_flat(
+                df_train, feature_cols=feature_cols, season=f"{season}_train"
+            )
+
+        return df_train
+
+    def prepare_test(
+        self,
+        df_test: pd.DataFrame,
+        season: str,
+        climate_vars: Tuple[str, ...],
+    ) -> pd.DataFrame:
+        """
+        Model-ready prep for the TEST split: imputation only, no label
+        cleaning — test labels stay exactly as classified, so evaluation
+        reflects genuine held-out performance.
+        """
+        domain_mask = df_test["elevation"].notna().to_numpy()
+        return self.resolve_missing(
+            df_test,
+            nearest_neighbor_cols=("ndvi", *climate_vars),
+            drop_if_any_nan_in=("label",),
+            domain_mask=domain_mask,
+        )
