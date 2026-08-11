@@ -80,7 +80,7 @@ def test_smote_application_is_logged_at_info(caplog):
     """Regression test for the 'was SMOTE even applied?' confusion — the
     resample summary must be visible at INFO, not buried at DEBUG."""
     import logging
-    from wildfire_susceptibility.modeling.training.resampling import SMOTEResampler
+    from wildfire_susceptibility.modeling.resampling import SMOTEResampler
 
     caplog.set_level(logging.INFO)
     resampler = SMOTEResampler({"modeling": {"use_smote": True, "smote_k_neighbors": 3}})

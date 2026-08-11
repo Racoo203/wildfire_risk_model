@@ -4,7 +4,7 @@ exploding a small search subsample — the 4,800 -> 703,090 row bug."""
 
 import numpy as np
 import pytest
-from wildfire_susceptibility.modeling.training.resampling import SMOTEResampler
+from wildfire_susceptibility.modeling.resampling import SMOTEResampler
 
 
 def test_smote_caps_targets_to_batch_majority_size():

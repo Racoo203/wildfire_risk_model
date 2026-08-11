@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import roc_auc_score, precision_recall_curve, auc
 
-from ..training.resampling import SMOTEResampler
+from ..resampling import SMOTEResampler
 
 logger = logging.getLogger(__name__)
 
