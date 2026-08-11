@@ -367,3 +367,183 @@
 2026-08-06 17:47:00 - wildfire_susceptibility - INFO - [stage_integration] [CACHED] summer/train -> dataset_train_summer.csv
 2026-08-06 17:47:00 - wildfire_susceptibility - INFO - [stage_integration] [CACHED] summer/test -> dataset_test_summer.csv
 2026-08-06 17:47:00 - wildfire_susceptibility - INFO - === Stage complete: integration ===
+2026-08-10 11:38:20 - wildfire_susceptibility - INFO - Logger initialized: wildfire_susceptibility
+2026-08-10 11:38:20 - wildfire_susceptibility - INFO - === Running stage: static ===
+2026-08-10 11:38:20 - wildfire_susceptibility - INFO - [stage_static] Building static features...
+2026-08-10 11:38:20 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] BoundaryBuilder: outputs already exist, skipping computation
+2026-08-10 11:38:20 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] TopographyBuilder: outputs already exist, skipping computation
+2026-08-10 11:38:20 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] ProximityBuilder: outputs already exist, skipping computation
+2026-08-10 11:38:20 - wildfire_susceptibility - INFO - [stage_static] Complete — 9 output path(s).
+2026-08-10 11:38:20 - wildfire_susceptibility - INFO - === Stage complete: static ===
+2026-08-10 11:38:20 - wildfire_susceptibility - INFO - === Running stage: seasonal ===
+2026-08-10 11:38:20 - wildfire_susceptibility - INFO - [stage_seasonal] [summer] Building seasonal features...
+2026-08-10 11:38:20 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] ClimateBuilder[summer][train]: outputs already exist, skipping computation
+2026-08-10 11:38:20 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] VegetationBuilder[summer][train]: outputs already exist, skipping computation
+2026-08-10 11:38:20 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] ClimateBuilder[summer][test]: outputs already exist, skipping computation
+2026-08-10 11:38:20 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] VegetationBuilder[summer][test]: outputs already exist, skipping computation
+2026-08-10 11:38:20 - wildfire_susceptibility - INFO - === Stage complete: seasonal ===
+2026-08-10 11:38:20 - wildfire_susceptibility - INFO - === Running stage: labels ===
+2026-08-10 11:38:20 - wildfire_susceptibility - INFO - [stage_labels] [summer] Building fire labels...
+2026-08-10 11:38:20 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] FireBuilder[summer]: outputs already exist, skipping computation
+2026-08-10 11:38:20 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[conv][summer_train]: outputs already exist, skipping computation
+2026-08-10 11:38:21 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[convolution][gmm][summer_train]: outputs already exist, skipping computation
+2026-08-10 11:38:21 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[conv][summer_test]: outputs already exist, skipping computation
+2026-08-10 11:38:21 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[convolution][gmm][summer_test]: outputs already exist, skipping computation
+2026-08-10 11:38:30 - wildfire_susceptibility.pipeline.stage_labels - INFO - [stage_labels] [summer] comparison run: classify_method='jenks'
+2026-08-10 11:38:30 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[conv][summer_train]: outputs already exist, skipping computation
+2026-08-10 11:54:17 - wildfire_susceptibility - INFO - Logger initialized: wildfire_susceptibility
+2026-08-10 11:54:17 - wildfire_susceptibility - INFO - === Running stage: static ===
+2026-08-10 11:54:17 - wildfire_susceptibility - INFO - [stage_static] Building static features...
+2026-08-10 11:54:20 - wildfire_susceptibility - INFO - Merged 5 SRTM tiles: _tmp_srtm_merged.tif
+2026-08-10 11:54:30 - wildfire_susceptibility.core.raster - INFO - Reprojected data\silver\layers\_tmp_srtm_merged.tif to data\silver\layers\_tmp_elev.tif
+2026-08-10 11:54:37 - wildfire_susceptibility.core.raster - INFO - Written data\silver\layers\_tmp_slope.tif
+2026-08-10 11:54:39 - wildfire_susceptibility.core.raster - INFO - Written data\silver\layers\_tmp_aspect.tif
+2026-08-10 11:54:39 - wildfire_susceptibility - INFO - Slope and aspect derived from clipped DEM.
+2026-08-10 11:54:42 - wildfire_susceptibility.core.raster - INFO - Clipped data\silver\layers\_tmp_elev.tif to data\silver\layers\topo_elevation.tif
+2026-08-10 11:54:43 - wildfire_susceptibility.core.raster - INFO - Clipped data\silver\layers\_tmp_aspect.tif to data\silver\layers\topo_aspect.tif
+2026-08-10 11:54:45 - wildfire_susceptibility.core.raster - INFO - Clipped data\silver\layers\_tmp_slope.tif to data\silver\layers\topo_slope.tif
+2026-08-10 11:54:45 - wildfire_susceptibility - INFO - Topography features complete.
+2026-08-10 11:58:26 - wildfire_susceptibility.core.raster - INFO - Distance raster -> dist_roads.tif (681,934 feature px)
+2026-08-10 11:58:26 - wildfire_susceptibility - INFO - Roads: distance raster written -> dist_roads.tif
+2026-08-10 11:58:36 - wildfire_susceptibility.core.raster - INFO - Distance raster -> dist_rivers.tif (111,053 feature px)
+2026-08-10 11:58:36 - wildfire_susceptibility - INFO - Rivers: distance raster written -> dist_rivers.tif
+2026-08-10 11:59:06 - wildfire_susceptibility.core.raster - INFO - Distance raster -> dist_buildings.tif (264,408 feature px)
+2026-08-10 11:59:06 - wildfire_susceptibility - INFO - Buildings: distance raster written -> dist_buildings.tif
+2026-08-10 11:59:09 - wildfire_susceptibility - INFO - Land-use class raster written -> landuse_class.tif (11,555 polygons, 10 classes)
+2026-08-10 11:59:11 - wildfire_susceptibility - INFO - [stage_static] Complete — 9 output path(s).
+2026-08-10 11:59:11 - wildfire_susceptibility - INFO - === Stage complete: static ===
+2026-08-10 11:59:11 - wildfire_susceptibility - INFO - === Running stage: seasonal ===
+2026-08-10 11:59:11 - wildfire_susceptibility - INFO - [stage_seasonal] [summer] Building seasonal features...
+2026-08-10 11:59:16 - wildfire_susceptibility.core.raster - INFO - Aligned data\silver\layers\_tmp_native_tas_summer_train.tif to reference, to data\silver\layers\_tmp_clip_tas_summer_train.tif
+2026-08-10 11:59:17 - wildfire_susceptibility.core.raster - INFO - Clipped data\silver\layers\_tmp_clip_tas_summer_train.tif to data\silver\layers\meteo_tas_summer_train.tif
+2026-08-10 11:59:17 - wildfire_susceptibility - INFO - [summer][train] Climate feature ready: tas: meteo_tas_summer_train.tif
+2026-08-10 11:59:21 - wildfire_susceptibility.core.raster - INFO - Aligned data\silver\layers\_tmp_native_tasmax_summer_train.tif to reference, to data\silver\layers\_tmp_clip_tasmax_summer_train.tif
+2026-08-10 11:59:22 - wildfire_susceptibility.core.raster - INFO - Clipped data\silver\layers\_tmp_clip_tasmax_summer_train.tif to data\silver\layers\meteo_tasmax_summer_train.tif
+2026-08-10 11:59:22 - wildfire_susceptibility - INFO - [summer][train] Climate feature ready: tasmax: meteo_tasmax_summer_train.tif
+2026-08-10 11:59:26 - wildfire_susceptibility.core.raster - INFO - Aligned data\silver\layers\_tmp_native_tasmin_summer_train.tif to reference, to data\silver\layers\_tmp_clip_tasmin_summer_train.tif
+2026-08-10 11:59:27 - wildfire_susceptibility.core.raster - INFO - Clipped data\silver\layers\_tmp_clip_tasmin_summer_train.tif to data\silver\layers\meteo_tasmin_summer_train.tif
+2026-08-10 11:59:28 - wildfire_susceptibility - INFO - [summer][train] Climate feature ready: tasmin: meteo_tasmin_summer_train.tif
+2026-08-10 11:59:32 - wildfire_susceptibility.core.raster - INFO - Aligned data\silver\layers\_tmp_native_rainfall_summer_train.tif to reference, to data\silver\layers\_tmp_clip_rainfall_summer_train.tif
+2026-08-10 11:59:33 - wildfire_susceptibility.core.raster - INFO - Clipped data\silver\layers\_tmp_clip_rainfall_summer_train.tif to data\silver\layers\meteo_rainfall_summer_train.tif
+2026-08-10 11:59:33 - wildfire_susceptibility - INFO - [summer][train] Climate feature ready: rainfall: meteo_rainfall_summer_train.tif
+2026-08-10 11:59:37 - wildfire_susceptibility.core.raster - INFO - Aligned data\silver\layers\_tmp_native_sfcWind_summer_train.tif to reference, to data\silver\layers\_tmp_clip_sfcWind_summer_train.tif
+2026-08-10 11:59:38 - wildfire_susceptibility.core.raster - INFO - Clipped data\silver\layers\_tmp_clip_sfcWind_summer_train.tif to data\silver\layers\meteo_sfcWind_summer_train.tif
+2026-08-10 11:59:38 - wildfire_susceptibility - INFO - [summer][train] Climate feature ready: sfcWind: meteo_sfcWind_summer_train.tif
+2026-08-10 11:59:43 - wildfire_susceptibility.core.raster - INFO - Aligned data\silver\layers\_tmp_native_hurs_summer_train.tif to reference, to data\silver\layers\_tmp_clip_hurs_summer_train.tif
+2026-08-10 11:59:44 - wildfire_susceptibility.core.raster - INFO - Clipped data\silver\layers\_tmp_clip_hurs_summer_train.tif to data\silver\layers\meteo_hurs_summer_train.tif
+2026-08-10 11:59:44 - wildfire_susceptibility - INFO - [summer][train] Climate feature ready: hurs: meteo_hurs_summer_train.tif
+2026-08-10 11:59:45 - wildfire_susceptibility.core.raster - INFO - Aligned data\silver\layers\_tmp_native_diurnal_range_summer_train.tif to reference, to data\silver\layers\_tmp_clip_diurnal_range_summer_train.tif
+2026-08-10 11:59:46 - wildfire_susceptibility.core.raster - INFO - Clipped data\silver\layers\_tmp_clip_diurnal_range_summer_train.tif to data\silver\layers\meteo_diurnal_range_summer_train.tif
+2026-08-10 11:59:49 - wildfire_susceptibility.core.raster - INFO - Aligned data\silver\layers\_tmp_ndvi_native_summer_train.tif to reference, to data\silver\layers\_tmp_clip_ndvi_summer_train.tif
+2026-08-10 11:59:50 - wildfire_susceptibility.core.raster - INFO - Clipped data\silver\layers\_tmp_clip_ndvi_summer_train.tif to data\silver\layers\ndvi_summer_train.tif
+2026-08-10 11:59:50 - wildfire_susceptibility - INFO - [summer][train] NDVI ready -> ndvi_summer_train.tif
+2026-08-10 11:59:51 - wildfire_susceptibility.core.raster - INFO - Aligned data\silver\layers\_tmp_native_tas_summer_test.tif to reference, to data\silver\layers\_tmp_clip_tas_summer_test.tif
+2026-08-10 11:59:52 - wildfire_susceptibility.core.raster - INFO - Clipped data\silver\layers\_tmp_clip_tas_summer_test.tif to data\silver\layers\meteo_tas_summer_test.tif
+2026-08-10 11:59:52 - wildfire_susceptibility - INFO - [summer][test] Climate feature ready: tas: meteo_tas_summer_test.tif
+2026-08-10 11:59:54 - wildfire_susceptibility.core.raster - INFO - Aligned data\silver\layers\_tmp_native_tasmax_summer_test.tif to reference, to data\silver\layers\_tmp_clip_tasmax_summer_test.tif
+2026-08-10 11:59:55 - wildfire_susceptibility.core.raster - INFO - Clipped data\silver\layers\_tmp_clip_tasmax_summer_test.tif to data\silver\layers\meteo_tasmax_summer_test.tif
+2026-08-10 11:59:55 - wildfire_susceptibility - INFO - [summer][test] Climate feature ready: tasmax: meteo_tasmax_summer_test.tif
+2026-08-10 11:59:56 - wildfire_susceptibility.core.raster - INFO - Aligned data\silver\layers\_tmp_native_tasmin_summer_test.tif to reference, to data\silver\layers\_tmp_clip_tasmin_summer_test.tif
+2026-08-10 11:59:57 - wildfire_susceptibility.core.raster - INFO - Clipped data\silver\layers\_tmp_clip_tasmin_summer_test.tif to data\silver\layers\meteo_tasmin_summer_test.tif
+2026-08-10 11:59:57 - wildfire_susceptibility - INFO - [summer][test] Climate feature ready: tasmin: meteo_tasmin_summer_test.tif
+2026-08-10 11:59:59 - wildfire_susceptibility.core.raster - INFO - Aligned data\silver\layers\_tmp_native_rainfall_summer_test.tif to reference, to data\silver\layers\_tmp_clip_rainfall_summer_test.tif
+2026-08-10 12:00:00 - wildfire_susceptibility.core.raster - INFO - Clipped data\silver\layers\_tmp_clip_rainfall_summer_test.tif to data\silver\layers\meteo_rainfall_summer_test.tif
+2026-08-10 12:00:00 - wildfire_susceptibility - INFO - [summer][test] Climate feature ready: rainfall: meteo_rainfall_summer_test.tif
+2026-08-10 12:00:02 - wildfire_susceptibility.core.raster - INFO - Aligned data\silver\layers\_tmp_native_sfcWind_summer_test.tif to reference, to data\silver\layers\_tmp_clip_sfcWind_summer_test.tif
+2026-08-10 12:00:04 - wildfire_susceptibility.core.raster - INFO - Clipped data\silver\layers\_tmp_clip_sfcWind_summer_test.tif to data\silver\layers\meteo_sfcWind_summer_test.tif
+2026-08-10 12:00:04 - wildfire_susceptibility - INFO - [summer][test] Climate feature ready: sfcWind: meteo_sfcWind_summer_test.tif
+2026-08-10 12:00:06 - wildfire_susceptibility.core.raster - INFO - Aligned data\silver\layers\_tmp_native_hurs_summer_test.tif to reference, to data\silver\layers\_tmp_clip_hurs_summer_test.tif
+2026-08-10 12:00:07 - wildfire_susceptibility.core.raster - INFO - Clipped data\silver\layers\_tmp_clip_hurs_summer_test.tif to data\silver\layers\meteo_hurs_summer_test.tif
+2026-08-10 12:00:07 - wildfire_susceptibility - INFO - [summer][test] Climate feature ready: hurs: meteo_hurs_summer_test.tif
+2026-08-10 12:00:08 - wildfire_susceptibility.core.raster - INFO - Aligned data\silver\layers\_tmp_native_diurnal_range_summer_test.tif to reference, to data\silver\layers\_tmp_clip_diurnal_range_summer_test.tif
+2026-08-10 12:00:09 - wildfire_susceptibility.core.raster - INFO - Clipped data\silver\layers\_tmp_clip_diurnal_range_summer_test.tif to data\silver\layers\meteo_diurnal_range_summer_test.tif
+2026-08-10 12:00:10 - wildfire_susceptibility.core.raster - INFO - Aligned data\silver\layers\_tmp_ndvi_native_summer_test.tif to reference, to data\silver\layers\_tmp_clip_ndvi_summer_test.tif
+2026-08-10 12:00:11 - wildfire_susceptibility.core.raster - INFO - Clipped data\silver\layers\_tmp_clip_ndvi_summer_test.tif to data\silver\layers\ndvi_summer_test.tif
+2026-08-10 12:00:11 - wildfire_susceptibility - INFO - [summer][test] NDVI ready -> ndvi_summer_test.tif
+2026-08-10 12:00:11 - wildfire_susceptibility - INFO - === Stage complete: seasonal ===
+2026-08-10 12:00:11 - wildfire_susceptibility - INFO - === Running stage: labels ===
+2026-08-10 12:00:11 - wildfire_susceptibility - INFO - [stage_labels] [summer] Building fire labels...
+2026-08-10 12:00:12 - wildfire_susceptibility - INFO - Rows remaining after month filter: 13651
+2026-08-10 12:00:17 - wildfire_susceptibility - INFO - [summer_train][convolution][gmm] class counts: {0: 437913, 1: 343112, 2: 386249, 3: 72923} | unlabelled/trimmed cells: 2610918 | out-of-domain NaN cells: 2606943 | thresholds: ['5.474e-05', '0.002189', '0.02315']
+2026-08-10 12:00:17 - wildfire_susceptibility - INFO - [summer_test][convolution][gmm] applied FROZEN fit from paired split (no refit).
+2026-08-10 12:00:17 - wildfire_susceptibility - INFO - [summer_test][convolution][gmm] class counts: {0: 345572, 1: 248405, 2: 240070, 3: 24059} | unlabelled/trimmed cells: 2993009 | out-of-domain NaN cells: 2606943 | thresholds: ['5.474e-05', '0.002189', '0.02315']
+2026-08-10 12:00:23 - wildfire_susceptibility.pipeline.stage_labels - INFO - [stage_labels] [summer] comparison run: classify_method='jenks'
+2026-08-10 12:00:23 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[conv][summer_train]: outputs already exist, skipping computation
+2026-08-10 12:02:02 - wildfire_susceptibility - INFO - [summer_train][convolution][jenks] class counts: {0: 1003658, 1: 193699, 2: 38224, 3: 4616} | unlabelled/trimmed cells: 2610918 | out-of-domain NaN cells: 2606943 | thresholds: ['0.008901', '0.03221', '0.08977']
+2026-08-10 12:02:02 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[conv][summer_test]: outputs already exist, skipping computation
+2026-08-10 12:02:02 - wildfire_susceptibility - INFO - [summer_test][convolution][jenks] applied FROZEN fit from paired split (no refit).
+2026-08-10 12:02:02 - wildfire_susceptibility - INFO - [summer_test][convolution][jenks] class counts: {0: 741306, 1: 104321, 2: 11276, 3: 1203} | unlabelled/trimmed cells: 2993009 | out-of-domain NaN cells: 2606943 | thresholds: ['0.008901', '0.03221', '0.08977']
+2026-08-10 12:02:02 - wildfire_susceptibility.pipeline.stage_labels - INFO - [stage_labels] [summer] comparison run: classify_method='gmm'
+2026-08-10 12:02:02 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[conv][summer_train]: outputs already exist, skipping computation
+2026-08-10 12:02:02 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[convolution][gmm][summer_train]: outputs already exist, skipping computation
+2026-08-10 12:02:02 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[conv][summer_test]: outputs already exist, skipping computation
+2026-08-10 12:02:02 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[convolution][gmm][summer_test]: outputs already exist, skipping computation
+2026-08-10 12:02:03 - wildfire_susceptibility - INFO - === Stage complete: labels ===
+2026-08-10 12:02:03 - wildfire_susceptibility - INFO - === Running stage: integration ===
+2026-08-10 12:02:03 - wildfire_susceptibility - INFO - [stage_integration] [CACHED] summer/train -> dataset_train_summer.csv
+2026-08-10 12:02:03 - wildfire_susceptibility - INFO - [stage_integration] [CACHED] summer/test -> dataset_test_summer.csv
+2026-08-10 12:02:03 - wildfire_susceptibility - INFO - === Stage complete: integration ===
+2026-08-10 12:12:02 - wildfire_susceptibility - INFO - Logger initialized: wildfire_susceptibility
+2026-08-10 12:12:02 - wildfire_susceptibility - INFO - === Running stage: static ===
+2026-08-10 12:12:02 - wildfire_susceptibility - INFO - [stage_static] Building static features...
+2026-08-10 12:12:02 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] BoundaryBuilder: outputs already exist, skipping computation
+2026-08-10 12:12:02 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] TopographyBuilder: outputs already exist, skipping computation
+2026-08-10 12:12:02 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] ProximityBuilder: outputs already exist, skipping computation
+2026-08-10 12:12:02 - wildfire_susceptibility - INFO - [stage_static] Complete — 9 output path(s).
+2026-08-10 12:12:02 - wildfire_susceptibility - INFO - === Stage complete: static ===
+2026-08-10 12:12:02 - wildfire_susceptibility - INFO - === Running stage: seasonal ===
+2026-08-10 12:12:02 - wildfire_susceptibility - INFO - [stage_seasonal] [summer] Building seasonal features...
+2026-08-10 12:12:02 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] ClimateBuilder[summer][train]: outputs already exist, skipping computation
+2026-08-10 12:12:02 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] VegetationBuilder[summer][train]: outputs already exist, skipping computation
+2026-08-10 12:12:02 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] ClimateBuilder[summer][test]: outputs already exist, skipping computation
+2026-08-10 12:12:02 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] VegetationBuilder[summer][test]: outputs already exist, skipping computation
+2026-08-10 12:12:02 - wildfire_susceptibility - INFO - === Stage complete: seasonal ===
+2026-08-10 12:12:02 - wildfire_susceptibility - INFO - === Running stage: labels ===
+2026-08-10 12:12:02 - wildfire_susceptibility - INFO - [stage_labels] [summer] Building fire labels...
+2026-08-10 12:12:02 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] FireBuilder[summer]: outputs already exist, skipping computation
+2026-08-10 12:12:03 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[conv][summer_train]: outputs already exist, skipping computation
+2026-08-10 12:12:03 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[convolution][gmm][summer_train]: outputs already exist, skipping computation
+2026-08-10 12:12:03 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[conv][summer_test]: outputs already exist, skipping computation
+2026-08-10 12:12:03 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[convolution][gmm][summer_test]: outputs already exist, skipping computation
+2026-08-10 12:12:06 - wildfire_susceptibility.pipeline.stage_labels - INFO - [stage_labels] [summer] comparison run: classify_method='jenks'
+2026-08-10 12:12:06 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[conv][summer_train]: outputs already exist, skipping computation
+2026-08-10 12:12:07 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[convolution][jenks][summer_train]: outputs already exist, skipping computation
+2026-08-10 12:12:07 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[conv][summer_test]: outputs already exist, skipping computation
+2026-08-10 12:12:07 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[convolution][jenks][summer_test]: outputs already exist, skipping computation
+2026-08-10 12:12:07 - wildfire_susceptibility.pipeline.stage_labels - INFO - [stage_labels] [summer] comparison run: classify_method='gmm'
+2026-08-10 12:12:07 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[conv][summer_train]: outputs already exist, skipping computation
+2026-08-10 12:12:07 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[convolution][gmm][summer_train]: outputs already exist, skipping computation
+2026-08-10 12:12:07 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[conv][summer_test]: outputs already exist, skipping computation
+2026-08-10 12:12:07 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[convolution][gmm][summer_test]: outputs already exist, skipping computation
+2026-08-10 12:12:08 - wildfire_susceptibility - INFO - === Stage complete: labels ===
+2026-08-10 12:12:08 - wildfire_susceptibility - INFO - === Running stage: integration ===
+2026-08-10 12:12:08 - wildfire_susceptibility - INFO - [stage_integration] [CACHED] summer/train -> dataset_train_summer.csv
+2026-08-10 12:12:08 - wildfire_susceptibility - INFO - [stage_integration] [CACHED] summer/test -> dataset_test_summer.csv
+2026-08-10 12:12:08 - wildfire_susceptibility - INFO - === Stage complete: integration ===
+2026-08-10 12:12:08 - wildfire_susceptibility - INFO - === Running stage: preprocessing ===
+2026-08-10 12:12:08 - wildfire_susceptibility - INFO - [stage_preprocessing] [summer] Imputing + cleaning labels...
+2026-08-10 16:39:06 - wildfire_susceptibility - INFO - Logger initialized: wildfire_susceptibility
+2026-08-10 16:39:06 - wildfire_susceptibility - INFO - [stage_preprocessing] [test_season] Imputing + cleaning labels...
+2026-08-10 16:40:34 - wildfire_susceptibility - INFO - Logger initialized: wildfire_susceptibility
+2026-08-10 16:41:54 - wildfire_susceptibility - INFO - Logger initialized: wildfire_susceptibility
+2026-08-10 16:42:01 - wildfire_susceptibility - INFO - [stage_train] [test_season] Loading cleaned datasets...
+2026-08-10 16:42:01 - wildfire_susceptibility - INFO - [stage_train] [test_season][random_forest] Search + refit...
+2026-08-10 16:42:02 - wildfire_susceptibility.modeling.training.search - INFO - [test_season][random_forest] finished=0 target=1 remaining=1
+2026-08-10 16:42:02 - wildfire_susceptibility.modeling.cv.base - INFO - [test_season][random_forest] trial 0 fold 1: fitting on 25 rows...
+2026-08-10 16:42:04 - wildfire_susceptibility.modeling.cv.base - WARNING - [test_season][random_forest] trial 0 fold 1: AUC scoring failed on this fold (multiclass format is not supported); scoring as 0.0
+2026-08-10 16:42:04 - wildfire_susceptibility.modeling.training.search - INFO - [test_season][random_forest] trial 0 fold 1 AUC=0.0000 | params={'n_estimators': 209, 'max_depth': 16, 'min_samples_leaf': 11, 'min_samples_split': 15, 'max_features': 'sqrt', 'class_weight': None}
+2026-08-10 16:42:04 - wildfire_susceptibility.modeling.cv.base - INFO - [test_season][random_forest] trial 0 fold 2: fitting on 25 rows...
+2026-08-10 16:42:05 - wildfire_susceptibility.modeling.cv.base - WARNING - [test_season][random_forest] trial 0 fold 2: AUC scoring failed on this fold (multiclass format is not supported); scoring as 0.0
+2026-08-10 16:42:05 - wildfire_susceptibility.modeling.training.search - INFO - [test_season][random_forest] trial 0 fold 2 AUC=0.0000 | params={'n_estimators': 209, 'max_depth': 16, 'min_samples_leaf': 11, 'min_samples_split': 15, 'max_features': 'sqrt', 'class_weight': None}
+2026-08-10 16:42:05 - wildfire_susceptibility.modeling.training.trainer - INFO - [test_season][random_forest] train shape=(50, 3) | search shape=(50, 3) (standard CV) | class counts={1.0: 17, 2.0: 13, 3.0: 13, 0.0: 7}
+2026-08-11 07:42:10 - wildfire_susceptibility - INFO - Logger initialized: wildfire_susceptibility
+2026-08-11 07:42:10 - wildfire_susceptibility - INFO - [stage_preprocessing] [test_season] Imputing + cleaning labels...
+2026-08-11 07:42:10 - wildfire_susceptibility.modeling.dataset_prep - INFO - No unresolved in-domain NaNs after imputation.
+2026-08-11 07:42:10 - wildfire_susceptibility.modeling.label_cleaning - INFO - [test_season_train] LabelCleaner: flagged 93 / 93 Low-class pixels (100.00%) as ambiguous.
+2026-08-11 07:42:10 - wildfire_susceptibility.modeling.dataset_prep - INFO - No unresolved in-domain NaNs after imputation.
+2026-08-11 07:50:34 - wildfire_susceptibility - INFO - Logger initialized: wildfire_susceptibility
+2026-08-11 07:50:34 - wildfire_susceptibility - INFO - [stage_preprocessing] [test_season] Imputing + cleaning labels...
+2026-08-11 07:50:34 - wildfire_susceptibility.modeling.dataset_prep - INFO - No unresolved in-domain NaNs after imputation.
+2026-08-11 07:50:35 - wildfire_susceptibility.modeling.label_cleaning - INFO - [test_season_train] LabelCleaner: flagged 93 / 93 Low-class pixels (100.00%) as ambiguous.
+2026-08-11 07:50:35 - wildfire_susceptibility.modeling.dataset_prep - INFO - No unresolved in-domain NaNs after imputation.
+2026-08-11 07:50:35 - wildfire_susceptibility - INFO - [stage_eda] [test_season] Generating EDA figures...
