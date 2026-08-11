@@ -62,11 +62,6 @@ class FireBuilder(VarBuilder):
         incidents_df["month"] = incidents_df[date_cols].dt.month
         incidents_df["day"] = incidents_df[date_cols].dt.day
 
-        incidents_df.drop_duplicates(
-            subset = ["CallDateID", "IncidentEasting", "IncidentNorthing"],
-            inplace = True
-        )
-
         easting, northing = geo_cols
         gdf = gpd.GeoDataFrame(
             incidents_df,
