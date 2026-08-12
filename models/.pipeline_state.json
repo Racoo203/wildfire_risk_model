@@ -37,10 +37,10 @@
   "labels": {
     "summer": {
       "train": {
-        "raw_labels": "data\\silver\\layers\\risk_labels_convolution_gmm_summer_train.tif"
+        "raw_labels": "data\\silver\\layers\\risk_labels_kde_jenks_summer_train.tif"
       },
       "test": {
-        "raw_labels": "data\\silver\\layers\\risk_labels_convolution_gmm_summer_test.tif"
+        "raw_labels": "data\\silver\\layers\\risk_labels_kde_jenks_summer_test.tif"
       },
       "fire_train": "data\\silver\\layers\\fire_points_train_summer.gpkg",
       "fire_test": "data\\silver\\layers\\fire_points_test_summer.gpkg"

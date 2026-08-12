@@ -6,7 +6,7 @@ labels:
   density_method: "convolution"          # Options: "convolution" | "kde"
   conv_sigma_cells: 3
   kde_bandwidth_m: 500
-  kde_zero_percentile: 90.0              # KDE-only: percentile of the raster's own density
+  kde_zero_percentile: 95.0              # KDE-only: percentile of the raster's own density
                                           # distribution treated as background/zero (see kernel_density.py).
   trim_bottom_pct: 0.1                   # Trims lower 0.1% of valid densities (replaces hard zero)
   include_d_fires_as_feature: false
