@@ -110,6 +110,8 @@ def plot_vif_correlation(
         fig1, Path(figures_dir) / (season or "static") / "eda" / "vif.png", figures_dir,
         "vif", "viz.charts.plot_vif_correlation", season, params={"threshold": vif_threshold},
     )
+    vif_csv_path = Path(figures_dir) / (season or "static") / "eda" / "vif.csv"
+    vifs.rename("vif").to_csv(vif_csv_path, header=True)
 
     if (vifs > vif_threshold).any():
         logging.getLogger(__name__).warning(
@@ -125,8 +127,13 @@ def plot_vif_correlation(
         fig2, Path(figures_dir) / (season or "static") / "eda" / "correlation_spearman.png",
         figures_dir, "correlation_spearman", "viz.charts.plot_vif_correlation", season,
     )
+    spearman_csv_path = Path(figures_dir) / (season or "static") / "eda" / "correlation_spearman.csv"
+    corr_spearman.to_csv(spearman_csv_path)
 
-    return {"vif": vif_path, "spearman": spearman_path}
+    return {
+        "vif": vif_path, "spearman": spearman_path,
+        "vif_csv": vif_csv_path, "spearman_csv": spearman_csv_path,
+    }
 
 
 def plot_class_balance(
@@ -205,6 +212,53 @@ def plot_cv_comparison(figures_dir, season=None, mlflow_experiment=None):
 
     out_path = Path(figures_dir) / (season or "static") / "models" / "cv_comparison.png"
     return _save_and_log(fig, out_path, figures_dir, "cv_comparison", "viz.charts.plot_cv_comparison", season)
+
+
+def plot_temporal_decomposition(series: pd.Series, stl_result, name: str, figures_dir) -> Path:
+    """Raw monthly series + STL seasonal + residual components, three
+    panels — the temporal-EDA decomposition figure for one climate
+    variable's county-wide monthly time series (not per-season, since the
+    series itself spans all months)."""
+    fig, axes = plt.subplots(3, 1, figsize=(10, 9))
+    series.plot(ax=axes[0], title=f"{name} — raw monthly series")
+    stl_result.seasonal.plot(ax=axes[1], title="Seasonal component")
+    stl_result.resid.plot(ax=axes[2], title="Residual (deseasonalized)")
+
+    out_path = Path(figures_dir) / "temporal_eda" / f"{name}_decomposition.png"
+    return _save_and_log(fig, out_path, figures_dir, "temporal_decomposition",
+                          "viz.charts.plot_temporal_decomposition", params={"feature": name})
+
+
+def plot_acf_pacf(series: pd.Series, name: str, figures_dir, lags: int = 36) -> Path:
+    """ACF + PACF side by side for one climate variable's monthly series."""
+    from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
+    plot_acf(series.dropna(), ax=ax1, lags=lags)
+    plot_pacf(series.dropna(), ax=ax2, lags=lags)
+
+    out_path = Path(figures_dir) / "temporal_eda" / f"{name}_acf_pacf.png"
+    return _save_and_log(fig, out_path, figures_dir, "acf_pacf", "viz.charts.plot_acf_pacf",
+                          params={"feature": name, "lags": lags})
+
+
+def plot_spatial_correlogram(correlogram_df: pd.DataFrame, figures_dir) -> Path:
+    """Moran's I vs. distance band, one line per (season, layer) group —
+    the distance where I drops to ~0 / loses significance is the practical
+    range of spatial autocorrelation for that layer."""
+    fig, ax = plt.subplots(figsize=(9, 6))
+    for (season, layer), grp in correlogram_df.groupby(["season", "layer"]):
+        ax.plot(grp["lag_lo_m"], grp["I"], marker="o", label=f"{season} — {layer}")
+    ax.axhline(0, color="black", linestyle="--", alpha=0.4)
+    ax.set_xlabel("Distance band lower edge (m)")
+    ax.set_ylabel("Moran's I")
+    ax.set_title("Spatial autocorrelation correlogram")
+    ax.legend(fontsize=7, loc="upper right")
+
+    out_path = Path(figures_dir) / "eda" / "spatial_correlogram.png"
+    return _save_and_log(fig, out_path, figures_dir, "spatial_autocorrelation_correlogram",
+                          "viz.charts.plot_spatial_correlogram")
+
 
 def plot_confusion_matrix(
     cm: np.ndarray,

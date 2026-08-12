@@ -28,6 +28,7 @@ from wildfire_susceptibility.pipeline.stage_integration import stage_integration
 
 from wildfire_susceptibility.pipeline.stage_preprocessing import stage_preprocessing
 from wildfire_susceptibility.pipeline.stage_eda import stage_eda
+from wildfire_susceptibility.pipeline.stage_temporal_eda import stage_temporal_eda
 from wildfire_susceptibility.pipeline.stage_train import stage_train
 from wildfire_susceptibility.pipeline.stage_evaluate import stage_evaluate
 
@@ -43,7 +44,7 @@ GEN_ONLY = [
 ]
 
 TRAIN_ONLY = [
-    "preprocessing", "train", "evaluate", "selection",
+    "preprocessing", "eda", "temporal_eda", "train", "evaluate", "selection",
 ]
 
 STAGE_ORDER = GEN_ONLY + TRAIN_ONLY
@@ -87,6 +88,9 @@ def run_stage(stage: str, config: dict, state: dict) -> dict:
 
     elif stage == "eda":
         state["eda"] = stage_eda(config, {"raw": state["integration"], "clean": state["preprocessing"]})
+
+    elif stage == "temporal_eda":
+        state["temporal_eda"] = stage_temporal_eda(config)
 
     elif stage == "train":
         train_input = {"ref_path": state["static"]["ref_path"]}
