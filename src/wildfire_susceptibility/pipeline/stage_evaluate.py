@@ -6,6 +6,7 @@ import joblib
 import mlflow
 import pandas as pd
 
+from .. import viz
 from ..modeling.training.evaluation import PostTrainingEvaluator
 from ..modeling.training.trainer import ModelTrainer
 from ..utils.logger import setup_logger
@@ -21,6 +22,7 @@ def stage_evaluate(config: dict, input_paths: dict) -> Dict[str, Dict[str, dict]
 
     evaluator = PostTrainingEvaluator(config)
     excluded = set(config["modeling"].get("excluded_features", []))
+    figures_dir = Path(config["base"]["figures_dir"])
 
     out: Dict[str, Dict[str, dict]] = {}
     for season, season_paths in input_paths.items():
@@ -36,11 +38,25 @@ def stage_evaluate(config: dict, input_paths: dict) -> Dict[str, Dict[str, dict]
         fire_test_gdf = gpd.read_file(season_paths["fire_test"]) if "fire_test" in season_paths else None
 
         out[season] = {}
+        proba_by_model = {}
         for model_name, artifact_path in season_paths.get("artifacts", {}).items():
             logger.info(f"[stage_evaluate] [{season}][{model_name}] Reloading + evaluating...")
             model = joblib.load(Path(artifact_path) / "model.joblib")
+            proba_by_model[model_name] = model.predict_proba(X_test[feature_cols].values)
             out[season][model_name] = evaluator.evaluate(
                 model, X_test[feature_cols], y_test, season, model_name,
                 ref_path, fire_test_gdf, x_coords, y_coords,
             )
+
+        if proba_by_model:
+            n_classes = next(iter(proba_by_model.values())).shape[1]
+            try:
+                viz.plot_roc_curves(y_test.to_numpy(), proba_by_model, n_classes, figures_dir, season=season)
+                logger.info(
+                    f"[stage_evaluate] [{season}] ROC comparison chart written "
+                    f"({len(proba_by_model)} model(s))."
+                )
+            except Exception as exc:
+                logger.warning(f"[stage_evaluate] [{season}] ROC comparison chart failed, skipping: {exc}")
+
     return out
