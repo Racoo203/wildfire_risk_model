@@ -19,6 +19,15 @@ logger = logging.getLogger(__name__)
 OPTUNA_STORAGE = "sqlite:///data/silver/dbs/optuna_studies.db"
 FINISHED_STATES = {optuna.trial.TrialState.COMPLETE, optuna.trial.TrialState.PRUNED}
 
+# Bump this whenever `_make_objective`'s scoring logic changes (which metric
+# is returned/pruned-on) — the study name's param-space hash only captures
+# param_space() shape, not the objective function body, so an
+# objective-only change would otherwise silently resume/append trials from
+# an incompatible old study (see get_or_create_study). v2: objective
+# switched from mean CV AUC to mean CV PR-AUC-macro (AUC/F1-macro/QWK
+# logged as trial user_attrs instead).
+OBJECTIVE_VERSION = "objv2-prauc"
+
 
 class HyperparamSearch:
     """Owns everything needed to run an efficient Optuna search: subsampling
@@ -154,7 +163,7 @@ class HyperparamSearch:
 
         model_cls = MODELS[model_name]
         sig = self._param_space_signature(model_cls)
-        study_name = f"{season}_{model_name}_{sig}"
+        study_name = f"{season}_{model_name}_{sig}_{OBJECTIVE_VERSION}"
 
         storage = optuna.storages.RDBStorage(
             url=OPTUNA_STORAGE,
@@ -232,22 +241,39 @@ class HyperparamSearch:
         }
 
     def _make_objective(self, model_cls, X_search, y_search, folds, season, model_name):
+        """PR-AUC-macro (one-vs-rest-style, computed on one-hot y) is the
+        primary objective — see fit_and_score_full. It's a better tuning
+        target than plain ROC-AUC for this 4-class ordinal problem: ROC-AUC
+        stays high under majority-class collapse in a way PR-AUC and
+        F1-macro don't, which is exactly the AUC-fine/F1-poor pattern that
+        motivated this change. F1-macro and QWK are computed every trial
+        too (fit_and_score_full returns all four every fold, at no extra
+        fit cost) and stashed as trial user_attrs for reporting/model
+        comparison — they never influence pruning or the tuned value."""
         def objective(trial):
             params = model_cls().param_space(trial)
-            fold_aucs = []
+            fold_metrics = []
 
             for fold_idx, (train_idx, test_idx) in enumerate(folds):
                 context = f"[{season}][{model_name}] trial {trial.number} fold {fold_idx + 1}"
-                auc = self.cv_strategy.fit_and_score(
+                scores = self.cv_strategy.fit_and_score_full(
                     model_cls, params, X_search, y_search, train_idx, test_idx, context=context,
                 )
-                fold_aucs.append(auc)
-                logger.info(f"{context} AUC={auc:.4f} | params={params}")
+                fold_metrics.append(scores)
+                mean_pr_auc = float(np.mean([f["pr_auc_macro"] for f in fold_metrics]))
+                logger.info(
+                    f"{context} PR_AUC_macro={scores['pr_auc_macro']:.4f} AUC={scores['auc']:.4f} "
+                    f"F1_macro={scores['f1_macro']:.4f} QWK={scores['qwk']:.4f} | params={params}"
+                )
 
-                trial.report(float(np.mean(fold_aucs)), step=fold_idx)
+                trial.report(mean_pr_auc, step=fold_idx)
                 if trial.should_prune():
                     raise optuna.TrialPruned()
 
-            return float(np.mean(fold_aucs))
+            trial.set_user_attr("auc", float(np.mean([f["auc"] for f in fold_metrics])))
+            trial.set_user_attr("f1_macro", float(np.mean([f["f1_macro"] for f in fold_metrics])))
+            trial.set_user_attr("qwk", float(np.mean([f["qwk"] for f in fold_metrics])))
+
+            return float(np.mean([f["pr_auc_macro"] for f in fold_metrics]))
 
         return objective

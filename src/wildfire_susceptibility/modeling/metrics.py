@@ -47,6 +47,11 @@ def compute_full_metrics(
         "gini_macro": float(gini_macro),
         "log_loss": float(log_loss(y_true, y_proba, labels=range(n_classes))),
         "cohen_kappa": float(cohen_kappa_score(y_true, y_pred)),
+        # Quadratic-weighted kappa: classes are an ordinal risk discretization
+        # (Low < Medium < High < Very High), so distant misclassifications
+        # (Low predicted as Very High) are penalized more than adjacent ones
+        # (Low predicted as Medium) — unlike unweighted cohen_kappa above.
+        "qwk": float(cohen_kappa_score(y_true, y_pred, weights="quadratic")),
         "matthews_corrcoef": float(matthews_corrcoef(y_true, y_pred)),
         "precision_macro": float(np.mean(precision)),
         "recall_macro": float(np.mean(recall)),

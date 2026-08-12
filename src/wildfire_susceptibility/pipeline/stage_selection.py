@@ -54,8 +54,12 @@ def stage_selection(config: dict, input_paths: dict) -> Dict[str, Path]:
                 "cv_pr_auc_macro_standard": manifest.get("cv_pr_auc_macro_standard"),
                 "cv_pr_auc_macro_spatial": manifest.get("cv_pr_auc_macro_spatial"),
                 "cv_pr_auc_macro_optimism_gap": gap.get("pr_auc_macro"),
+                "cv_qwk_standard": manifest.get("cv_qwk_standard"),
+                "cv_qwk_spatial": manifest.get("cv_qwk_spatial"),
+                "cv_qwk_optimism_gap": gap.get("qwk"),
                 "val_auc": manifest["val_auc"],
                 "val_f1": manifest["val_f1"],
+                "val_qwk": manifest.get("val_qwk"),
                 "tf_pct_medium_plus": (eval_result.get("time_forward_validation") or {}).get("pct_medium_plus"),
             })
 

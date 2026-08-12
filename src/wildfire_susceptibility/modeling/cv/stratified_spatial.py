@@ -14,9 +14,10 @@ are now baselines reported for comparison). Steps, mapped to methods:
        Resampling                 side, using self.resampler (never disabled
                                    for this strategy, unlike the plain spatial
                                    baseline's search-time SMOTE-off convention)
-    6. Model Training/Eval      -> fit_and_score reports AUC (pipeline-wide
-                                    metric) + F1/PR-AUC as documented in the
-                                    dissertation methodology
+    6. Model Training/Eval      -> fit_and_score_full reports PR-AUC-macro
+                                    (the Optuna HPO objective) + AUC/F1-macro/
+                                    QWK as documented in the dissertation
+                                    methodology
 """
 from collections import defaultdict
 from typing import List, Optional, Tuple
@@ -24,7 +25,7 @@ import logging
 
 import numpy as np
 import pandas as pd
-from sklearn.metrics import roc_auc_score, f1_score, average_precision_score
+from sklearn.metrics import roc_auc_score, f1_score, average_precision_score, cohen_kappa_score
 
 from .base import CVStrategy
 from ..balance import log_class_balance, warn_if_class_missing
@@ -157,9 +158,9 @@ class StratifiedSpatialBlockCV(CVStrategy):
         self, model_cls, params, X, y, train_idx, test_idx, context: str = "",
     ) -> dict:
         """Fit once, return the full metric set the dissertation reports
-        (AUC, F1-macro, PR-AUC-macro). `fit_and_score` delegates here so a
-        fold's model is only ever fit once even when both the scalar and
-        the full metric set are needed (see trainer.py's optimism-gap
+        (AUC, F1-macro, PR-AUC-macro, QWK). `fit_and_score` delegates here
+        so a fold's model is only ever fit once even when both the scalar
+        and the full metric set are needed (see trainer.py's optimism-gap
         logging)."""
         y_tr_raw = y.iloc[train_idx]
         log_class_balance(logger, context, y_tr_raw, note="train, pre-resample", level=logging.DEBUG)
@@ -187,12 +188,13 @@ class StratifiedSpatialBlockCV(CVStrategy):
         f1_macro = float(f1_score(y_va, pred, average="macro"))
         y_va_bin = np.eye(proba.shape[1])[y_va.astype(int)]
         pr_auc_macro = float(average_precision_score(y_va_bin, proba, average="macro"))
+        qwk = float(cohen_kappa_score(y_va, pred, weights="quadratic"))
 
         logger.info(
             f"{context} AUC={auc:.4f} F1_macro={f1_macro:.4f} PR_AUC_macro={pr_auc_macro:.4f} "
-            f"(validation fold untouched/imbalanced)"
+            f"QWK={qwk:.4f} (validation fold untouched/imbalanced)"
         )
-        return {"auc": auc, "f1_macro": f1_macro, "pr_auc_macro": pr_auc_macro}
+        return {"auc": auc, "f1_macro": f1_macro, "pr_auc_macro": pr_auc_macro, "qwk": qwk}
 
     def fit_and_score(self, model_cls, params, X, y, train_idx, test_idx, context: str = "") -> float:
         return self.fit_and_score_full(model_cls, params, X, y, train_idx, test_idx, context=context)["auc"]

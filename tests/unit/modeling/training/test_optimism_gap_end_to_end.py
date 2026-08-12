@@ -1,18 +1,25 @@
 # tests/unit/modeling/training/test_optimism_gap_end_to_end.py
 """End-to-end coverage for optimism-gap logging through ModelTrainer.train_one
-with cv_strategy="both":
+with cv_strategy="both". Optuna's objective is PR-AUC-macro (search.py); AUC/
+F1-macro/QWK for the searched side come from the best trial's user_attrs, and
+the diagnostic side always runs a full metrics pass, so all four metrics
+(AUC, F1-macro, PR-AUC-macro, QWK) are available on both sides regardless of
+log_full_cv_diagnostics:
 
 - With modeling.log_full_cv_diagnostics=True (the dissertation's
   baseline.yaml setting): confirms the standard-vs-spatial full metrics
-  passes run without error, populate the returned dict's new
-  cv_f1_macro_*/cv_pr_auc_macro_*/cv_optimism_gap keys, fix the pre-existing
-  bug where cv_auc_spatial_folds stayed None under this config (breaking
-  stage_selection.py's Kruskal-Wallis test), and actually reach MLflow.
+  passes run without error, populate the returned dict's
+  cv_f1_macro_*/cv_pr_auc_macro_*/cv_qwk_*/cv_optimism_gap keys with
+  full-training-set values (rather than the search subsample) on the
+  searched side, fix the pre-existing bug where cv_auc_spatial_folds stayed
+  None under this config (breaking stage_selection.py's Kruskal-Wallis
+  test), and actually reach MLflow.
 - With the flag left at its default (False): confirms the expensive
   primary-side full-training-set re-scoring pass is skipped entirely (not
-  just its results discarded), while the pre-existing AUC-only optimism gap
-  still gets logged correctly (now numerically fixed vs. the old multiclass
-  bug, just not the new F1-macro/PR-AUC-macro/fold-level additions)."""
+  just its results discarded), while every metric's optimism gap is still
+  logged correctly using the search subsample's cheap values on the
+  searched side — only cv_auc_spatial_folds (which needs a full pass on the
+  searched side specifically) stays unpopulated."""
 
 import numpy as np
 import pandas as pd
@@ -85,16 +92,17 @@ def test_train_one_populates_optimism_gap_metrics(full_diagnostics_trainer, spat
         run_post_training_evaluation=False,
     )
 
-    # standard-vs-spatial AUC gap already existed pre-this-change; F1-macro
-    # and PR-AUC-macro are new.
+    # standard-vs-spatial AUC gap already existed pre-this-change; F1-macro,
+    # PR-AUC-macro, and QWK are new.
     assert result["cv_optimism_gap"] is not None
-    assert set(result["cv_optimism_gap"]) == {"auc", "f1_macro", "pr_auc_macro"}
+    assert set(result["cv_optimism_gap"]) == {"auc", "f1_macro", "pr_auc_macro", "qwk"}
     for v in result["cv_optimism_gap"].values():
         assert isinstance(v, float)
 
     for key in (
         "cv_f1_macro_standard", "cv_f1_macro_spatial",
         "cv_pr_auc_macro_standard", "cv_pr_auc_macro_spatial",
+        "cv_qwk_standard", "cv_qwk_spatial",
     ):
         assert isinstance(result[key], float), f"{key} was not populated: {result[key]!r}"
 
@@ -129,10 +137,13 @@ def test_train_one_logs_optimism_gap_metrics_to_mlflow(full_diagnostics_trainer,
         "metrics.cv_f1_macro_optimism_gap",
         "metrics.cv_pr_auc_macro_optimism_gap",
         "metrics.cv_auc_optimism_gap",
+        "metrics.cv_qwk_optimism_gap",
         "metrics.cv_f1_macro_standard",
         "metrics.cv_f1_macro_spatial",
         "metrics.cv_pr_auc_macro_standard",
         "metrics.cv_pr_auc_macro_spatial",
+        "metrics.cv_qwk_standard",
+        "metrics.cv_qwk_spatial",
     ):
         assert metric in row.index, f"{metric} missing from logged run"
         assert not pd.isna(row[metric]), f"{metric} was logged as NaN"
@@ -172,12 +183,26 @@ def test_log_full_cv_diagnostics_defaults_off_and_skips_the_expensive_pass(
         f"got roles={seen_roles}"
     )
 
-    # AUC-only gap still logged correctly (Bug A fix applies unconditionally)...
-    assert result["cv_optimism_gap"] == {"auc": pytest.approx(result["cv_auc_standard"] - result["cv_auc_spatial"])}
-    # ...but nothing that requires the primary-side pass is populated.
+    # Every metric's gap is still logged correctly (Bug A fix applies
+    # unconditionally, and AUC/F1-macro/PR-AUC-macro/QWK are all available
+    # cheaply on both sides even without the primary-side full pass: the
+    # diagnostic side from its own full pass, the searched side from
+    # Optuna's best_value/user_attrs).
+    assert set(result["cv_optimism_gap"]) == {"auc", "f1_macro", "pr_auc_macro", "qwk"}
+    assert result["cv_optimism_gap"]["auc"] == pytest.approx(
+        result["cv_auc_standard"] - result["cv_auc_spatial"]
+    )
+    assert result["cv_optimism_gap"]["pr_auc_macro"] == pytest.approx(
+        result["cv_pr_auc_macro_standard"] - result["cv_pr_auc_macro_spatial"]
+    )
     for key in (
+        "cv_auc_standard", "cv_auc_spatial",
         "cv_f1_macro_standard", "cv_f1_macro_spatial",
         "cv_pr_auc_macro_standard", "cv_pr_auc_macro_spatial",
-        "cv_auc_spatial_folds",
+        "cv_qwk_standard", "cv_qwk_spatial",
     ):
-        assert result[key] is None, f"{key} should stay None when log_full_cv_diagnostics is False, got {result[key]!r}"
+        assert isinstance(result[key], float), f"{key} should be populated cheaply, got {result[key]!r}"
+
+    # ...but cv_auc_spatial_folds specifically needs a full pass on the
+    # *searched* side (for stage_selection's Kruskal-Wallis) and stays None.
+    assert result["cv_auc_spatial_folds"] is None
