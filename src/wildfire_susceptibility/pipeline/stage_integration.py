@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Dict
 
 from ..core.raster import RasterManager
+from ..utils.checkpoint import cache_is_valid, compute_cache_signature, write_cache_signature
 from ..utils.logger import setup_logger
 
 _NON_RASTER_STATIC_KEYS = {"ref_path", "boundary"}
@@ -44,14 +45,19 @@ def stage_integration(config: dict, input_paths: dict) -> Dict[str, dict]:
             raw_labels = label_paths.pop("raw_labels")
 
             all_features = {**static_features, **seasonal_paths, **label_paths}  # d_fires, if present, lives in label_paths
+            stage_inputs = {**all_features, "label": raw_labels}
             out_csv = model_data_dir / f"dataset_{split}_{season}.csv"
+            sig_path = model_data_dir / f"dataset_{split}_{season}.sig.json"
 
-            if not config["processing"]["force_recompute"] and out_csv.exists():
+            if not config["processing"]["force_recompute"] and cache_is_valid(
+                [out_csv], sig_path, config, stage_inputs
+            ):
                 logger.info(f"[stage_integration] [CACHED] {season}/{split} -> {out_csv.name}")
                 out[season][split] = out_csv
                 continue
 
             RasterManager.stack_to_dataframe({**all_features, "label": raw_labels}, ref_path, out_csv)
+            write_cache_signature(sig_path, compute_cache_signature(config, stage_inputs))
             logger.info(f"[stage_integration] [{season}][{split}] Assembled -> {out_csv.name}")
             out[season][split] = out_csv
 

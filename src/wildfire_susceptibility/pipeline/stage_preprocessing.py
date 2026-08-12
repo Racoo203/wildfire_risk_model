@@ -20,6 +20,7 @@ from typing import Dict
 import pandas as pd
 
 from ..modeling.dataset_prep import DatasetPrep
+from ..utils.checkpoint import cache_is_valid, compute_cache_signature, write_cache_signature
 from ..utils.logger import setup_logger
 
 
@@ -39,8 +40,12 @@ def stage_preprocessing(config: dict, input_paths: dict) -> Dict[str, dict]:
 
         train_out = gold_dir / f"dataset_train_{season}_clean.csv"
         test_out = gold_dir / f"dataset_test_{season}_clean.csv"
+        sig_path = gold_dir / f"dataset_{season}_clean.sig.json"
+        stage_inputs = {"train": splits["train"], "test": splits["test"]}
 
-        if not config["processing"]["force_recompute"] and train_out.exists() and test_out.exists():
+        if not config["processing"]["force_recompute"] and cache_is_valid(
+            [train_out, test_out], sig_path, config, stage_inputs
+        ):
             logger.info(f"[stage_preprocessing] [CACHED] {season} -> {train_out.name}, {test_out.name}")
             out[season] = {"train": train_out, "test": test_out}
             continue
@@ -54,6 +59,7 @@ def stage_preprocessing(config: dict, input_paths: dict) -> Dict[str, dict]:
 
         df_train.to_csv(train_out, index=False)
         df_test.to_csv(test_out, index=False)
+        write_cache_signature(sig_path, compute_cache_signature(config, stage_inputs))
         out[season] = {"train": train_out, "test": test_out}
 
     return out

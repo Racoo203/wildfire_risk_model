@@ -130,5 +130,17 @@
     "comparison_table": "figures\\model_comparison.csv",
     "selection_summary": "figures\\selection_summary.json",
     "kruskal_results": "figures\\kruskal_wallis.json"
+  },
+  "eda": {
+    "summer": {
+      "nan_coverage": "figures\\summer\\eda\\nan_coverage.png",
+      "vif": "figures\\summer\\eda\\vif.png",
+      "spearman": "figures\\summer\\eda\\correlation_spearman.png",
+      "class_balance": "figures\\summer\\eda\\class_balance.png"
+    }
+  },
+  "temporal_eda": {
+    "stationarity_summary": "figures\\temporal_eda\\stationarity_summary.csv",
+    "spatial_correlogram": "figures\\eda\\spatial_correlogram.csv"
   }
 }

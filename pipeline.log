@@ -2260,3 +2260,110 @@
 2026-08-12 08:22:07 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [stratified_spatial_block] class 3.0 proportion across folds: [np.float64(0.024), np.float64(0.014), np.float64(0.019), np.float64(0.018), np.float64(0.018)] (spread=0.010)
 2026-08-12 08:22:08 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] finished=0 target=30 remaining=30
 2026-08-12 08:22:08 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 0 fold 1: class counts={0: 127459, 1: 68406, 2: 19524, 3: 2824} | imbalance_ratio=45.13 (train, post-resample (used to fit))
+2026-08-12 09:36:01 - wildfire_susceptibility - INFO - Logger initialized: wildfire_susceptibility
+2026-08-12 09:36:01 - wildfire_susceptibility - INFO - [stage_preprocessing] [summer] Imputing + cleaning labels...
+2026-08-12 09:36:01 - wildfire_susceptibility.modeling.dataset_prep - INFO - No unresolved in-domain NaNs after imputation.
+2026-08-12 09:36:01 - wildfire_susceptibility.modeling.dataset_prep - INFO - No unresolved in-domain NaNs after imputation.
+2026-08-12 09:36:01 - wildfire_susceptibility - INFO - [stage_preprocessing] [summer] Imputing + cleaning labels...
+2026-08-12 09:36:01 - wildfire_susceptibility.modeling.dataset_prep - INFO - No unresolved in-domain NaNs after imputation.
+2026-08-12 09:36:01 - wildfire_susceptibility.modeling.dataset_prep - INFO - No unresolved in-domain NaNs after imputation.
+2026-08-12 09:36:01 - wildfire_susceptibility - INFO - [stage_preprocessing] [summer] Imputing + cleaning labels...
+2026-08-12 09:36:01 - wildfire_susceptibility.modeling.dataset_prep - INFO - No unresolved in-domain NaNs after imputation.
+2026-08-12 09:36:01 - wildfire_susceptibility.modeling.dataset_prep - INFO - No unresolved in-domain NaNs after imputation.
+2026-08-12 09:36:01 - wildfire_susceptibility - INFO - [stage_preprocessing] [CACHED] summer -> dataset_train_summer_clean.csv, dataset_test_summer_clean.csv
+2026-08-12 11:16:25 - wildfire_susceptibility - INFO - Logger initialized: wildfire_susceptibility
+2026-08-12 11:16:25 - wildfire_susceptibility - INFO - === Running stage: static ===
+2026-08-12 11:16:25 - wildfire_susceptibility - INFO - [stage_static] Building static features...
+2026-08-12 11:16:25 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] BoundaryBuilder: outputs already exist, skipping computation
+2026-08-12 11:16:25 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] TopographyBuilder: outputs already exist, skipping computation
+2026-08-12 11:16:25 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] ProximityBuilder: outputs already exist, skipping computation
+2026-08-12 11:16:25 - wildfire_susceptibility - INFO - [stage_static] Complete — 9 output path(s).
+2026-08-12 11:16:25 - wildfire_susceptibility - INFO - === Stage complete: static ===
+2026-08-12 11:16:25 - wildfire_susceptibility - INFO - === Running stage: seasonal ===
+2026-08-12 11:16:25 - wildfire_susceptibility - INFO - [stage_seasonal] [summer] Building seasonal features...
+2026-08-12 11:16:25 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] ClimateBuilder[summer][train]: outputs already exist, skipping computation
+2026-08-12 11:16:25 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] VegetationBuilder[summer][train]: outputs already exist, skipping computation
+2026-08-12 11:16:25 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] ClimateBuilder[summer][test]: outputs already exist, skipping computation
+2026-08-12 11:16:25 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] VegetationBuilder[summer][test]: outputs already exist, skipping computation
+2026-08-12 11:16:25 - wildfire_susceptibility - INFO - === Stage complete: seasonal ===
+2026-08-12 11:16:25 - wildfire_susceptibility - INFO - === Running stage: labels ===
+2026-08-12 11:16:25 - wildfire_susceptibility - INFO - [stage_labels] [summer] Building fire labels...
+2026-08-12 11:16:25 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] FireBuilder[summer]: outputs already exist, skipping computation
+2026-08-12 11:16:26 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[kde][summer_train]: outputs already exist, skipping computation
+2026-08-12 11:16:26 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[kde][jenks][summer_train]: outputs already exist, skipping computation
+2026-08-12 11:16:26 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[kde][summer_test]: outputs already exist, skipping computation
+2026-08-12 11:16:26 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[kde][jenks][summer_test]: outputs already exist, skipping computation
+2026-08-12 11:16:26 - wildfire_susceptibility - INFO - === Stage complete: labels ===
+2026-08-12 11:16:26 - wildfire_susceptibility - INFO - === Running stage: integration ===
+2026-08-12 11:18:08 - wildfire_susceptibility.core.raster - INFO - Dataset saved to data\silver\model_datasets\dataset_train_summer.csv (3,851,115 rows, 18 columns)
+2026-08-12 11:18:08 - wildfire_susceptibility - INFO - [stage_integration] [summer][train] Assembled -> dataset_train_summer.csv
+2026-08-12 11:20:50 - wildfire_susceptibility.core.raster - INFO - Dataset saved to data\silver\model_datasets\dataset_test_summer.csv (3,851,115 rows, 18 columns)
+2026-08-12 11:20:51 - wildfire_susceptibility - INFO - [stage_integration] [summer][test] Assembled -> dataset_test_summer.csv
+2026-08-12 11:20:51 - wildfire_susceptibility - INFO - === Stage complete: integration ===
+2026-08-12 11:20:51 - wildfire_susceptibility - INFO - === Running stage: preprocessing ===
+2026-08-12 11:20:51 - wildfire_susceptibility - INFO - [stage_preprocessing] [summer] Imputing + cleaning labels...
+2026-08-12 11:21:26 - wildfire_susceptibility.modeling.dataset_prep - INFO - Nearest-neighbor filled 1,734 in-domain NaNs in 'ndvi'
+2026-08-12 11:21:27 - wildfire_susceptibility.modeling.dataset_prep - INFO - Nearest-neighbor filled 38,862 in-domain NaNs in 'tas'
+2026-08-12 11:21:28 - wildfire_susceptibility.modeling.dataset_prep - INFO - Nearest-neighbor filled 38,862 in-domain NaNs in 'tasmax'
+2026-08-12 11:21:28 - wildfire_susceptibility.modeling.dataset_prep - INFO - Nearest-neighbor filled 38,862 in-domain NaNs in 'tasmin'
+2026-08-12 11:21:29 - wildfire_susceptibility.modeling.dataset_prep - INFO - Nearest-neighbor filled 38,862 in-domain NaNs in 'rainfall'
+2026-08-12 11:21:29 - wildfire_susceptibility.modeling.dataset_prep - INFO - Nearest-neighbor filled 38,862 in-domain NaNs in 'sfcWind'
+2026-08-12 11:21:30 - wildfire_susceptibility.modeling.dataset_prep - INFO - Nearest-neighbor filled 38,862 in-domain NaNs in 'hurs'
+2026-08-12 11:21:31 - wildfire_susceptibility.modeling.dataset_prep - INFO - Nearest-neighbor filled 38,862 in-domain NaNs in 'diurnal_range'
+2026-08-12 11:21:31 - wildfire_susceptibility.modeling.dataset_prep - INFO - Dropped 3,658,752 in-domain rows...
+2026-08-12 11:21:31 - wildfire_susceptibility.modeling.dataset_prep - INFO - No unresolved in-domain NaNs after imputation.
+2026-08-12 11:21:32 - wildfire_susceptibility.modeling.dataset_prep - INFO - Nearest-neighbor filled 2,773 in-domain NaNs in 'ndvi'
+2026-08-12 11:21:33 - wildfire_susceptibility.modeling.dataset_prep - INFO - Nearest-neighbor filled 38,862 in-domain NaNs in 'tas'
+2026-08-12 11:21:33 - wildfire_susceptibility.modeling.dataset_prep - INFO - Nearest-neighbor filled 38,862 in-domain NaNs in 'tasmax'
+2026-08-12 11:21:34 - wildfire_susceptibility.modeling.dataset_prep - INFO - Nearest-neighbor filled 38,862 in-domain NaNs in 'tasmin'
+2026-08-12 11:21:34 - wildfire_susceptibility.modeling.dataset_prep - INFO - Nearest-neighbor filled 38,862 in-domain NaNs in 'rainfall'
+2026-08-12 11:21:35 - wildfire_susceptibility.modeling.dataset_prep - INFO - Nearest-neighbor filled 38,862 in-domain NaNs in 'sfcWind'
+2026-08-12 11:21:36 - wildfire_susceptibility.modeling.dataset_prep - INFO - Nearest-neighbor filled 38,862 in-domain NaNs in 'hurs'
+2026-08-12 11:21:36 - wildfire_susceptibility.modeling.dataset_prep - INFO - Nearest-neighbor filled 38,862 in-domain NaNs in 'diurnal_range'
+2026-08-12 11:21:36 - wildfire_susceptibility.modeling.dataset_prep - INFO - Dropped 3,658,752 in-domain rows...
+2026-08-12 11:21:36 - wildfire_susceptibility.modeling.dataset_prep - INFO - No unresolved in-domain NaNs after imputation.
+2026-08-12 11:21:51 - wildfire_susceptibility - INFO - === Stage complete: preprocessing ===
+2026-08-12 11:21:51 - wildfire_susceptibility - INFO - === Running stage: eda ===
+2026-08-12 11:21:51 - wildfire_susceptibility - INFO - [stage_eda] [summer] Generating EDA figures...
+2026-08-12 11:22:14 - wildfire_susceptibility.viz.charts - WARNING - [summer] VIF: 1 feature(s) exceed VIF>10.0
+2026-08-12 11:22:16 - wildfire_susceptibility - INFO - === Stage complete: eda ===
+2026-08-12 11:22:16 - wildfire_susceptibility - INFO - === Running stage: temporal_eda ===
+2026-08-12 11:22:16 - wildfire_susceptibility - INFO - [stage_temporal_eda] Analyzing tas...
+2026-08-12 11:22:31 - wildfire_susceptibility - INFO - [stage_temporal_eda] Analyzing tasmax...
+2026-08-12 11:22:44 - wildfire_susceptibility - INFO - [stage_temporal_eda] Analyzing tasmin...
+2026-08-12 11:22:58 - wildfire_susceptibility - INFO - [stage_temporal_eda] Analyzing rainfall...
+2026-08-12 11:23:12 - wildfire_susceptibility - INFO - [stage_temporal_eda] Analyzing sfcWind...
+2026-08-12 11:23:26 - wildfire_susceptibility - INFO - [stage_temporal_eda] Analyzing hurs...
+2026-08-12 11:23:40 - wildfire_susceptibility - INFO - [stage_temporal_eda] Stationarity summary -> stationarity_summary.csv
+2026-08-12 11:25:07 - wildfire_susceptibility - INFO - [stage_temporal_eda] Spatial correlogram -> spatial_correlogram.csv
+2026-08-12 11:25:07 - wildfire_susceptibility - INFO - === Stage complete: temporal_eda ===
+2026-08-12 11:25:07 - wildfire_susceptibility - INFO - === Running stage: train ===
+2026-08-12 11:25:10 - wildfire_susceptibility - INFO - [stage_train] [summer] Loading cleaned datasets...
+2026-08-12 11:25:11 - wildfire_susceptibility - INFO - Training with the following features: ['elevation', 'slope', 'aspect', 'd_roads', 'd_rivers', 'd_buildings', 'landuse_class', 'tasmax', 'rainfall', 'sfcWind', 'hurs', 'diurnal_range', 'ndvi']
+2026-08-12 11:25:11 - wildfire_susceptibility.modeling.dataset_prep - INFO - Assigned 192,363 rows to 70 spatial blocks (4 km grid)
+2026-08-12 11:25:11 - wildfire_susceptibility - INFO - [stage_train] [summer][catboost] Search + refit...
+2026-08-12 11:25:11 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] block search subsample: 48,242/192,363 rows across 11 block(s) (2 force-kept for rarest class 4.0)
+2026-08-12 11:25:11 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] block search subsample: class counts={0: 18660, 1: 11511, 2: 9138, 3: 4960, 4: 3973} | imbalance_ratio=4.70
+2026-08-12 11:25:11 - wildfire_susceptibility.modeling.cv.base - INFO - [stratified_spatial_block] spatial buffer (4000m, radius=1 block(s)): dropped 8,877/13,977 train rows within the buffer ring of this fold's test blocks
+2026-08-12 11:25:11 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [stratified_spatial_block] fold 0 (validation, untouched): class counts={0: 12258, 1: 8506, 2: 6886, 3: 3497, 4: 3118} | imbalance_ratio=3.93
+2026-08-12 11:25:12 - wildfire_susceptibility.modeling.cv.base - INFO - [stratified_spatial_block] spatial buffer (4000m, radius=1 block(s)): dropped 27,211/35,258 train rows within the buffer ring of this fold's test blocks
+2026-08-12 11:25:12 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [stratified_spatial_block] fold 1 (validation, untouched): class counts={0: 5433, 1: 2981, 2: 2252, 3: 1463, 4: 855} | imbalance_ratio=6.35
+2026-08-12 11:25:12 - wildfire_susceptibility.modeling.cv.base - INFO - [stratified_spatial_block] spatial buffer (4000m, radius=1 block(s)): dropped 7,054/47,249 train rows within the buffer ring of this fold's test blocks
+2026-08-12 11:25:12 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [stratified_spatial_block] fold 2 (validation, untouched): class counts={0: 969, 1: 24} | imbalance_ratio=40.38
+2026-08-12 11:25:12 - wildfire_susceptibility.modeling.cv.stratified_spatial - WARNING - [stratified_spatial_block] fold 2 (validation): missing class(es) [np.float64(2.0), np.float64(3.0), np.float64(4.0)] — not represented here.
+2026-08-12 11:25:12 - wildfire_susceptibility.modeling.cv.stratified_spatial - WARNING - [stratified_spatial_block] fold 3 is degenerate (empty split); skipping.
+2026-08-12 11:25:12 - wildfire_susceptibility.modeling.cv.stratified_spatial - WARNING - [stratified_spatial_block] fold 4 is degenerate (empty split); skipping.
+2026-08-12 11:25:12 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [stratified_spatial_block] class 0.0 proportion across folds: [np.float64(0.358), np.float64(0.418), np.float64(0.976)] (spread=0.618)
+2026-08-12 11:25:12 - wildfire_susceptibility.modeling.cv.stratified_spatial - WARNING - [stratified_spatial_block] class 0.0 spread across folds (0.618) exceeds 0.15 — block-level stratification may be too coarse for this class at the current spatial_block_size_m.
+2026-08-12 11:25:12 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [stratified_spatial_block] class 1.0 proportion across folds: [np.float64(0.248), np.float64(0.23), np.float64(0.024)] (spread=0.224)
+2026-08-12 11:25:12 - wildfire_susceptibility.modeling.cv.stratified_spatial - WARNING - [stratified_spatial_block] class 1.0 spread across folds (0.224) exceeds 0.15 — block-level stratification may be too coarse for this class at the current spatial_block_size_m.
+2026-08-12 11:25:12 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [stratified_spatial_block] class 2.0 proportion across folds: [np.float64(0.201), np.float64(0.173), 0.0] (spread=0.201)
+2026-08-12 11:25:12 - wildfire_susceptibility.modeling.cv.stratified_spatial - WARNING - [stratified_spatial_block] class 2.0 spread across folds (0.201) exceeds 0.15 — block-level stratification may be too coarse for this class at the current spatial_block_size_m.
+2026-08-12 11:25:12 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [stratified_spatial_block] class 3.0 proportion across folds: [np.float64(0.102), np.float64(0.113), 0.0] (spread=0.113)
+2026-08-12 11:25:12 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [stratified_spatial_block] class 4.0 proportion across folds: [np.float64(0.091), np.float64(0.066), 0.0] (spread=0.091)
+2026-08-12 11:25:12 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] removing 1 incomplete trial(s) from a previous run: [0]
+2026-08-12 11:25:12 - wildfire_susceptibility.modeling.training.search - WARNING - Could not mark trial 0 as FAILED: Cannot tell a FAIL trial.
+2026-08-12 11:25:12 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] finished=0 target=30 remaining=30
+2026-08-12 11:25:12 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 1 fold 1: class counts={0: 2019, 1: 1300, 2: 1257, 3: 524} | imbalance_ratio=3.85 (train, post-resample (used to fit))
+2026-08-12 11:25:24 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 1 fold 1: class counts={0: 12258, 1: 8506, 2: 6886, 3: 3497, 4: 3118} | imbalance_ratio=3.93 (validation, untouched — isolation check)
+2026-08-12 11:25:24 - wildfire_susceptibility.modeling.cv.stratified_spatial - WARNING - [summer][catboost] trial 1 fold 1: AUC scoring failed (Number of given labels, 5, not equal to the number of columns in 'y_score', 4); scoring as 0.0
