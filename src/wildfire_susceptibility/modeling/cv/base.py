@@ -11,6 +11,7 @@ import pandas as pd
 from sklearn.metrics import roc_auc_score, f1_score, average_precision_score, cohen_kappa_score
 
 from ..resampling import SMOTEResampler
+from ..imbalance import ImbalanceStrategy
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +32,7 @@ class CVStrategy(ABC):
         self.resampler = resampler
         self.spatial_buffer_m = config["modeling"].get("spatial_buffer_m", 0.0) or 0.0
         self.spatial_block_size_m = config["modeling"].get("spatial_block_size_m", 5000.0)
+        self._imbalance = ImbalanceStrategy(config)
 
     @abstractmethod
     def make_folds(
@@ -88,6 +90,7 @@ class CVStrategy(ABC):
     def fit_and_score_full(
         self, model_cls, params: dict, X: pd.DataFrame, y: pd.Series,
         train_idx: np.ndarray, test_idx: np.ndarray, context: str = "",
+        model_name: Optional[str] = None,
     ) -> dict:
         """Fit once on train_idx (resampled per self.resampler), score AUC,
         F1-macro, PR-AUC-macro, and QWK on test_idx untouched — all
@@ -100,14 +103,23 @@ class CVStrategy(ABC):
         extra class-balance logging) override this. `fit_and_score`
         delegates here so a fold's model is only ever fit once even when
         both the scalar and the full metric set are needed (see
-        trainer.py's optimism-gap logging)."""
+        trainer.py's optimism-gap logging).
+
+        `model_name`, when given, resolves modeling.imbalance_strategy for
+        this model (see modeling/imbalance.py): SMOTE is disabled here
+        regardless of self.resampler's own config if the resolved strategy
+        isn't 'smote', and a balanced sample_weight is computed from y_tr
+        (post-resample) and passed to model.fit() if the resolved strategy
+        is 'cost_weighted'. model_name=None (e.g. ad-hoc/test callers)
+        preserves old behavior: resampler runs as configured, no weighting."""
         logger.info(f"{context}: fitting on {len(train_idx):,} rows...")
         X_tr = X.iloc[train_idx].values
         y_tr = y.iloc[train_idx].values
-        X_tr, y_tr = self.resampler.resample(X_tr, y_tr, context=context)
+        X_tr, y_tr = self.resampler.resample(X_tr, y_tr, context=context, model_name=model_name)
 
+        sample_weight = self._imbalance.sample_weight_for(model_name, y_tr) if model_name else None
         model = model_cls(**params)
-        model.fit(X_tr, y_tr)
+        model.fit(X_tr, y_tr, sample_weight=sample_weight)
 
         y_va = y.iloc[test_idx].values
         proba = model.predict_proba(X.iloc[test_idx].values)
@@ -136,19 +148,24 @@ class CVStrategy(ABC):
     def fit_and_score(
         self, model_cls, params: dict, X: pd.DataFrame, y: pd.Series,
         train_idx: np.ndarray, test_idx: np.ndarray, context: str = "",
+        model_name: Optional[str] = None,
     ) -> float:
         """Scalar-AUC convenience wrapper around fit_and_score_full, kept
         for callers (HyperparamSearch's Optuna objective) that only need
         the one number."""
-        return self.fit_and_score_full(model_cls, params, X, y, train_idx, test_idx, context=context)["auc"]
+        return self.fit_and_score_full(
+            model_cls, params, X, y, train_idx, test_idx, context=context, model_name=model_name,
+        )["auc"]
 
     def mean_auc_across_folds(
-        self, model_cls, params, X, y, folds, context: str = "",
+        self, model_cls, params, X, y, folds, context: str = "", model_name: Optional[str] = None,
     ) -> float:
         scores = []
         for i, (train_idx, test_idx) in enumerate(folds):
             fold_context = f"{context} fold {i + 1}/{len(folds)}"
-            auc = self.fit_and_score(model_cls, params, X, y, train_idx, test_idx, context=fold_context)
+            auc = self.fit_and_score(
+                model_cls, params, X, y, train_idx, test_idx, context=fold_context, model_name=model_name,
+            )
             logger.info(f"{fold_context} AUC={auc:.4f}")
             scores.append(auc)
         return float(np.mean(scores))

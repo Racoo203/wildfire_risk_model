@@ -1,12 +1,16 @@
 """Shared protocol every model wrapper implements, so train.py can treat
 RF/SVM/XGBoost/NN identically."""
 
-from typing import Protocol, runtime_checkable
+from typing import Optional, Protocol, runtime_checkable
 import numpy as np
 
 @runtime_checkable
 class BaseWildfireModel(Protocol):
-    def fit(self, X: np.ndarray, y: np.ndarray) -> "BaseWildfireModel": ...
+    def fit(self, X: np.ndarray, y: np.ndarray, sample_weight: Optional[np.ndarray] = None) -> "BaseWildfireModel":
+        """sample_weight is None unless modeling.imbalance_strategy resolves
+        to 'cost_weighted' for this model (see modeling/imbalance.py) —
+        every wrapper must accept the kwarg even if it has no effect."""
+        ...
 
     def predict_proba(self, X: np.ndarray) -> np.ndarray: ...
 

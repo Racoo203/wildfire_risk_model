@@ -41,23 +41,39 @@ class NeuralNetModel:
         self.model = None
         self.n_classes = None
 
-    def fit(self, X, y):
+    def fit(self, X, y, sample_weight=None):
         self.n_classes = int(np.max(y)) + 1
         n_features = X.shape[1]
         self.model = _FeedForward(n_features, self.n_classes, self.hidden_dim, self.n_layers, self.dropout)
         optimizer = optim.Adam(self.model.parameters(), lr=self.lr, weight_decay=self.weight_decay)
-        criterion = nn.CrossEntropyLoss()
+        # reduction="none" + manual per-sample multiply (rather than
+        # CrossEntropyLoss's per-CLASS weight= kwarg) so this generalizes
+        # to any sample_weight array, not just ones that are constant
+        # within a class — sample_weight_for() currently only ever produces
+        # the latter (balanced/inverse-frequency), but nothing here assumes
+        # that.
+        criterion = nn.CrossEntropyLoss(reduction="none")
 
         X_t = torch.as_tensor(X, dtype=torch.float32)
         y_t = torch.as_tensor(y, dtype=torch.long)
-        dataset = torch.utils.data.TensorDataset(X_t, y_t)
+        if sample_weight is not None:
+            w_t = torch.as_tensor(sample_weight, dtype=torch.float32)
+            dataset = torch.utils.data.TensorDataset(X_t, y_t, w_t)
+        else:
+            dataset = torch.utils.data.TensorDataset(X_t, y_t)
         loader = torch.utils.data.DataLoader(dataset, batch_size=self.batch_size, shuffle=True)
 
         self.model.train()
         for _ in range(self.epochs):
-            for xb, yb in loader:
+            for batch in loader:
                 optimizer.zero_grad()
-                loss = criterion(self.model(xb), yb)
+                if sample_weight is not None:
+                    xb, yb, wb = batch
+                    per_sample_loss = criterion(self.model(xb), yb)
+                    loss = (per_sample_loss * wb).mean()
+                else:
+                    xb, yb = batch
+                    loss = criterion(self.model(xb), yb).mean()
                 loss.backward()
                 optimizer.step()
 

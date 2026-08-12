@@ -176,6 +176,28 @@ class ModelingConfig(BaseModel):
                      "always logged regardless of this flag — that pass "
                      "already existed before this flag was introduced.",
     )
+    imbalance_strategy: Literal["none", "smote", "cost_weighted"] = Field(
+        default="smote",
+        description="Primary imbalance-handling switch, resolved per model "
+                     "via imbalance_strategy_by_model (falls back to this "
+                     "default). 'smote' defers entirely to the existing "
+                     "use_smote/smote_during_search/search_resample_target_"
+                     "size/smote_sampling_strategy fields below (unchanged "
+                     "legacy behavior — this is the default specifically so "
+                     "existing configs are unaffected). 'cost_weighted' "
+                     "computes balanced (inverse-frequency) sample_weight "
+                     "from each fit's own training y and passes it into the "
+                     "model's native fit(sample_weight=...); SMOTE is "
+                     "force-disabled for that model regardless of "
+                     "use_smote, to avoid double-correcting for the same "
+                     "imbalance. 'none' does neither.",
+    )
+    imbalance_strategy_by_model: Dict[str, Literal["none", "smote", "cost_weighted"]] = Field(
+        default_factory=dict,
+        description="Per-model override of imbalance_strategy, same "
+                     "fallback-to-default convention as "
+                     "optuna_search_subsample_by_model.",
+    )
     use_smote: Optional[bool] = Field(
         default=None,
         description="Explicit override. If left unset (None) and "

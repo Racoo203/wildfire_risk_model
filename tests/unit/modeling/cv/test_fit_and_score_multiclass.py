@@ -137,7 +137,7 @@ class _FixedProbaModel:
     def __init__(self, **_params):
         pass
 
-    def fit(self, X, y):
+    def fit(self, X, y, sample_weight=None):
         return self
 
     def predict_proba(self, X):

@@ -10,6 +10,7 @@ import logging
 import numpy as np
 
 from .balance import log_class_balance, imbalance_ratio
+from .imbalance import ImbalanceStrategy
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +26,7 @@ class SMOTEResampler:
         self.k_neighbors = modeling_cfg.get("smote_k_neighbors", 5)
         self.sampling_strategy = modeling_cfg.get("smote_sampling_strategy", "auto")
         self.is_final = is_final
+        self._imbalance = ImbalanceStrategy(config)
 
         # Final refit NEVER inherits search_resample_target_size, regardless
         # of whether it's set in config — that knob controls "how big/balanced
@@ -54,7 +56,15 @@ class SMOTEResampler:
                 f"enabling resampling implicitly."
             )
 
-    def resample(self, X, y, context=""):
+    def resample(self, X, y, context="", model_name: Optional[str] = None):
+        if model_name is not None and not self._imbalance.smote_allowed(model_name):
+            log_class_balance(
+                logger, context, y,
+                note=f"SMOTE disabled — imbalance_strategy={self._imbalance.resolve(model_name)!r} for '{model_name}'",
+                level=logging.DEBUG,
+            )
+            return X, y
+
         if not self.enabled:
             log_class_balance(logger, context, y, note="SMOTE disabled — distribution unchanged", level=logging.DEBUG)
             return X, y

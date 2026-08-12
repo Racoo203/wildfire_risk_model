@@ -156,22 +156,26 @@ class StratifiedSpatialBlockCV(CVStrategy):
 
     def fit_and_score_full(
         self, model_cls, params, X, y, train_idx, test_idx, context: str = "",
+        model_name: Optional[str] = None,
     ) -> dict:
         """Fit once, return the full metric set the dissertation reports
         (AUC, F1-macro, PR-AUC-macro, QWK). `fit_and_score` delegates here
         so a fold's model is only ever fit once even when both the scalar
         and the full metric set are needed (see trainer.py's optimism-gap
-        logging)."""
+        logging). `model_name` resolves modeling.imbalance_strategy the
+        same way the base class's fit_and_score_full does — see that
+        docstring."""
         y_tr_raw = y.iloc[train_idx]
         log_class_balance(logger, context, y_tr_raw, note="train, pre-resample", level=logging.DEBUG)
 
         X_tr = X.iloc[train_idx].values
         y_tr = y_tr_raw.values
-        X_tr, y_tr = self.resampler.resample(X_tr, y_tr, context=context)
+        X_tr, y_tr = self.resampler.resample(X_tr, y_tr, context=context, model_name=model_name)
         log_class_balance(logger, context, y_tr, note="train, post-resample (used to fit)")
 
+        sample_weight = self._imbalance.sample_weight_for(model_name, y_tr) if model_name else None
         model = model_cls(**params)
-        model.fit(X_tr, y_tr)
+        model.fit(X_tr, y_tr, sample_weight=sample_weight)
 
         X_va, y_va = X.iloc[test_idx].values, y.iloc[test_idx].values
         log_class_balance(logger, context, y_va, note="validation, untouched — isolation check")
@@ -196,5 +200,10 @@ class StratifiedSpatialBlockCV(CVStrategy):
         )
         return {"auc": auc, "f1_macro": f1_macro, "pr_auc_macro": pr_auc_macro, "qwk": qwk}
 
-    def fit_and_score(self, model_cls, params, X, y, train_idx, test_idx, context: str = "") -> float:
-        return self.fit_and_score_full(model_cls, params, X, y, train_idx, test_idx, context=context)["auc"]
+    def fit_and_score(
+        self, model_cls, params, X, y, train_idx, test_idx, context: str = "",
+        model_name: Optional[str] = None,
+    ) -> float:
+        return self.fit_and_score_full(
+            model_cls, params, X, y, train_idx, test_idx, context=context, model_name=model_name,
+        )["auc"]

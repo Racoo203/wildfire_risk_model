@@ -10,10 +10,10 @@ class SVMModel:
         self.params = kwargs
         self.model: CalibratedClassifierCV | None = None
 
-    def fit(self, X: np.ndarray, y: np.ndarray) -> "SVMModel":
+    def fit(self, X: np.ndarray, y: np.ndarray, sample_weight: np.ndarray | None = None) -> "SVMModel":
         base = SVC(random_state=42, **self.params)
         self.model = CalibratedClassifierCV(base, method="sigmoid", cv=3)
-        self.model.fit(X, y)
+        self.model.fit(X, y, sample_weight=sample_weight)
         return self
 
     def predict_proba(self, X: np.ndarray) -> np.ndarray:

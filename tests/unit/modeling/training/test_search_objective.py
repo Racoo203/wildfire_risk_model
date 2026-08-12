@@ -33,7 +33,7 @@ class _StubCVStrategy:
         self.scores = scores
         self.calls = 0
 
-    def fit_and_score_full(self, model_cls, params, X, y, train_idx, test_idx, context=""):
+    def fit_and_score_full(self, model_cls, params, X, y, train_idx, test_idx, context="", model_name=None):
         self.calls += 1
         return dict(self.scores)
 
