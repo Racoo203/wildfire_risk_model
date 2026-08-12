@@ -32,13 +32,20 @@ class RandomForestModel:
         return self.model.predict_proba(X)
 
     def param_space(self, trial) -> dict:
+        # class_weight is deliberately NOT tunable here: imbalance handling
+        # is a resolver-level config choice (modeling.imbalance_strategy),
+        # not something Optuna should pick. Leaving it in the search space
+        # meant a trial could sample class_weight="balanced" while
+        # imbalance_strategy resolved to "smote" for this model, stacking
+        # class weighting on top of SMOTE-resampled training data with
+        # nothing preventing it (the fit()-level guard below only fires for
+        # the "cost_weighted" sample_weight path).
         return {
             "n_estimators": trial.suggest_int("n_estimators", 100, 400),
             "max_depth": trial.suggest_int("max_depth", 4, 25),
             "min_samples_leaf": trial.suggest_int("min_samples_leaf", 1, 15),
             "min_samples_split": trial.suggest_int("min_samples_split", 2, 20),
             "max_features": trial.suggest_categorical("max_features", ["sqrt", "log2", None]),
-            "class_weight": trial.suggest_categorical("class_weight", [None, "balanced"]),
         }
 
     def needs_scaling(self) -> bool:

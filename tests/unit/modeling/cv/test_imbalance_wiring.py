@@ -85,6 +85,53 @@ def test_smote_model_gets_no_sample_weight(minimal_modeling_config):
     assert call["sample_weight"] is None
 
 
+def test_smote_random_forest_never_receives_class_weight_via_optuna(minimal_modeling_config):
+    """Regression for the HPO-audit leak: random_forest's class_weight used
+    to be an Optuna-tunable categorical, so a trial could sample
+    class_weight="balanced" while imbalance_strategy resolved to "smote"
+    for this model — stacking class weighting on top of SMOTE-resampled
+    training data, since the fit()-level guard in RandomForestModel.fit()
+    only fires for the cost_weighted sample_weight path, not this one.
+    Exercises the real RandomForestModel.param_space() (not a hand-rolled
+    fake) through the real fit_and_score_full() path under
+    imbalance_strategy="smote", with a capturing stub standing in only at
+    the model-construction point so the test can assert on exactly what
+    reached it."""
+    optuna = pytest.importorskip("optuna")
+    from wildfire_susceptibility.modeling.models.random_forest import RandomForestModel
+
+    class _CapturingRFParams:
+        last_constructor_kwargs = []
+
+        def __init__(self, **params):
+            _CapturingRFParams.last_constructor_kwargs.append(params)
+
+        def fit(self, X, y, sample_weight=None):
+            return self
+
+        def predict_proba(self, X):
+            return np.full((len(X), 4), 0.25)
+
+    config = minimal_modeling_config
+    config["modeling"]["use_smote"] = True
+    config["modeling"]["smote_sampling_strategy"] = "auto"
+    config["modeling"]["imbalance_strategy"] = "smote"
+    resampler = SMOTEResampler(config)
+    strategy = StandardKFoldCV(config, resampler)
+
+    study = optuna.create_study()
+    trial = study.ask()
+    params = RandomForestModel().param_space(trial)
+    assert "class_weight" not in params
+
+    X, y, train_idx, test_idx = _dataset()
+    strategy.fit_and_score_full(
+        _CapturingRFParams, params, X, y, train_idx, test_idx, model_name="random_forest",
+    )
+
+    assert all("class_weight" not in kwargs for kwargs in _CapturingRFParams.last_constructor_kwargs)
+
+
 def test_none_strategy_model_gets_no_sample_weight_and_no_resampling(minimal_modeling_config):
     config = minimal_modeling_config
     config["modeling"]["use_smote"] = True  # must still be overridden off by imbalance_strategy='none'

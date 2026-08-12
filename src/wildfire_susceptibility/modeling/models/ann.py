@@ -42,6 +42,14 @@ class NeuralNetModel:
         self.n_classes = None
 
     def fit(self, X, y, sample_weight=None):
+        # Every other model wrapper fixes random_state=42; torch has no
+        # equivalent constructor kwarg, so weight init and the DataLoader's
+        # shuffle order have to be seeded explicitly here to match that
+        # convention — otherwise search/refit results for this model alone
+        # aren't reproducible run-to-run.
+        torch.manual_seed(42)
+        generator = torch.Generator().manual_seed(42)
+
         self.n_classes = int(np.max(y)) + 1
         n_features = X.shape[1]
         self.model = _FeedForward(n_features, self.n_classes, self.hidden_dim, self.n_layers, self.dropout)
@@ -61,7 +69,7 @@ class NeuralNetModel:
             dataset = torch.utils.data.TensorDataset(X_t, y_t, w_t)
         else:
             dataset = torch.utils.data.TensorDataset(X_t, y_t)
-        loader = torch.utils.data.DataLoader(dataset, batch_size=self.batch_size, shuffle=True)
+        loader = torch.utils.data.DataLoader(dataset, batch_size=self.batch_size, shuffle=True, generator=generator)
 
         self.model.train()
         for _ in range(self.epochs):
