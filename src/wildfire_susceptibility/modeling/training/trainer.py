@@ -436,5 +436,15 @@ class ModelTrainer:
                 mlflow.xgboost.log_model(fitted_model.model, artifact_path="model")
             elif model_name == "neural_net":
                 mlflow.pytorch.log_model(fitted_model.model, artifact_path="model")
+            elif model_name == "catboost":
+                mlflow.catboost.log_model(fitted_model.model, artifact_path="model")
+            # "ordinal_lr" (mord.LogisticAT) has no branch here: it's not a
+            # plain sklearn estimator (no mlflow.sklearn compatibility) and
+            # mlflow has no native mord flavor, so it falls through with no
+            # mlflow model artifact logged — same silent-no-op behavior this
+            # if/elif already has for any other unmatched model_name. The
+            # joblib artifact under models/<season>/<model_name>/<cfg_sig>/
+            # (stage_train.py's _write_artifact) is unaffected and remains
+            # the source of truth for reloading this model.
         except Exception as exc:
             logger.warning(f"Could not log model artifact for '{model_name}': {exc}")
