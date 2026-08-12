@@ -276,6 +276,35 @@ def plot_cv_comparison(figures_dir, season=None, mlflow_experiment=None):
     out_path = Path(figures_dir) / (season or "static") / "models" / "cv_comparison.png"
     return _save_and_log(fig, out_path, figures_dir, "cv_comparison", "viz.charts.plot_cv_comparison", season)
 
+
+def plot_optuna_optimization_history(study, figures_dir, season=None, model_name=None) -> Path:
+    """Optuna's per-trial objective value + running best, for one
+    (season, model) hyperparameter search."""
+    import optuna.visualization.matplotlib as optuna_mpl
+
+    ax = optuna_mpl.plot_optimization_history(study)
+    fig = ax.get_figure()
+
+    fname = f"optuna_history_{model_name or 'model'}.png"
+    out_path = Path(figures_dir) / (season or "static") / "models" / fname
+    return _save_and_log(fig, out_path, figures_dir, "optuna_optimization_history",
+                          "viz.charts.plot_optuna_optimization_history", season, params={"model": model_name})
+
+
+def plot_optuna_param_importances(study, figures_dir, season=None, model_name=None) -> Path:
+    """Optuna's fANOVA-based hyperparameter importance ranking for one
+    (season, model) search."""
+    import optuna.visualization.matplotlib as optuna_mpl
+
+    ax = optuna_mpl.plot_param_importances(study)
+    fig = ax.get_figure()
+
+    fname = f"optuna_param_importance_{model_name or 'model'}.png"
+    out_path = Path(figures_dir) / (season or "static") / "models" / fname
+    return _save_and_log(fig, out_path, figures_dir, "optuna_param_importance",
+                          "viz.charts.plot_optuna_param_importances", season, params={"model": model_name})
+
+
 def plot_confusion_matrix(
     cm: np.ndarray,
     class_names: List[str],
