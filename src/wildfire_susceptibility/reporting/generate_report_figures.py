@@ -23,6 +23,8 @@ Categories (--only accepts a comma-separated subset):
     susceptibility_maps  — the 4-class output map, per season (+ per model if available)
     eda                  — VIF/correlation (Pearson+Spearman), class balance, NaN coverage
     models               — ROC curves, CV comparison, SHAP (requires mlflow + trained runs)
+    optuna_plots         — optimization history + param importance per model (requires
+                            a completed/in-progress Optuna search per (season, model))
 """
 
 from __future__ import annotations
@@ -44,7 +46,7 @@ from wildfire_susceptibility import viz
 
 logger = logging.getLogger("wildfire_susceptibility.scripts.generate_report_figures")
 
-ALL_CATEGORIES = ("factor_maps", "susceptibility_maps", "eda", "models")
+ALL_CATEGORIES = ("factor_maps", "susceptibility_maps", "eda", "models", "optuna_plots")
 
 # --------------------------------------------------------------------------
 # Path discovery — mirrors the naming conventions used by the feature
@@ -241,6 +243,43 @@ def generate_model_figures(cfg: dict, season: str) -> None:
     )
 
 
+def generate_optuna_plots(cfg: dict, season: str) -> None:
+    """
+    Optimization-history + param-importance plots for every model's Optuna
+    search this season. Study names are reconstructed with the exact same
+    deterministic scheme HyperparamSearch.get_or_create_study() uses
+    (season + model name + param-space signature + objective version), so
+    no separate index of study names needs to be persisted anywhere —
+    the SQLite storage is already fully queryable as-is.
+    """
+    import optuna
+    from wildfire_susceptibility.modeling.training.search import (
+        HyperparamSearch, OPTUNA_STORAGE, OBJECTIVE_VERSION,
+    )
+
+    figures_dir = _figures_dir(cfg)
+    for model_name in cfg["modeling"]["models"]:
+        model_cls = MODELS[model_name]
+        sig = HyperparamSearch._param_space_signature(model_cls)
+        study_name = f"{season}_{model_name}_{sig}_{OBJECTIVE_VERSION}"
+
+        try:
+            study = optuna.load_study(study_name=study_name, storage=OPTUNA_STORAGE)
+        except KeyError:
+            logger.warning(f"[{season}][{model_name}] No Optuna study '{study_name}' found yet; skipping.")
+            continue
+        except Exception as exc:
+            logger.warning(f"[{season}][{model_name}] Could not load Optuna study '{study_name}': {exc}")
+            continue
+
+        try:
+            viz.plot_optuna_optimization_history(study, figures_dir, season=season, model_name=model_name)
+            viz.plot_optuna_param_importances(study, figures_dir, season=season, model_name=model_name)
+            logger.info(f"[{season}][{model_name}] Rendered Optuna plots.")
+        except Exception as exc:
+            logger.warning(f"[{season}][{model_name}] Optuna plot rendering failed: {exc}")
+
+
 # --------------------------------------------------------------------------
 # Orchestration
 # --------------------------------------------------------------------------
@@ -250,6 +289,7 @@ CATEGORY_FUNCS = {
     "susceptibility_maps": generate_susceptibility_map,
     "eda": generate_eda_figures,
     "models": generate_model_figures,
+    "optuna_plots": generate_optuna_plots,
 }
 
 
