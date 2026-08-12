@@ -46,12 +46,13 @@ def evaluate_on_test(
     """
     results: Dict = {
         "shap_path": None,
+        "shap_dependence_path": None,
         "time_forward_validation": None,
     }
 
-    results["shap_path"] = _try_shap_summary(
-        final_model, X_test, feature_names, season, model_name, config
-    )
+    shap_paths = _try_shap_plots(final_model, X_test, feature_names, season, model_name, config)
+    results["shap_path"] = shap_paths.get("shap_summary_path") if shap_paths else None
+    results["shap_dependence_path"] = shap_paths.get("shap_dependence_path") if shap_paths else None
 
     if fire_test_gdf is not None and x_coords is not None and y_coords is not None:
         results["time_forward_validation"] = _try_time_forward_validation(
@@ -61,13 +62,16 @@ def evaluate_on_test(
     return results
 
 
-def _try_shap_summary(final_model, X_test, feature_names, season, model_name, config) -> Optional[Path]:
+def _try_shap_plots(final_model, X_test, feature_names, season, model_name, config) -> Optional[Dict[str, Path]]:
     try:
         import shap
-        from ..viz.charts import plot_shap_summary
+        from ..viz.charts import plot_shap_summary, plot_shap_dependence
 
-        # Tree models: TreeExplainer (fast, exact). SVM/NN: KernelExplainer
-        # on a small background sample (expensive — cap sample size hard).
+        # Tree models: TreeExplainer (fast, exact). SVM/ordinal_lr/NN:
+        # KernelExplainer on a small background sample (expensive — cap
+        # sample size hard). Every model wrapper exposes predict_proba per
+        # the shared BaseWildfireModel contract, so KernelExplainer works
+        # uniformly regardless of which non-tree model is passed in.
         underlying = getattr(final_model, "model", final_model)
         sample = X_test if len(X_test) <= 2000 else X_test[
             np.random.default_rng(42).choice(len(X_test), 2000, replace=False)
@@ -75,19 +79,26 @@ def _try_shap_summary(final_model, X_test, feature_names, season, model_name, co
 
         if model_name in ("random_forest", "xgboost", "catboost"):
             explainer = shap.TreeExplainer(underlying)
-            shap_values = explainer.shap_values(sample)
+            shap_X = sample
         else:
             background = sample[: min(100, len(sample))]
             explainer = shap.KernelExplainer(final_model.predict_proba, background)
-            shap_values = explainer.shap_values(sample[: min(200, len(sample))])
+            shap_X = sample[: min(200, len(sample))]
+
+        shap_values = explainer.shap_values(shap_X)
 
         figures_dir = Path(config["base"]["figures_dir"])
-        path = plot_shap_summary(shap_values, feature_names, figures_dir, season=season, model_name=model_name)
-        logger.info(f"[{season}][{model_name}] SHAP summary written -> {path}")
-        return path
+        summary_path = plot_shap_summary(
+            shap_values, feature_names, figures_dir, season=season, model_name=model_name
+        )
+        dependence_path = plot_shap_dependence(
+            shap_values, shap_X, feature_names, figures_dir, season=season, model_name=model_name
+        )
+        logger.info(f"[{season}][{model_name}] SHAP summary + dependence plots written.")
+        return {"shap_summary_path": summary_path, "shap_dependence_path": dependence_path}
 
     except Exception as exc:
-        logger.warning(f"[{season}][{model_name}] SHAP summary failed, skipping: {exc}")
+        logger.warning(f"[{season}][{model_name}] SHAP plots failed, skipping: {exc}")
         return None
 
 
