@@ -62,7 +62,7 @@ def stage_config(tmp_path, monkeypatch, fast_modeling_config):
 
     config = fast_modeling_config
     config["base"]["figures_dir"] = str(tmp_path / "figures")
-    config["modeling"]["models"] = ["random_forest"]
+    config["modeling"]["models"] = ["random_forest", "svm"]
     config["modeling"]["mlflow_experiment"] = "test-stage-train-evaluate"
     config["modeling"]["cv_strategy"] = "standard"
     config["modeling"]["excluded_features"] = []
@@ -116,5 +116,11 @@ def test_stage_train_then_stage_evaluate_round_trip(
 
     assert "test_season" in eval_out
     assert "random_forest" in eval_out["test_season"]
+    assert "svm" in eval_out["test_season"]
     result = eval_out["test_season"]["random_forest"]
     assert "full_metrics_path" in result
+
+    # ROC comparison across models — regression coverage for the previously-
+    # unwired viz.plot_roc_curves() call.
+    roc_path = tmp_path / "figures" / "test_season" / "models" / "roc_comparison.png"
+    assert roc_path.exists()
