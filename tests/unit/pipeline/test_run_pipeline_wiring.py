@@ -125,6 +125,21 @@ def test_eda_stage_receives_raw_and_clean(monkeypatch, fake_preprocessing_state)
     assert captured["clean"] == fake_preprocessing_state["preprocessing"]
 
 
+def test_temporal_eda_stage_receives_config_and_stores_result(monkeypatch):
+    captured = {}
+
+    def fake_stage(config):
+        captured["config"] = config
+        return {"stationarity_summary": Path("stationarity.csv")}
+
+    monkeypatch.setattr(rp, "stage_temporal_eda", fake_stage)
+    fake_cfg = {"base": {"figures_dir": "figures"}}
+    state = rp.run_stage("temporal_eda", config=fake_cfg, state={})
+
+    assert captured["config"] is fake_cfg
+    assert state["temporal_eda"] == {"stationarity_summary": Path("stationarity.csv")}
+
+
 def test_train_stage_merges_preprocessing_paths_with_fire_gpkgs(monkeypatch, fake_preprocessing_state):
     captured = {}
 
