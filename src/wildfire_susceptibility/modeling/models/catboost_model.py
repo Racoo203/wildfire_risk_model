@@ -10,7 +10,7 @@ class CatBoostModel:
         self.params = kwargs
         self.model: CatBoostClassifier | None = None
 
-    def fit(self, X: np.ndarray, y: np.ndarray) -> "CatBoostModel":
+    def fit(self, X: np.ndarray, y: np.ndarray, sample_weight: np.ndarray | None = None) -> "CatBoostModel":
         self.model = CatBoostClassifier(
             random_state=42,
             verbose=False,
@@ -19,7 +19,7 @@ class CatBoostModel:
             allow_writing_files=False,  # skip catboost_info/ training-log dir — unused here
             **self.params,
         )
-        self.model.fit(X, y)
+        self.model.fit(X, y, sample_weight=sample_weight)
         return self
 
     def predict_proba(self, X: np.ndarray) -> np.ndarray:

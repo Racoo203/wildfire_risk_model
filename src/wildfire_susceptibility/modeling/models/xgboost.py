@@ -9,15 +9,15 @@ class XGBoostModel:
         self.params = kwargs
         self.model: xgb.XGBClassifier | None = None
 
-    def fit(self, X: np.ndarray, y: np.ndarray) -> "XGBoostModel":
+    def fit(self, X: np.ndarray, y: np.ndarray, sample_weight: np.ndarray | None = None) -> "XGBoostModel":
         self.model = xgb.XGBClassifier(
-            random_state=42, 
-            eval_metric="mlogloss", 
+            random_state=42,
+            eval_metric="mlogloss",
             objective="multi:softprob",
-            n_jobs=-1, 
+            n_jobs=-1,
             **self.params,
         )
-        self.model.fit(X, y)
+        self.model.fit(X, y, sample_weight=sample_weight)
         return self
 
     def predict_proba(self, X: np.ndarray) -> np.ndarray:

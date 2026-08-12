@@ -30,6 +30,7 @@ from ...core.registry import MODELS
 from .. import models  # noqa: F401 — registers model wrappers (two dots: training/ -> modeling/)
 from ..dataset_prep import DatasetPrep
 from ..resampling import SMOTEResampler
+from ..imbalance import ImbalanceStrategy
 from ..cv import get_cv_strategy, requires_spatial_groups
 from .search import HyperparamSearch
 from .evaluation import PostTrainingEvaluator
@@ -75,6 +76,7 @@ class ModelTrainer:
         self.search = HyperparamSearch(config, self.cv_strategy)
         self.evaluator = PostTrainingEvaluator(config)
         self.dataset_prep = DatasetPrep(config)
+        self._imbalance = ImbalanceStrategy(config)
 
     def _validate_cv_config(self) -> None:
         cv_strategy = self.config["modeling"].get("cv_strategy", "both")
@@ -315,6 +317,7 @@ class ModelTrainer:
             "search_metric": "spatial" if search_uses_groups else "standard",
             "search_objective_metric": "pr_auc_macro",
             "use_smote": self.config["modeling"].get("use_smote", False),
+            "imbalance_strategy": self._imbalance.resolve(model_name),
         })
         mlflow.log_params(best_params)
 
@@ -351,6 +354,7 @@ class ModelTrainer:
             strategy.fit_and_score_full(
                 model_cls, best_params, X_tr, y_train, train_idx, test_idx,
                 context=f"{context} fold {i + 1}/{len(folds)}",
+                model_name=model_name,
             )
             for i, (train_idx, test_idx) in enumerate(folds)
         ]
@@ -414,11 +418,13 @@ class ModelTrainer:
 
     def _fit_final_and_validate(self, model_cls, best_params, X_tr, y_train, X_va, y_val, season, model_name):
         X_fit, y_fit = self.final_resampler.resample(
-            X_tr.values, y_train.values, context=f"[{season}][{model_name}] final refit"
+            X_tr.values, y_train.values, context=f"[{season}][{model_name}] final refit",
+            model_name=model_name,
         )
 
+        sample_weight = self._imbalance.sample_weight_for(model_name, y_fit)
         final_model = model_cls(**best_params)
-        final_model.fit(X_fit, y_fit)
+        final_model.fit(X_fit, y_fit, sample_weight=sample_weight)
 
         val_proba = final_model.predict_proba(X_va.values)
         val_pred = np.argmax(val_proba, axis=1)

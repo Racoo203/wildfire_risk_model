@@ -21,9 +21,11 @@ from ...core.registry import MODELS
 class OrdinalLogisticModel:
     """Proportional-odds ordinal logistic regression (mord.LogisticAT) for the
     4-class ordinal susceptibility target. mord.fit() natively accepts a
-    sample_weight kwarg — not used yet (cost-weighted learning is a later
-    branch), but confirmed to work, unlike statsmodels' OrderedModel which has
-    no weighting path at all.
+    sample_weight kwarg, threaded straight into the internal threshold_fit()
+    solver call — confirmed via source inspection, unlike statsmodels'
+    OrderedModel which has no weighting path at all. Populated by
+    modeling.imbalance.ImbalanceStrategy when imbalance_strategy resolves to
+    'cost_weighted' for this model; None otherwise.
 
     Note: mord's own .predict() uses the proper cumulative-threshold ordinal
     decision rule, which can disagree with argmax(predict_proba(X)) — the two
@@ -38,9 +40,9 @@ class OrdinalLogisticModel:
         self.params = kwargs
         self.model: mord.LogisticAT | None = None
 
-    def fit(self, X: np.ndarray, y: np.ndarray) -> "OrdinalLogisticModel":
+    def fit(self, X: np.ndarray, y: np.ndarray, sample_weight: np.ndarray | None = None) -> "OrdinalLogisticModel":
         self.model = mord.LogisticAT(**self.params)
-        self.model.fit(X, y)
+        self.model.fit(X, y, sample_weight=sample_weight)
         return self
 
     def predict_proba(self, X: np.ndarray) -> np.ndarray:

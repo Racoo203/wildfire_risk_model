@@ -258,6 +258,7 @@ class HyperparamSearch:
                 context = f"[{season}][{model_name}] trial {trial.number} fold {fold_idx + 1}"
                 scores = self.cv_strategy.fit_and_score_full(
                     model_cls, params, X_search, y_search, train_idx, test_idx, context=context,
+                    model_name=model_name,
                 )
                 fold_metrics.append(scores)
                 mean_pr_auc = float(np.mean([f["pr_auc_macro"] for f in fold_metrics]))

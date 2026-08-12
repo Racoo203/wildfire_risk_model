@@ -63,6 +63,67 @@ def test_neural_net_contract(synthetic_classification_data):
     assert np.allclose(proba.sum(axis=1), 1.0, atol=1e-2)
 
 
+@pytest.mark.parametrize(
+    "model_name", ["random_forest", "svm", "xgboost", "catboost", "ordinal_lr"]
+)
+def test_fit_accepts_sample_weight_and_it_actually_changes_the_fit(model_name, synthetic_classification_data):
+    """Every wrapper's fit() must accept sample_weight (used by
+    imbalance_strategy='cost_weighted', see modeling/imbalance.py) and
+    actually use it, not just silently accept-and-ignore it — this is a
+    behavioral check (different weighting -> different predict_proba), not
+    just a signature/crash check."""
+    X, y = synthetic_classification_data
+
+    heavy_on_class_0 = np.where(y == 0, 100.0, 1.0)
+    heavy_on_class_1 = np.where(y == 1, 100.0, 1.0)
+
+    model_a = MODELS[model_name]().fit(X, y, sample_weight=heavy_on_class_0)
+    model_b = MODELS[model_name]().fit(X, y, sample_weight=heavy_on_class_1)
+
+    proba_a = model_a.predict_proba(X)
+    proba_b = model_b.predict_proba(X)
+
+    assert not np.allclose(proba_a, proba_b), (
+        f"{model_name}: predict_proba was identical under two very different "
+        f"sample_weight arrays — sample_weight is likely being silently dropped."
+    )
+
+
+def test_neural_net_fit_accepts_sample_weight_and_it_actually_changes_the_fit(synthetic_classification_data):
+    torch = pytest.importorskip("torch")
+    X, y = synthetic_classification_data
+
+    heavy_on_class_0 = np.where(y == 0, 100.0, 1.0)
+    heavy_on_class_1 = np.where(y == 1, 100.0, 1.0)
+
+    torch.manual_seed(0)
+    model_a = MODELS["neural_net"](epochs=5).fit(X, y, sample_weight=heavy_on_class_0)
+    torch.manual_seed(0)
+    model_b = MODELS["neural_net"](epochs=5).fit(X, y, sample_weight=heavy_on_class_1)
+
+    proba_a = model_a.predict_proba(X)
+    proba_b = model_b.predict_proba(X)
+    assert not np.allclose(proba_a, proba_b), (
+        "neural_net: predict_proba was identical under two very different "
+        "sample_weight arrays — sample_weight is likely being silently dropped."
+    )
+
+
+def test_random_forest_cost_weighted_pins_class_weight_to_none(synthetic_classification_data):
+    """RF's class_weight is an Optuna-searched hyperparameter (None/'balanced').
+    When an external sample_weight is supplied (cost_weighted strategy),
+    class_weight must be forced to None so sklearn doesn't multiply
+    class_weight-derived weights by sample_weight and silently compound the
+    two imbalance-correction mechanisms."""
+    X, y = synthetic_classification_data
+    model = MODELS["random_forest"](class_weight="balanced")
+    weight = np.ones(len(y))
+
+    model.fit(X, y, sample_weight=weight)
+
+    assert model.model.class_weight is None
+
+
 def test_param_space_returns_dict_optuna_can_consume(synthetic_classification_data):
     optuna = pytest.importorskip("optuna")
     X, y = synthetic_classification_data

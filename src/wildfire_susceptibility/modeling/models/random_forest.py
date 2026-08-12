@@ -10,14 +10,22 @@ class RandomForestModel:
         self.params = kwargs
         self.model: RandomForestClassifier | None = None
 
-    def fit(self, X: np.ndarray, y: np.ndarray) -> "RandomForestModel":
+    def fit(self, X: np.ndarray, y: np.ndarray, sample_weight: np.ndarray | None = None) -> "RandomForestModel":
+        params = dict(self.params)
+        if sample_weight is not None:
+            # An externally-computed sample_weight (cost_weighted imbalance
+            # strategy) takes over class balancing — sklearn multiplies
+            # class_weight-derived weights by sample_weight elementwise, so
+            # leaving class_weight="balanced" here (Optuna's HPO choice, see
+            # param_space below) would silently compound the two.
+            params["class_weight"] = None
         self.model = RandomForestClassifier(
-            random_state=42, 
-            n_jobs=-1, 
-            criterion="gini", 
-            **self.params
+            random_state=42,
+            n_jobs=-1,
+            criterion="gini",
+            **params
         )
-        self.model.fit(X, y)
+        self.model.fit(X, y, sample_weight=sample_weight)
         return self
 
     def predict_proba(self, X: np.ndarray) -> np.ndarray:
