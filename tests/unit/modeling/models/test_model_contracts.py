@@ -89,6 +89,24 @@ def test_fit_accepts_sample_weight_and_it_actually_changes_the_fit(model_name, s
     )
 
 
+def test_neural_net_fit_is_deterministic_without_external_seeding(synthetic_classification_data):
+    """Every other model wrapper fixes random_state=42; neural_net had no
+    equivalent, so weight init and the DataLoader's shuffle order varied
+    run-to-run purely from torch's global RNG state — meaning HPO search
+    and the final refit for this model alone weren't reproducible, unlike
+    every other model in the roster. fit() must seed internally now, not
+    rely on a caller to torch.manual_seed() first."""
+    torch = pytest.importorskip("torch")
+    X, y = synthetic_classification_data
+
+    model_a = MODELS["neural_net"](epochs=5).fit(X, y)
+    model_b = MODELS["neural_net"](epochs=5).fit(X, y)
+
+    proba_a = model_a.predict_proba(X)
+    proba_b = model_b.predict_proba(X)
+    np.testing.assert_allclose(proba_a, proba_b)
+
+
 def test_neural_net_fit_accepts_sample_weight_and_it_actually_changes_the_fit(synthetic_classification_data):
     torch = pytest.importorskip("torch")
     X, y = synthetic_classification_data
@@ -122,6 +140,25 @@ def test_random_forest_cost_weighted_pins_class_weight_to_none(synthetic_classif
     model.fit(X, y, sample_weight=weight)
 
     assert model.model.class_weight is None
+
+
+def test_random_forest_param_space_excludes_class_weight(synthetic_classification_data):
+    """class_weight must never be an Optuna-tunable dimension: imbalance
+    handling is a resolver-level config choice (modeling.imbalance_strategy),
+    not something a trial should be free to pick. Before this test existed,
+    a trial could sample class_weight="balanced" while imbalance_strategy
+    resolved to "smote" for random_forest, stacking class weighting on top
+    of SMOTE-resampled training data — the fit()-level guard in
+    RandomForestModel.fit() only neutralizes the cost_weighted case (see
+    test_random_forest_cost_weighted_pins_class_weight_to_none above), not
+    this one."""
+    optuna = pytest.importorskip("optuna")
+    study = optuna.create_study()
+    trial = study.ask()
+
+    space = MODELS["random_forest"]().param_space(trial)
+
+    assert "class_weight" not in space
 
 
 def test_param_space_returns_dict_optuna_can_consume(synthetic_classification_data):
