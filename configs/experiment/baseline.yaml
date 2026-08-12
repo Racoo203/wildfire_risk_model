@@ -1,5 +1,5 @@
 processing:
-  force_recompute: true
+  force_recompute: false
 
 seasons:
   active: ["summer"]
@@ -7,7 +7,9 @@ seasons:
 labels:
   density_method: "kde"
   classify_method: "jenks"
-  compare_classify_methods: ["jenks", "gmm"]
+  n_classes: 5
+  compare_classify_methods: []
+  clean_labels: false
   auto_find_k: false
   include_d_fires_as_feature: false
 

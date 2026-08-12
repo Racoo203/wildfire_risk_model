@@ -1538,3 +1538,725 @@
 2026-08-11 10:03:08 - wildfire_susceptibility.modeling.training.resampling - INFO - [summer][xgboost] final refit: class counts={0: 684580, 1: 400000, 2: 200000, 3: 100000} | imbalance_ratio=6.85 (after SMOTE)
 2026-08-11 10:03:08 - wildfire_susceptibility.modeling.training.resampling - INFO - [summer][xgboost] final refit: SMOTE applied — {0: 684580, 1: 296090, 2: 70435, 3: 10461} -> {0: 684580, 1: 400000, 2: 200000, 3: 100000} (k=5, strategy={1: 400000, 2: 200000, 3: 100000}, resulting imbalance_ratio=6.85)
 2026-08-11 10:03:08 - wildfire_susceptibility.modeling.training.resampling - WARNING - [summer][xgboost] final refit: post-SMOTE imbalance_ratio=6.85 is still notably unbalanced — check smote_sampling_strategy targets against this fold's sizes.
+2026-08-12 01:37:13 - wildfire_susceptibility - INFO - Logger initialized: wildfire_susceptibility
+2026-08-12 01:37:13 - wildfire_susceptibility - INFO - === Running stage: static ===
+2026-08-12 01:37:13 - wildfire_susceptibility - INFO - [stage_static] Building static features...
+2026-08-12 01:37:15 - wildfire_susceptibility - INFO - Merged 5 SRTM tiles: _tmp_srtm_merged.tif
+2026-08-12 01:37:21 - wildfire_susceptibility.core.raster - INFO - Reprojected data\silver\layers\_tmp_srtm_merged.tif to data\silver\layers\_tmp_elev.tif
+2026-08-12 01:37:28 - wildfire_susceptibility.core.raster - INFO - Written data\silver\layers\_tmp_slope.tif
+2026-08-12 01:37:30 - wildfire_susceptibility.core.raster - INFO - Written data\silver\layers\_tmp_aspect.tif
+2026-08-12 01:37:30 - wildfire_susceptibility - INFO - Slope and aspect derived from clipped DEM.
+2026-08-12 01:37:32 - wildfire_susceptibility.core.raster - INFO - Clipped data\silver\layers\_tmp_elev.tif to data\silver\layers\topo_elevation.tif
+2026-08-12 01:37:33 - wildfire_susceptibility.core.raster - INFO - Clipped data\silver\layers\_tmp_aspect.tif to data\silver\layers\topo_aspect.tif
+2026-08-12 01:37:34 - wildfire_susceptibility.core.raster - INFO - Clipped data\silver\layers\_tmp_slope.tif to data\silver\layers\topo_slope.tif
+2026-08-12 01:37:35 - wildfire_susceptibility - INFO - Topography features complete.
+2026-08-12 01:42:46 - wildfire_susceptibility.core.raster - INFO - Distance raster -> dist_roads.tif (681,934 feature px)
+2026-08-12 01:42:46 - wildfire_susceptibility - INFO - Roads: distance raster written -> dist_roads.tif
+2026-08-12 01:43:09 - wildfire_susceptibility.core.raster - INFO - Distance raster -> dist_rivers.tif (111,053 feature px)
+2026-08-12 01:43:09 - wildfire_susceptibility - INFO - Rivers: distance raster written -> dist_rivers.tif
+2026-08-12 01:44:04 - wildfire_susceptibility.core.raster - INFO - Distance raster -> dist_buildings.tif (264,408 feature px)
+2026-08-12 01:44:04 - wildfire_susceptibility - INFO - Buildings: distance raster written -> dist_buildings.tif
+2026-08-12 01:44:08 - wildfire_susceptibility - INFO - Land-use class raster written -> landuse_class.tif (11,555 polygons, 10 classes)
+2026-08-12 01:44:15 - wildfire_susceptibility - INFO - [stage_static] Complete — 9 output path(s).
+2026-08-12 01:44:15 - wildfire_susceptibility - INFO - === Stage complete: static ===
+2026-08-12 01:44:15 - wildfire_susceptibility - INFO - === Running stage: seasonal ===
+2026-08-12 01:44:15 - wildfire_susceptibility - INFO - [stage_seasonal] [summer] Building seasonal features...
+2026-08-12 01:44:24 - wildfire_susceptibility.core.raster - INFO - Aligned data\silver\layers\_tmp_native_tas_summer_train.tif to reference, to data\silver\layers\_tmp_clip_tas_summer_train.tif
+2026-08-12 01:44:25 - wildfire_susceptibility.core.raster - INFO - Clipped data\silver\layers\_tmp_clip_tas_summer_train.tif to data\silver\layers\meteo_tas_summer_train.tif
+2026-08-12 01:44:25 - wildfire_susceptibility - INFO - [summer][train] Climate feature ready: tas: meteo_tas_summer_train.tif
+2026-08-12 01:44:32 - wildfire_susceptibility.core.raster - INFO - Aligned data\silver\layers\_tmp_native_tasmax_summer_train.tif to reference, to data\silver\layers\_tmp_clip_tasmax_summer_train.tif
+2026-08-12 01:44:33 - wildfire_susceptibility.core.raster - INFO - Clipped data\silver\layers\_tmp_clip_tasmax_summer_train.tif to data\silver\layers\meteo_tasmax_summer_train.tif
+2026-08-12 01:44:33 - wildfire_susceptibility - INFO - [summer][train] Climate feature ready: tasmax: meteo_tasmax_summer_train.tif
+2026-08-12 01:44:39 - wildfire_susceptibility.core.raster - INFO - Aligned data\silver\layers\_tmp_native_tasmin_summer_train.tif to reference, to data\silver\layers\_tmp_clip_tasmin_summer_train.tif
+2026-08-12 01:44:41 - wildfire_susceptibility.core.raster - INFO - Clipped data\silver\layers\_tmp_clip_tasmin_summer_train.tif to data\silver\layers\meteo_tasmin_summer_train.tif
+2026-08-12 01:44:41 - wildfire_susceptibility - INFO - [summer][train] Climate feature ready: tasmin: meteo_tasmin_summer_train.tif
+2026-08-12 01:44:47 - wildfire_susceptibility.core.raster - INFO - Aligned data\silver\layers\_tmp_native_rainfall_summer_train.tif to reference, to data\silver\layers\_tmp_clip_rainfall_summer_train.tif
+2026-08-12 01:44:49 - wildfire_susceptibility.core.raster - INFO - Clipped data\silver\layers\_tmp_clip_rainfall_summer_train.tif to data\silver\layers\meteo_rainfall_summer_train.tif
+2026-08-12 01:44:49 - wildfire_susceptibility - INFO - [summer][train] Climate feature ready: rainfall: meteo_rainfall_summer_train.tif
+2026-08-12 01:44:55 - wildfire_susceptibility.core.raster - INFO - Aligned data\silver\layers\_tmp_native_sfcWind_summer_train.tif to reference, to data\silver\layers\_tmp_clip_sfcWind_summer_train.tif
+2026-08-12 01:44:57 - wildfire_susceptibility.core.raster - INFO - Clipped data\silver\layers\_tmp_clip_sfcWind_summer_train.tif to data\silver\layers\meteo_sfcWind_summer_train.tif
+2026-08-12 01:44:57 - wildfire_susceptibility - INFO - [summer][train] Climate feature ready: sfcWind: meteo_sfcWind_summer_train.tif
+2026-08-12 01:45:03 - wildfire_susceptibility.core.raster - INFO - Aligned data\silver\layers\_tmp_native_hurs_summer_train.tif to reference, to data\silver\layers\_tmp_clip_hurs_summer_train.tif
+2026-08-12 01:45:05 - wildfire_susceptibility.core.raster - INFO - Clipped data\silver\layers\_tmp_clip_hurs_summer_train.tif to data\silver\layers\meteo_hurs_summer_train.tif
+2026-08-12 01:45:05 - wildfire_susceptibility - INFO - [summer][train] Climate feature ready: hurs: meteo_hurs_summer_train.tif
+2026-08-12 01:45:05 - wildfire_susceptibility.core.raster - INFO - Aligned data\silver\layers\_tmp_native_diurnal_range_summer_train.tif to reference, to data\silver\layers\_tmp_clip_diurnal_range_summer_train.tif
+2026-08-12 01:45:07 - wildfire_susceptibility.core.raster - INFO - Clipped data\silver\layers\_tmp_clip_diurnal_range_summer_train.tif to data\silver\layers\meteo_diurnal_range_summer_train.tif
+2026-08-12 01:45:11 - wildfire_susceptibility.core.raster - INFO - Aligned data\silver\layers\_tmp_ndvi_native_summer_train.tif to reference, to data\silver\layers\_tmp_clip_ndvi_summer_train.tif
+2026-08-12 01:45:13 - wildfire_susceptibility.core.raster - INFO - Clipped data\silver\layers\_tmp_clip_ndvi_summer_train.tif to data\silver\layers\ndvi_summer_train.tif
+2026-08-12 01:45:13 - wildfire_susceptibility - INFO - [summer][train] NDVI ready -> ndvi_summer_train.tif
+2026-08-12 01:45:15 - wildfire_susceptibility.core.raster - INFO - Aligned data\silver\layers\_tmp_native_tas_summer_test.tif to reference, to data\silver\layers\_tmp_clip_tas_summer_test.tif
+2026-08-12 01:45:16 - wildfire_susceptibility.core.raster - INFO - Clipped data\silver\layers\_tmp_clip_tas_summer_test.tif to data\silver\layers\meteo_tas_summer_test.tif
+2026-08-12 01:45:17 - wildfire_susceptibility - INFO - [summer][test] Climate feature ready: tas: meteo_tas_summer_test.tif
+2026-08-12 01:45:19 - wildfire_susceptibility.core.raster - INFO - Aligned data\silver\layers\_tmp_native_tasmax_summer_test.tif to reference, to data\silver\layers\_tmp_clip_tasmax_summer_test.tif
+2026-08-12 01:45:20 - wildfire_susceptibility.core.raster - INFO - Clipped data\silver\layers\_tmp_clip_tasmax_summer_test.tif to data\silver\layers\meteo_tasmax_summer_test.tif
+2026-08-12 01:45:20 - wildfire_susceptibility - INFO - [summer][test] Climate feature ready: tasmax: meteo_tasmax_summer_test.tif
+2026-08-12 01:45:22 - wildfire_susceptibility.core.raster - INFO - Aligned data\silver\layers\_tmp_native_tasmin_summer_test.tif to reference, to data\silver\layers\_tmp_clip_tasmin_summer_test.tif
+2026-08-12 01:45:24 - wildfire_susceptibility.core.raster - INFO - Clipped data\silver\layers\_tmp_clip_tasmin_summer_test.tif to data\silver\layers\meteo_tasmin_summer_test.tif
+2026-08-12 01:45:24 - wildfire_susceptibility - INFO - [summer][test] Climate feature ready: tasmin: meteo_tasmin_summer_test.tif
+2026-08-12 01:45:26 - wildfire_susceptibility.core.raster - INFO - Aligned data\silver\layers\_tmp_native_rainfall_summer_test.tif to reference, to data\silver\layers\_tmp_clip_rainfall_summer_test.tif
+2026-08-12 01:45:27 - wildfire_susceptibility.core.raster - INFO - Clipped data\silver\layers\_tmp_clip_rainfall_summer_test.tif to data\silver\layers\meteo_rainfall_summer_test.tif
+2026-08-12 01:45:27 - wildfire_susceptibility - INFO - [summer][test] Climate feature ready: rainfall: meteo_rainfall_summer_test.tif
+2026-08-12 01:45:30 - wildfire_susceptibility.core.raster - INFO - Aligned data\silver\layers\_tmp_native_sfcWind_summer_test.tif to reference, to data\silver\layers\_tmp_clip_sfcWind_summer_test.tif
+2026-08-12 01:45:31 - wildfire_susceptibility.core.raster - INFO - Clipped data\silver\layers\_tmp_clip_sfcWind_summer_test.tif to data\silver\layers\meteo_sfcWind_summer_test.tif
+2026-08-12 01:45:31 - wildfire_susceptibility - INFO - [summer][test] Climate feature ready: sfcWind: meteo_sfcWind_summer_test.tif
+2026-08-12 01:45:33 - wildfire_susceptibility.core.raster - INFO - Aligned data\silver\layers\_tmp_native_hurs_summer_test.tif to reference, to data\silver\layers\_tmp_clip_hurs_summer_test.tif
+2026-08-12 01:45:35 - wildfire_susceptibility.core.raster - INFO - Clipped data\silver\layers\_tmp_clip_hurs_summer_test.tif to data\silver\layers\meteo_hurs_summer_test.tif
+2026-08-12 01:45:35 - wildfire_susceptibility - INFO - [summer][test] Climate feature ready: hurs: meteo_hurs_summer_test.tif
+2026-08-12 01:45:35 - wildfire_susceptibility.core.raster - INFO - Aligned data\silver\layers\_tmp_native_diurnal_range_summer_test.tif to reference, to data\silver\layers\_tmp_clip_diurnal_range_summer_test.tif
+2026-08-12 01:45:37 - wildfire_susceptibility.core.raster - INFO - Clipped data\silver\layers\_tmp_clip_diurnal_range_summer_test.tif to data\silver\layers\meteo_diurnal_range_summer_test.tif
+2026-08-12 01:45:39 - wildfire_susceptibility.core.raster - INFO - Aligned data\silver\layers\_tmp_ndvi_native_summer_test.tif to reference, to data\silver\layers\_tmp_clip_ndvi_summer_test.tif
+2026-08-12 01:45:40 - wildfire_susceptibility.core.raster - INFO - Clipped data\silver\layers\_tmp_clip_ndvi_summer_test.tif to data\silver\layers\ndvi_summer_test.tif
+2026-08-12 01:45:40 - wildfire_susceptibility - INFO - [summer][test] NDVI ready -> ndvi_summer_test.tif
+2026-08-12 01:45:40 - wildfire_susceptibility - INFO - === Stage complete: seasonal ===
+2026-08-12 01:45:40 - wildfire_susceptibility - INFO - === Running stage: labels ===
+2026-08-12 01:45:40 - wildfire_susceptibility - INFO - [stage_labels] [summer] Building fire labels...
+2026-08-12 01:45:41 - wildfire_susceptibility - INFO - Rows remaining after month filter: 13872
+2026-08-12 02:05:22 - wildfire_susceptibility - INFO - [summer_train][kde][jenks] class counts: {0: 243516, 1: 101575, 2: 31213, 3: 8422} | unlabelled/trimmed cells: 3466389 | out-of-domain NaN cells: 2606943 | thresholds: ['1.645e-09', '3.071e-09', '5.358e-09']
+2026-08-12 02:12:58 - wildfire_susceptibility - INFO - [summer_test][kde][jenks] applied FROZEN fit from paired split (no refit).
+2026-08-12 02:12:59 - wildfire_susceptibility - INFO - [summer_test][kde][jenks] class counts: {0: 250084, 1: 91647, 2: 35371, 3: 7624} | unlabelled/trimmed cells: 3466389 | out-of-domain NaN cells: 2606943 | thresholds: ['1.645e-09', '3.071e-09', '5.358e-09']
+2026-08-12 02:13:01 - wildfire_susceptibility.pipeline.stage_labels - INFO - [stage_labels] [summer] comparison run: classify_method='jenks'
+2026-08-12 02:35:08 - wildfire_susceptibility - INFO - [summer_train][kde][jenks] class counts: {0: 245243, 1: 100989, 2: 30489, 3: 8005} | unlabelled/trimmed cells: 3466389 | out-of-domain NaN cells: 2606943 | thresholds: ['1.658e-09', '3.11e-09', '5.432e-09']
+2026-08-12 02:44:42 - wildfire_susceptibility - INFO - [summer_test][kde][jenks] applied FROZEN fit from paired split (no refit).
+2026-08-12 02:44:42 - wildfire_susceptibility - INFO - [summer_test][kde][jenks] class counts: {0: 251510, 1: 91372, 2: 34723, 3: 7121} | unlabelled/trimmed cells: 3466389 | out-of-domain NaN cells: 2606943 | thresholds: ['1.658e-09', '3.11e-09', '5.432e-09']
+2026-08-12 02:44:42 - wildfire_susceptibility.pipeline.stage_labels - INFO - [stage_labels] [summer] comparison run: classify_method='gmm'
+2026-08-12 03:05:40 - wildfire_susceptibility - INFO - Logger initialized: wildfire_susceptibility
+2026-08-12 03:05:40 - wildfire_susceptibility - INFO - [stage_temporal_eda] Analyzing tasmax...
+2026-08-12 03:05:42 - wildfire_susceptibility.viz.charts - WARNING - [summer] VIF: 2 feature(s) exceed VIF>10.0
+2026-08-12 03:05:56 - wildfire_susceptibility - INFO - [summer_train][kde][gmm] class counts: {0: 204300, 1: 131803, 2: 39962, 3: 8661} | unlabelled/trimmed cells: 3466389 | out-of-domain NaN cells: 2606943 | thresholds: ['1.399e-09', '2.829e-09', '5.316e-09']
+2026-08-12 03:06:29 - wildfire_susceptibility - INFO - Logger initialized: wildfire_susceptibility
+2026-08-12 03:06:29 - wildfire_susceptibility - INFO - [stage_temporal_eda] Analyzing tasmax...
+2026-08-12 03:06:31 - wildfire_susceptibility - INFO - [stage_temporal_eda] Stationarity summary -> stationarity_summary.csv
+2026-08-12 03:06:31 - wildfire_susceptibility - INFO - [stage_temporal_eda] Spatial correlogram -> spatial_correlogram.csv
+2026-08-12 03:06:31 - wildfire_susceptibility.viz.charts - WARNING - [summer] VIF: 2 feature(s) exceed VIF>10.0
+2026-08-12 03:16:31 - wildfire_susceptibility - INFO - [summer_test][kde][gmm] applied FROZEN fit from paired split (no refit).
+2026-08-12 03:16:31 - wildfire_susceptibility - INFO - [summer_test][kde][gmm] class counts: {0: 217276, 1: 116584, 2: 42957, 3: 7909} | unlabelled/trimmed cells: 3466389 | out-of-domain NaN cells: 2606943 | thresholds: ['1.399e-09', '2.829e-09', '5.316e-09']
+2026-08-12 03:16:31 - wildfire_susceptibility - INFO - === Stage complete: labels ===
+2026-08-12 03:16:31 - wildfire_susceptibility - INFO - === Running stage: integration ===
+2026-08-12 03:18:08 - wildfire_susceptibility.core.raster - INFO - Dataset saved to data\silver\model_datasets\dataset_train_summer.csv (3,851,115 rows, 18 columns)
+2026-08-12 03:18:08 - wildfire_susceptibility - INFO - [stage_integration] [summer][train] Assembled -> dataset_train_summer.csv
+2026-08-12 03:20:11 - wildfire_susceptibility.core.raster - INFO - Dataset saved to data\silver\model_datasets\dataset_test_summer.csv (3,851,115 rows, 18 columns)
+2026-08-12 03:20:11 - wildfire_susceptibility - INFO - [stage_integration] [summer][test] Assembled -> dataset_test_summer.csv
+2026-08-12 03:20:11 - wildfire_susceptibility - INFO - === Stage complete: integration ===
+2026-08-12 03:34:54 - wildfire_susceptibility - INFO - Logger initialized: wildfire_susceptibility
+2026-08-12 03:34:54 - wildfire_susceptibility - INFO - === Running stage: static ===
+2026-08-12 03:34:54 - wildfire_susceptibility - INFO - [stage_static] Building static features...
+2026-08-12 03:34:54 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] BoundaryBuilder: outputs already exist, skipping computation
+2026-08-12 03:34:54 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] TopographyBuilder: outputs already exist, skipping computation
+2026-08-12 03:34:54 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] ProximityBuilder: outputs already exist, skipping computation
+2026-08-12 03:34:54 - wildfire_susceptibility - INFO - [stage_static] Complete — 9 output path(s).
+2026-08-12 03:34:54 - wildfire_susceptibility - INFO - === Stage complete: static ===
+2026-08-12 03:34:54 - wildfire_susceptibility - INFO - === Running stage: seasonal ===
+2026-08-12 03:34:54 - wildfire_susceptibility - INFO - [stage_seasonal] [summer] Building seasonal features...
+2026-08-12 03:34:54 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] ClimateBuilder[summer][train]: outputs already exist, skipping computation
+2026-08-12 03:34:54 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] VegetationBuilder[summer][train]: outputs already exist, skipping computation
+2026-08-12 03:34:54 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] ClimateBuilder[summer][test]: outputs already exist, skipping computation
+2026-08-12 03:34:54 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] VegetationBuilder[summer][test]: outputs already exist, skipping computation
+2026-08-12 03:34:54 - wildfire_susceptibility - INFO - === Stage complete: seasonal ===
+2026-08-12 03:34:54 - wildfire_susceptibility - INFO - === Running stage: labels ===
+2026-08-12 03:34:54 - wildfire_susceptibility - INFO - [stage_labels] [summer] Building fire labels...
+2026-08-12 03:34:54 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] FireBuilder[summer]: outputs already exist, skipping computation
+2026-08-12 03:34:55 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[kde][summer_train]: outputs already exist, skipping computation
+2026-08-12 03:34:56 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[kde][jenks][summer_train]: outputs already exist, skipping computation
+2026-08-12 03:34:56 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[kde][summer_test]: outputs already exist, skipping computation
+2026-08-12 03:34:56 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[kde][jenks][summer_test]: outputs already exist, skipping computation
+2026-08-12 03:35:03 - wildfire_susceptibility.pipeline.stage_labels - INFO - [stage_labels] [summer] comparison run: classify_method='jenks'
+2026-08-12 03:35:03 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[kde][summer_train]: outputs already exist, skipping computation
+2026-08-12 03:35:03 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[kde][jenks][summer_train]: outputs already exist, skipping computation
+2026-08-12 03:35:03 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[kde][summer_test]: outputs already exist, skipping computation
+2026-08-12 03:35:03 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[kde][jenks][summer_test]: outputs already exist, skipping computation
+2026-08-12 03:35:04 - wildfire_susceptibility.pipeline.stage_labels - INFO - [stage_labels] [summer] comparison run: classify_method='gmm'
+2026-08-12 03:35:04 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[kde][summer_train]: outputs already exist, skipping computation
+2026-08-12 03:35:04 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[kde][gmm][summer_train]: outputs already exist, skipping computation
+2026-08-12 03:35:04 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[kde][summer_test]: outputs already exist, skipping computation
+2026-08-12 03:35:05 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[kde][gmm][summer_test]: outputs already exist, skipping computation
+2026-08-12 03:35:05 - wildfire_susceptibility - INFO - === Stage complete: labels ===
+2026-08-12 03:35:05 - wildfire_susceptibility - INFO - === Running stage: integration ===
+2026-08-12 03:35:05 - wildfire_susceptibility - INFO - [stage_integration] [CACHED] summer/train -> dataset_train_summer.csv
+2026-08-12 03:35:05 - wildfire_susceptibility - INFO - [stage_integration] [CACHED] summer/test -> dataset_test_summer.csv
+2026-08-12 03:35:05 - wildfire_susceptibility - INFO - === Stage complete: integration ===
+2026-08-12 03:35:05 - wildfire_susceptibility - INFO - === Running stage: preprocessing ===
+2026-08-12 03:35:05 - wildfire_susceptibility - INFO - [stage_preprocessing] [CACHED] summer -> dataset_train_summer_clean.csv, dataset_test_summer_clean.csv
+2026-08-12 03:35:05 - wildfire_susceptibility - INFO - === Stage complete: preprocessing ===
+2026-08-12 03:35:05 - wildfire_susceptibility - INFO - === Running stage: train ===
+2026-08-12 03:35:05 - wildfire_susceptibility - INFO - [stage_train] [summer] Loading cleaned datasets...
+2026-08-12 03:35:20 - wildfire_susceptibility.modeling.dataset_prep - INFO - Assigned 1,061,566 rows to 255 spatial blocks (4 km grid)
+2026-08-12 03:35:20 - wildfire_susceptibility - INFO - [stage_train] [summer][catboost] Search + refit...
+2026-08-12 03:35:20 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] block search subsample: 557,522/1,061,566 rows across 73 block(s) (73 force-kept for rarest class 3.0)
+2026-08-12 03:35:20 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] block search subsample: class counts={0: 304094, 1: 181709, 2: 61258, 3: 10461} | imbalance_ratio=29.07
+2026-08-12 03:35:23 - wildfire_susceptibility.modeling.cv.base - INFO - [stratified_spatial_block] spatial buffer (4000m, radius=1 block(s)): dropped 219,752/437,965 train rows within the buffer ring of this fold's test blocks
+2026-08-12 03:35:24 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [stratified_spatial_block] fold 0 (validation, untouched): class counts={0: 59739, 1: 40786, 2: 16123, 3: 2909} | imbalance_ratio=20.54
+2026-08-12 03:35:26 - wildfire_susceptibility.modeling.cv.base - INFO - [stratified_spatial_block] spatial buffer (4000m, radius=1 block(s)): dropped 257,148/442,358 train rows within the buffer ring of this fold's test blocks
+2026-08-12 03:35:26 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [stratified_spatial_block] fold 1 (validation, untouched): class counts={0: 63663, 1: 37842, 2: 11998, 3: 1661} | imbalance_ratio=38.33
+2026-08-12 03:35:28 - wildfire_susceptibility.modeling.cv.base - INFO - [stratified_spatial_block] spatial buffer (4000m, radius=1 block(s)): dropped 273,456/446,866 train rows within the buffer ring of this fold's test blocks
+2026-08-12 03:35:28 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [stratified_spatial_block] fold 2 (validation, untouched): class counts={0: 62681, 1: 34658, 2: 11203, 3: 2114} | imbalance_ratio=29.65
+2026-08-12 03:35:30 - wildfire_susceptibility.modeling.cv.base - INFO - [stratified_spatial_block] spatial buffer (4000m, radius=1 block(s)): dropped 274,988/449,923 train rows within the buffer ring of this fold's test blocks
+2026-08-12 03:35:30 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [stratified_spatial_block] fold 3 (validation, untouched): class counts={0: 59670, 1: 34342, 2: 11670, 3: 1917} | imbalance_ratio=31.13
+2026-08-12 03:35:32 - wildfire_susceptibility.modeling.cv.base - INFO - [stratified_spatial_block] spatial buffer (4000m, radius=1 block(s)): dropped 252,122/452,976 train rows within the buffer ring of this fold's test blocks
+2026-08-12 03:35:32 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [stratified_spatial_block] fold 4 (validation, untouched): class counts={0: 58341, 1: 34081, 2: 10264, 3: 1860} | imbalance_ratio=31.37
+2026-08-12 03:35:32 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [stratified_spatial_block] class 0.0 proportion across folds: [np.float64(0.5), np.float64(0.553), np.float64(0.566), np.float64(0.555), np.float64(0.558)] (spread=0.067)
+2026-08-12 03:35:32 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [stratified_spatial_block] class 1.0 proportion across folds: [np.float64(0.341), np.float64(0.329), np.float64(0.313), np.float64(0.319), np.float64(0.326)] (spread=0.028)
+2026-08-12 03:35:32 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [stratified_spatial_block] class 2.0 proportion across folds: [np.float64(0.135), np.float64(0.104), np.float64(0.101), np.float64(0.108), np.float64(0.098)] (spread=0.037)
+2026-08-12 03:35:32 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [stratified_spatial_block] class 3.0 proportion across folds: [np.float64(0.024), np.float64(0.014), np.float64(0.019), np.float64(0.018), np.float64(0.018)] (spread=0.010)
+2026-08-12 03:35:32 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] finished=0 target=30 remaining=30
+2026-08-12 03:35:32 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 0 fold 1: class counts={0: 127459, 1: 68406, 2: 19524, 3: 2824} | imbalance_ratio=45.13 (train, post-resample (used to fit))
+2026-08-12 03:35:58 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 0 fold 1: class counts={0: 59739, 1: 40786, 2: 16123, 3: 2909} | imbalance_ratio=20.54 (validation, untouched — isolation check)
+2026-08-12 03:36:00 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 0 fold 1 AUC=0.6854 F1_macro=0.3457 PR_AUC_macro=0.3660 QWK=0.3520 (validation fold untouched/imbalanced)
+2026-08-12 03:36:00 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 0 fold 1 PR_AUC_macro=0.3660 AUC=0.6854 F1_macro=0.3457 QWK=0.3520 | params={'iterations': 247, 'depth': 6, 'learning_rate': 0.04857767173780878, 'l2_leaf_reg': 2.1196144207656307, 'bagging_temperature': 0.2961271113195817}
+2026-08-12 03:36:00 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 0 fold 2: class counts={0: 100549, 1: 61275, 2: 20175, 3: 3211} | imbalance_ratio=31.31 (train, post-resample (used to fit))
+2026-08-12 03:36:24 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 0 fold 2: class counts={0: 63663, 1: 37842, 2: 11998, 3: 1661} | imbalance_ratio=38.33 (validation, untouched — isolation check)
+2026-08-12 03:36:24 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 0 fold 2 AUC=0.6687 F1_macro=0.3134 PR_AUC_macro=0.3361 QWK=0.2772 (validation fold untouched/imbalanced)
+2026-08-12 03:36:24 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 0 fold 2 PR_AUC_macro=0.3361 AUC=0.6687 F1_macro=0.3134 QWK=0.2772 | params={'iterations': 247, 'depth': 6, 'learning_rate': 0.04857767173780878, 'l2_leaf_reg': 2.1196144207656307, 'bagging_temperature': 0.2961271113195817}
+2026-08-12 03:36:25 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 0 fold 3: class counts={0: 96934, 1: 55124, 2: 18166, 3: 3186} | imbalance_ratio=30.42 (train, post-resample (used to fit))
+2026-08-12 03:36:47 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 0 fold 3: class counts={0: 62681, 1: 34658, 2: 11203, 3: 2114} | imbalance_ratio=29.65 (validation, untouched — isolation check)
+2026-08-12 03:36:48 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 0 fold 3 AUC=0.6654 F1_macro=0.3202 PR_AUC_macro=0.3491 QWK=0.3247 (validation fold untouched/imbalanced)
+2026-08-12 03:36:48 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 0 fold 3 PR_AUC_macro=0.3491 AUC=0.6654 F1_macro=0.3202 QWK=0.3247 | params={'iterations': 247, 'depth': 6, 'learning_rate': 0.04857767173780878, 'l2_leaf_reg': 2.1196144207656307, 'bagging_temperature': 0.2961271113195817}
+2026-08-12 03:36:48 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 0 fold 4: class counts={0: 102666, 1: 54883, 2: 15072, 3: 2314} | imbalance_ratio=44.37 (train, post-resample (used to fit))
+2026-08-12 03:37:10 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 0 fold 4: class counts={0: 59670, 1: 34342, 2: 11670, 3: 1917} | imbalance_ratio=31.13 (validation, untouched — isolation check)
+2026-08-12 03:37:11 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 0 fold 4 AUC=0.6503 F1_macro=0.3213 PR_AUC_macro=0.3365 QWK=0.2587 (validation fold untouched/imbalanced)
+2026-08-12 03:37:11 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 0 fold 4 PR_AUC_macro=0.3365 AUC=0.6503 F1_macro=0.3213 QWK=0.2587 | params={'iterations': 247, 'depth': 6, 'learning_rate': 0.04857767173780878, 'l2_leaf_reg': 2.1196144207656307, 'bagging_temperature': 0.2961271113195817}
+2026-08-12 03:37:11 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 0 fold 5: class counts={0: 110310, 1: 65319, 2: 21921, 3: 3304} | imbalance_ratio=33.39 (train, post-resample (used to fit))
+2026-08-12 03:37:36 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 0 fold 5: class counts={0: 58341, 1: 34081, 2: 10264, 3: 1860} | imbalance_ratio=31.37 (validation, untouched — isolation check)
+2026-08-12 03:37:37 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 0 fold 5 AUC=0.6291 F1_macro=0.2953 PR_AUC_macro=0.3186 QWK=0.1649 (validation fold untouched/imbalanced)
+2026-08-12 03:37:37 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 0 fold 5 PR_AUC_macro=0.3186 AUC=0.6291 F1_macro=0.2953 QWK=0.1649 | params={'iterations': 247, 'depth': 6, 'learning_rate': 0.04857767173780878, 'l2_leaf_reg': 2.1196144207656307, 'bagging_temperature': 0.2961271113195817}
+2026-08-12 03:37:37 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 1 fold 1: class counts={0: 127459, 1: 68406, 2: 19524, 3: 2824} | imbalance_ratio=45.13 (train, post-resample (used to fit))
+2026-08-12 03:38:20 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 1 fold 1: class counts={0: 59739, 1: 40786, 2: 16123, 3: 2909} | imbalance_ratio=20.54 (validation, untouched — isolation check)
+2026-08-12 03:38:21 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 1 fold 1 AUC=0.6758 F1_macro=0.3358 PR_AUC_macro=0.3551 QWK=0.3759 (validation fold untouched/imbalanced)
+2026-08-12 03:38:21 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 1 fold 1 PR_AUC_macro=0.3551 AUC=0.6758 F1_macro=0.3358 QWK=0.3759 | params={'iterations': 554, 'depth': 3, 'learning_rate': 0.0023570456828081827, 'l2_leaf_reg': 0.5059373664605883, 'bagging_temperature': 0.6281901638830741}
+2026-08-12 03:38:21 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 1 fold 2: class counts={0: 100549, 1: 61275, 2: 20175, 3: 3211} | imbalance_ratio=31.31 (train, post-resample (used to fit))
+2026-08-12 03:38:58 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 1 fold 2: class counts={0: 63663, 1: 37842, 2: 11998, 3: 1661} | imbalance_ratio=38.33 (validation, untouched — isolation check)
+2026-08-12 03:38:59 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 1 fold 2 AUC=0.6511 F1_macro=0.2993 PR_AUC_macro=0.3245 QWK=0.2209 (validation fold untouched/imbalanced)
+2026-08-12 03:38:59 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 1 fold 2 PR_AUC_macro=0.3245 AUC=0.6511 F1_macro=0.2993 QWK=0.2209 | params={'iterations': 554, 'depth': 3, 'learning_rate': 0.0023570456828081827, 'l2_leaf_reg': 0.5059373664605883, 'bagging_temperature': 0.6281901638830741}
+2026-08-12 03:38:59 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 1 fold 3: class counts={0: 96934, 1: 55124, 2: 18166, 3: 3186} | imbalance_ratio=30.42 (train, post-resample (used to fit))
+2026-08-12 03:39:34 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 1 fold 3: class counts={0: 62681, 1: 34658, 2: 11203, 3: 2114} | imbalance_ratio=29.65 (validation, untouched — isolation check)
+2026-08-12 03:39:35 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 1 fold 3 AUC=0.6964 F1_macro=0.3422 PR_AUC_macro=0.3512 QWK=0.3232 (validation fold untouched/imbalanced)
+2026-08-12 03:39:35 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 1 fold 3 PR_AUC_macro=0.3512 AUC=0.6964 F1_macro=0.3422 QWK=0.3232 | params={'iterations': 554, 'depth': 3, 'learning_rate': 0.0023570456828081827, 'l2_leaf_reg': 0.5059373664605883, 'bagging_temperature': 0.6281901638830741}
+2026-08-12 03:39:35 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 1 fold 4: class counts={0: 102666, 1: 54883, 2: 15072, 3: 2314} | imbalance_ratio=44.37 (train, post-resample (used to fit))
+2026-08-12 03:40:10 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 1 fold 4: class counts={0: 59670, 1: 34342, 2: 11670, 3: 1917} | imbalance_ratio=31.13 (validation, untouched — isolation check)
+2026-08-12 03:40:11 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 1 fold 4 AUC=0.6680 F1_macro=0.3169 PR_AUC_macro=0.3395 QWK=0.2631 (validation fold untouched/imbalanced)
+2026-08-12 03:40:11 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 1 fold 4 PR_AUC_macro=0.3395 AUC=0.6680 F1_macro=0.3169 QWK=0.2631 | params={'iterations': 554, 'depth': 3, 'learning_rate': 0.0023570456828081827, 'l2_leaf_reg': 0.5059373664605883, 'bagging_temperature': 0.6281901638830741}
+2026-08-12 03:40:12 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 1 fold 5: class counts={0: 110310, 1: 65319, 2: 21921, 3: 3304} | imbalance_ratio=33.39 (train, post-resample (used to fit))
+2026-08-12 03:40:52 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 1 fold 5: class counts={0: 58341, 1: 34081, 2: 10264, 3: 1860} | imbalance_ratio=31.37 (validation, untouched — isolation check)
+2026-08-12 03:40:53 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 1 fold 5 AUC=0.6608 F1_macro=0.2980 PR_AUC_macro=0.3217 QWK=0.2235 (validation fold untouched/imbalanced)
+2026-08-12 03:40:53 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 1 fold 5 PR_AUC_macro=0.3217 AUC=0.6608 F1_macro=0.2980 QWK=0.2235 | params={'iterations': 554, 'depth': 3, 'learning_rate': 0.0023570456828081827, 'l2_leaf_reg': 0.5059373664605883, 'bagging_temperature': 0.6281901638830741}
+2026-08-12 03:40:53 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 2 fold 1: class counts={0: 127459, 1: 68406, 2: 19524, 3: 2824} | imbalance_ratio=45.13 (train, post-resample (used to fit))
+2026-08-12 03:41:08 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 2 fold 1: class counts={0: 59739, 1: 40786, 2: 16123, 3: 2909} | imbalance_ratio=20.54 (validation, untouched — isolation check)
+2026-08-12 03:41:08 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 2 fold 1 AUC=0.6602 F1_macro=0.3167 PR_AUC_macro=0.3507 QWK=0.2597 (validation fold untouched/imbalanced)
+2026-08-12 03:41:09 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 2 fold 1 PR_AUC_macro=0.3507 AUC=0.6602 F1_macro=0.3167 QWK=0.2597 | params={'iterations': 150, 'depth': 5, 'learning_rate': 0.2095461403217968, 'l2_leaf_reg': 0.06405937340350171, 'bagging_temperature': 0.7637548783494612}
+2026-08-12 03:41:09 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 2 fold 2: class counts={0: 100549, 1: 61275, 2: 20175, 3: 3211} | imbalance_ratio=31.31 (train, post-resample (used to fit))
+2026-08-12 03:41:21 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 2 fold 2: class counts={0: 63663, 1: 37842, 2: 11998, 3: 1661} | imbalance_ratio=38.33 (validation, untouched — isolation check)
+2026-08-12 03:41:22 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 2 fold 2 AUC=0.6632 F1_macro=0.3130 PR_AUC_macro=0.3322 QWK=0.2483 (validation fold untouched/imbalanced)
+2026-08-12 03:41:22 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 2 fold 2 PR_AUC_macro=0.3322 AUC=0.6632 F1_macro=0.3130 QWK=0.2483 | params={'iterations': 150, 'depth': 5, 'learning_rate': 0.2095461403217968, 'l2_leaf_reg': 0.06405937340350171, 'bagging_temperature': 0.7637548783494612}
+2026-08-12 03:41:22 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 2 fold 3: class counts={0: 96934, 1: 55124, 2: 18166, 3: 3186} | imbalance_ratio=30.42 (train, post-resample (used to fit))
+2026-08-12 03:41:34 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 2 fold 3: class counts={0: 62681, 1: 34658, 2: 11203, 3: 2114} | imbalance_ratio=29.65 (validation, untouched — isolation check)
+2026-08-12 03:41:35 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 2 fold 3 AUC=0.6097 F1_macro=0.2959 PR_AUC_macro=0.3277 QWK=0.2237 (validation fold untouched/imbalanced)
+2026-08-12 03:41:35 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 2 fold 3 PR_AUC_macro=0.3277 AUC=0.6097 F1_macro=0.2959 QWK=0.2237 | params={'iterations': 150, 'depth': 5, 'learning_rate': 0.2095461403217968, 'l2_leaf_reg': 0.06405937340350171, 'bagging_temperature': 0.7637548783494612}
+2026-08-12 03:41:35 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 2 fold 4: class counts={0: 102666, 1: 54883, 2: 15072, 3: 2314} | imbalance_ratio=44.37 (train, post-resample (used to fit))
+2026-08-12 03:41:46 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 2 fold 4: class counts={0: 59670, 1: 34342, 2: 11670, 3: 1917} | imbalance_ratio=31.13 (validation, untouched — isolation check)
+2026-08-12 03:41:47 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 2 fold 4 AUC=0.6369 F1_macro=0.3138 PR_AUC_macro=0.3283 QWK=0.2404 (validation fold untouched/imbalanced)
+2026-08-12 03:41:47 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 2 fold 4 PR_AUC_macro=0.3283 AUC=0.6369 F1_macro=0.3138 QWK=0.2404 | params={'iterations': 150, 'depth': 5, 'learning_rate': 0.2095461403217968, 'l2_leaf_reg': 0.06405937340350171, 'bagging_temperature': 0.7637548783494612}
+2026-08-12 03:41:48 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 2 fold 5: class counts={0: 110310, 1: 65319, 2: 21921, 3: 3304} | imbalance_ratio=33.39 (train, post-resample (used to fit))
+2026-08-12 03:42:01 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 2 fold 5: class counts={0: 58341, 1: 34081, 2: 10264, 3: 1860} | imbalance_ratio=31.37 (validation, untouched — isolation check)
+2026-08-12 03:42:02 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 2 fold 5 AUC=0.6160 F1_macro=0.3003 PR_AUC_macro=0.3121 QWK=0.1642 (validation fold untouched/imbalanced)
+2026-08-12 03:42:02 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 2 fold 5 PR_AUC_macro=0.3121 AUC=0.6160 F1_macro=0.3003 QWK=0.1642 | params={'iterations': 150, 'depth': 5, 'learning_rate': 0.2095461403217968, 'l2_leaf_reg': 0.06405937340350171, 'bagging_temperature': 0.7637548783494612}
+2026-08-12 03:42:02 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 3 fold 1: class counts={0: 127459, 1: 68406, 2: 19524, 3: 2824} | imbalance_ratio=45.13 (train, post-resample (used to fit))
+2026-08-12 03:43:04 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 3 fold 1: class counts={0: 59739, 1: 40786, 2: 16123, 3: 2909} | imbalance_ratio=20.54 (validation, untouched — isolation check)
+2026-08-12 03:43:05 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 3 fold 1 AUC=0.6685 F1_macro=0.3439 PR_AUC_macro=0.3516 QWK=0.3484 (validation fold untouched/imbalanced)
+2026-08-12 03:43:05 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 3 fold 1 PR_AUC_macro=0.3516 AUC=0.6685 F1_macro=0.3439 QWK=0.3484 | params={'iterations': 117, 'depth': 10, 'learning_rate': 0.00572093386805648, 'l2_leaf_reg': 0.01217023829472703, 'bagging_temperature': 0.18567871635860744}
+2026-08-12 03:43:06 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 3 fold 2: class counts={0: 100549, 1: 61275, 2: 20175, 3: 3211} | imbalance_ratio=31.31 (train, post-resample (used to fit))
+2026-08-12 03:44:01 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 3 fold 2: class counts={0: 63663, 1: 37842, 2: 11998, 3: 1661} | imbalance_ratio=38.33 (validation, untouched — isolation check)
+2026-08-12 03:44:02 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 3 fold 2 AUC=0.6422 F1_macro=0.2954 PR_AUC_macro=0.3238 QWK=0.2504 (validation fold untouched/imbalanced)
+2026-08-12 03:44:02 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 3 fold 2 PR_AUC_macro=0.3238 AUC=0.6422 F1_macro=0.2954 QWK=0.2504 | params={'iterations': 117, 'depth': 10, 'learning_rate': 0.00572093386805648, 'l2_leaf_reg': 0.01217023829472703, 'bagging_temperature': 0.18567871635860744}
+2026-08-12 03:44:02 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 3 fold 3: class counts={0: 96934, 1: 55124, 2: 18166, 3: 3186} | imbalance_ratio=30.42 (train, post-resample (used to fit))
+2026-08-12 03:44:54 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 3 fold 3: class counts={0: 62681, 1: 34658, 2: 11203, 3: 2114} | imbalance_ratio=29.65 (validation, untouched — isolation check)
+2026-08-12 03:44:56 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 3 fold 3 AUC=0.6691 F1_macro=0.3092 PR_AUC_macro=0.3395 QWK=0.2855 (validation fold untouched/imbalanced)
+2026-08-12 03:44:56 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 3 fold 3 PR_AUC_macro=0.3395 AUC=0.6691 F1_macro=0.3092 QWK=0.2855 | params={'iterations': 117, 'depth': 10, 'learning_rate': 0.00572093386805648, 'l2_leaf_reg': 0.01217023829472703, 'bagging_temperature': 0.18567871635860744}
+2026-08-12 03:44:56 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 3 fold 4: class counts={0: 102666, 1: 54883, 2: 15072, 3: 2314} | imbalance_ratio=44.37 (train, post-resample (used to fit))
+2026-08-12 03:45:37 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 3 fold 4: class counts={0: 59670, 1: 34342, 2: 11670, 3: 1917} | imbalance_ratio=31.13 (validation, untouched — isolation check)
+2026-08-12 03:45:38 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 3 fold 4 AUC=0.6364 F1_macro=0.3256 PR_AUC_macro=0.3317 QWK=0.2726 (validation fold untouched/imbalanced)
+2026-08-12 03:45:38 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 3 fold 4 PR_AUC_macro=0.3317 AUC=0.6364 F1_macro=0.3256 QWK=0.2726 | params={'iterations': 117, 'depth': 10, 'learning_rate': 0.00572093386805648, 'l2_leaf_reg': 0.01217023829472703, 'bagging_temperature': 0.18567871635860744}
+2026-08-12 03:45:38 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 3 fold 5: class counts={0: 110310, 1: 65319, 2: 21921, 3: 3304} | imbalance_ratio=33.39 (train, post-resample (used to fit))
+2026-08-12 03:46:21 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 3 fold 5: class counts={0: 58341, 1: 34081, 2: 10264, 3: 1860} | imbalance_ratio=31.37 (validation, untouched — isolation check)
+2026-08-12 03:46:21 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 3 fold 5 AUC=0.6039 F1_macro=0.2853 PR_AUC_macro=0.3154 QWK=0.1119 (validation fold untouched/imbalanced)
+2026-08-12 03:46:21 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 3 fold 5 PR_AUC_macro=0.3154 AUC=0.6039 F1_macro=0.2853 QWK=0.1119 | params={'iterations': 117, 'depth': 10, 'learning_rate': 0.00572093386805648, 'l2_leaf_reg': 0.01217023829472703, 'bagging_temperature': 0.18567871635860744}
+2026-08-12 03:46:22 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 4 fold 1: class counts={0: 127459, 1: 68406, 2: 19524, 3: 2824} | imbalance_ratio=45.13 (train, post-resample (used to fit))
+2026-08-12 03:46:48 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 4 fold 1: class counts={0: 59739, 1: 40786, 2: 16123, 3: 2909} | imbalance_ratio=20.54 (validation, untouched — isolation check)
+2026-08-12 03:46:49 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 4 fold 1 AUC=0.6855 F1_macro=0.3528 PR_AUC_macro=0.3650 QWK=0.3546 (validation fold untouched/imbalanced)
+2026-08-12 03:46:49 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 4 fold 1 PR_AUC_macro=0.3650 AUC=0.6855 F1_macro=0.3528 QWK=0.3546 | params={'iterations': 354, 'depth': 6, 'learning_rate': 0.01915566098194145, 'l2_leaf_reg': 0.09182881023806878, 'bagging_temperature': 0.8909191461327491}
+2026-08-12 03:46:49 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 4 fold 2: class counts={0: 100549, 1: 61275, 2: 20175, 3: 3211} | imbalance_ratio=31.31 (train, post-resample (used to fit))
+2026-08-12 03:47:13 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 4 fold 2: class counts={0: 63663, 1: 37842, 2: 11998, 3: 1661} | imbalance_ratio=38.33 (validation, untouched — isolation check)
+2026-08-12 03:47:14 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 4 fold 2 AUC=0.6720 F1_macro=0.3180 PR_AUC_macro=0.3384 QWK=0.2915 (validation fold untouched/imbalanced)
+2026-08-12 03:47:14 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 4 fold 2 PR_AUC_macro=0.3384 AUC=0.6720 F1_macro=0.3180 QWK=0.2915 | params={'iterations': 354, 'depth': 6, 'learning_rate': 0.01915566098194145, 'l2_leaf_reg': 0.09182881023806878, 'bagging_temperature': 0.8909191461327491}
+2026-08-12 03:47:14 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 4 fold 3: class counts={0: 96934, 1: 55124, 2: 18166, 3: 3186} | imbalance_ratio=30.42 (train, post-resample (used to fit))
+2026-08-12 03:47:36 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 4 fold 3: class counts={0: 62681, 1: 34658, 2: 11203, 3: 2114} | imbalance_ratio=29.65 (validation, untouched — isolation check)
+2026-08-12 03:47:37 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 4 fold 3 AUC=0.6765 F1_macro=0.3253 PR_AUC_macro=0.3520 QWK=0.3332 (validation fold untouched/imbalanced)
+2026-08-12 03:47:37 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 4 fold 3 PR_AUC_macro=0.3520 AUC=0.6765 F1_macro=0.3253 QWK=0.3332 | params={'iterations': 354, 'depth': 6, 'learning_rate': 0.01915566098194145, 'l2_leaf_reg': 0.09182881023806878, 'bagging_temperature': 0.8909191461327491}
+2026-08-12 03:47:37 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 4 fold 4: class counts={0: 102666, 1: 54883, 2: 15072, 3: 2314} | imbalance_ratio=44.37 (train, post-resample (used to fit))
+2026-08-12 03:47:59 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 4 fold 4: class counts={0: 59670, 1: 34342, 2: 11670, 3: 1917} | imbalance_ratio=31.13 (validation, untouched — isolation check)
+2026-08-12 03:47:59 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 4 fold 4 AUC=0.6576 F1_macro=0.3272 PR_AUC_macro=0.3372 QWK=0.2803 (validation fold untouched/imbalanced)
+2026-08-12 03:47:59 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 4 fold 4 PR_AUC_macro=0.3372 AUC=0.6576 F1_macro=0.3272 QWK=0.2803 | params={'iterations': 354, 'depth': 6, 'learning_rate': 0.01915566098194145, 'l2_leaf_reg': 0.09182881023806878, 'bagging_temperature': 0.8909191461327491}
+2026-08-12 03:47:59 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 4 fold 5: class counts={0: 110310, 1: 65319, 2: 21921, 3: 3304} | imbalance_ratio=33.39 (train, post-resample (used to fit))
+2026-08-12 03:48:25 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 4 fold 5: class counts={0: 58341, 1: 34081, 2: 10264, 3: 1860} | imbalance_ratio=31.37 (validation, untouched — isolation check)
+2026-08-12 03:48:25 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 4 fold 5 AUC=0.6514 F1_macro=0.3088 PR_AUC_macro=0.3239 QWK=0.1694 (validation fold untouched/imbalanced)
+2026-08-12 03:48:25 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 4 fold 5 PR_AUC_macro=0.3239 AUC=0.6514 F1_macro=0.3088 QWK=0.1694 | params={'iterations': 354, 'depth': 6, 'learning_rate': 0.01915566098194145, 'l2_leaf_reg': 0.09182881023806878, 'bagging_temperature': 0.8909191461327491}
+2026-08-12 03:48:26 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 5 fold 1: class counts={0: 127459, 1: 68406, 2: 19524, 3: 2824} | imbalance_ratio=45.13 (train, post-resample (used to fit))
+2026-08-12 03:49:07 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 5 fold 1: class counts={0: 59739, 1: 40786, 2: 16123, 3: 2909} | imbalance_ratio=20.54 (validation, untouched — isolation check)
+2026-08-12 03:49:08 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 5 fold 1 AUC=0.6808 F1_macro=0.3632 PR_AUC_macro=0.3668 QWK=0.3639 (validation fold untouched/imbalanced)
+2026-08-12 03:49:08 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 5 fold 1 PR_AUC_macro=0.3668 AUC=0.6808 F1_macro=0.3632 QWK=0.3639 | params={'iterations': 790, 'depth': 3, 'learning_rate': 0.017443604837597396, 'l2_leaf_reg': 1.2412545687105996, 'bagging_temperature': 0.8520505263111401}
+2026-08-12 03:49:08 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 5 fold 2: class counts={0: 100549, 1: 61275, 2: 20175, 3: 3211} | imbalance_ratio=31.31 (train, post-resample (used to fit))
+2026-08-12 03:49:46 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 5 fold 2: class counts={0: 63663, 1: 37842, 2: 11998, 3: 1661} | imbalance_ratio=38.33 (validation, untouched — isolation check)
+2026-08-12 03:49:47 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 5 fold 2 AUC=0.6634 F1_macro=0.3150 PR_AUC_macro=0.3354 QWK=0.2877 (validation fold untouched/imbalanced)
+2026-08-12 03:49:47 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 5 fold 2 PR_AUC_macro=0.3354 AUC=0.6634 F1_macro=0.3150 QWK=0.2877 | params={'iterations': 790, 'depth': 3, 'learning_rate': 0.017443604837597396, 'l2_leaf_reg': 1.2412545687105996, 'bagging_temperature': 0.8520505263111401}
+2026-08-12 03:49:47 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 5 fold 3: class counts={0: 96934, 1: 55124, 2: 18166, 3: 3186} | imbalance_ratio=30.42 (train, post-resample (used to fit))
+2026-08-12 03:50:25 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 5 fold 3: class counts={0: 62681, 1: 34658, 2: 11203, 3: 2114} | imbalance_ratio=29.65 (validation, untouched — isolation check)
+2026-08-12 03:50:25 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 5 fold 3 AUC=0.6737 F1_macro=0.3436 PR_AUC_macro=0.3546 QWK=0.3478 (validation fold untouched/imbalanced)
+2026-08-12 03:50:25 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 5 fold 3 PR_AUC_macro=0.3546 AUC=0.6737 F1_macro=0.3436 QWK=0.3478 | params={'iterations': 790, 'depth': 3, 'learning_rate': 0.017443604837597396, 'l2_leaf_reg': 1.2412545687105996, 'bagging_temperature': 0.8520505263111401}
+2026-08-12 03:50:26 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 5 fold 4: class counts={0: 102666, 1: 54883, 2: 15072, 3: 2314} | imbalance_ratio=44.37 (train, post-resample (used to fit))
+2026-08-12 03:51:02 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 5 fold 4: class counts={0: 59670, 1: 34342, 2: 11670, 3: 1917} | imbalance_ratio=31.13 (validation, untouched — isolation check)
+2026-08-12 03:51:03 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 5 fold 4 AUC=0.6584 F1_macro=0.3169 PR_AUC_macro=0.3313 QWK=0.2554 (validation fold untouched/imbalanced)
+2026-08-12 03:51:03 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 5 fold 4 PR_AUC_macro=0.3313 AUC=0.6584 F1_macro=0.3169 QWK=0.2554 | params={'iterations': 790, 'depth': 3, 'learning_rate': 0.017443604837597396, 'l2_leaf_reg': 1.2412545687105996, 'bagging_temperature': 0.8520505263111401}
+2026-08-12 03:51:03 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 5 fold 5: class counts={0: 110310, 1: 65319, 2: 21921, 3: 3304} | imbalance_ratio=33.39 (train, post-resample (used to fit))
+2026-08-12 03:51:47 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 5 fold 5: class counts={0: 58341, 1: 34081, 2: 10264, 3: 1860} | imbalance_ratio=31.37 (validation, untouched — isolation check)
+2026-08-12 03:51:48 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 5 fold 5 AUC=0.6816 F1_macro=0.3416 PR_AUC_macro=0.3417 QWK=0.2996 (validation fold untouched/imbalanced)
+2026-08-12 03:51:48 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 5 fold 5 PR_AUC_macro=0.3417 AUC=0.6816 F1_macro=0.3416 QWK=0.2996 | params={'iterations': 790, 'depth': 3, 'learning_rate': 0.017443604837597396, 'l2_leaf_reg': 1.2412545687105996, 'bagging_temperature': 0.8520505263111401}
+2026-08-12 03:51:48 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 6 fold 1: class counts={0: 127459, 1: 68406, 2: 19524, 3: 2824} | imbalance_ratio=45.13 (train, post-resample (used to fit))
+2026-08-12 03:52:39 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 6 fold 1: class counts={0: 59739, 1: 40786, 2: 16123, 3: 2909} | imbalance_ratio=20.54 (validation, untouched — isolation check)
+2026-08-12 03:52:40 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 6 fold 1 AUC=0.6816 F1_macro=0.3496 PR_AUC_macro=0.3627 QWK=0.3535 (validation fold untouched/imbalanced)
+2026-08-12 03:52:40 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 6 fold 1 PR_AUC_macro=0.3627 AUC=0.6816 F1_macro=0.3496 QWK=0.3535 | params={'iterations': 530, 'depth': 7, 'learning_rate': 0.0074001317048619, 'l2_leaf_reg': 0.11622542212668453, 'bagging_temperature': 0.1432955699314713}
+2026-08-12 03:52:40 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 6 fold 2: class counts={0: 100549, 1: 61275, 2: 20175, 3: 3211} | imbalance_ratio=31.31 (train, post-resample (used to fit))
+2026-08-12 03:53:38 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 6 fold 2: class counts={0: 63663, 1: 37842, 2: 11998, 3: 1661} | imbalance_ratio=38.33 (validation, untouched — isolation check)
+2026-08-12 03:53:39 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 6 fold 2 AUC=0.6701 F1_macro=0.3127 PR_AUC_macro=0.3350 QWK=0.2898 (validation fold untouched/imbalanced)
+2026-08-12 03:53:39 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 6 fold 2 PR_AUC_macro=0.3350 AUC=0.6701 F1_macro=0.3127 QWK=0.2898 | params={'iterations': 530, 'depth': 7, 'learning_rate': 0.0074001317048619, 'l2_leaf_reg': 0.11622542212668453, 'bagging_temperature': 0.1432955699314713}
+2026-08-12 03:53:39 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 6 fold 3: class counts={0: 96934, 1: 55124, 2: 18166, 3: 3186} | imbalance_ratio=30.42 (train, post-resample (used to fit))
+2026-08-12 03:54:43 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 6 fold 3: class counts={0: 62681, 1: 34658, 2: 11203, 3: 2114} | imbalance_ratio=29.65 (validation, untouched — isolation check)
+2026-08-12 03:54:44 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 6 fold 3 AUC=0.6825 F1_macro=0.3344 PR_AUC_macro=0.3533 QWK=0.3425 (validation fold untouched/imbalanced)
+2026-08-12 03:54:44 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 6 fold 3 PR_AUC_macro=0.3533 AUC=0.6825 F1_macro=0.3344 QWK=0.3425 | params={'iterations': 530, 'depth': 7, 'learning_rate': 0.0074001317048619, 'l2_leaf_reg': 0.11622542212668453, 'bagging_temperature': 0.1432955699314713}
+2026-08-12 03:54:44 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 6 fold 4: class counts={0: 102666, 1: 54883, 2: 15072, 3: 2314} | imbalance_ratio=44.37 (train, post-resample (used to fit))
+2026-08-12 03:55:44 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 6 fold 4: class counts={0: 59670, 1: 34342, 2: 11670, 3: 1917} | imbalance_ratio=31.13 (validation, untouched — isolation check)
+2026-08-12 03:55:46 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 6 fold 4 AUC=0.6547 F1_macro=0.3305 PR_AUC_macro=0.3373 QWK=0.2880 (validation fold untouched/imbalanced)
+2026-08-12 03:55:46 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 6 fold 4 PR_AUC_macro=0.3373 AUC=0.6547 F1_macro=0.3305 QWK=0.2880 | params={'iterations': 530, 'depth': 7, 'learning_rate': 0.0074001317048619, 'l2_leaf_reg': 0.11622542212668453, 'bagging_temperature': 0.1432955699314713}
+2026-08-12 03:55:46 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 6 fold 5: class counts={0: 110310, 1: 65319, 2: 21921, 3: 3304} | imbalance_ratio=33.39 (train, post-resample (used to fit))
+2026-08-12 03:56:57 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 6 fold 5: class counts={0: 58341, 1: 34081, 2: 10264, 3: 1860} | imbalance_ratio=31.37 (validation, untouched — isolation check)
+2026-08-12 03:56:58 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 6 fold 5 AUC=0.6454 F1_macro=0.3042 PR_AUC_macro=0.3220 QWK=0.1844 (validation fold untouched/imbalanced)
+2026-08-12 03:56:58 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 6 fold 5 PR_AUC_macro=0.3220 AUC=0.6454 F1_macro=0.3042 QWK=0.1844 | params={'iterations': 530, 'depth': 7, 'learning_rate': 0.0074001317048619, 'l2_leaf_reg': 0.11622542212668453, 'bagging_temperature': 0.1432955699314713}
+2026-08-12 03:56:59 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 7 fold 1: class counts={0: 127459, 1: 68406, 2: 19524, 3: 2824} | imbalance_ratio=45.13 (train, post-resample (used to fit))
+2026-08-12 03:57:19 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 7 fold 1: class counts={0: 59739, 1: 40786, 2: 16123, 3: 2909} | imbalance_ratio=20.54 (validation, untouched — isolation check)
+2026-08-12 03:57:20 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 7 fold 1 AUC=0.6768 F1_macro=0.3531 PR_AUC_macro=0.3607 QWK=0.3515 (validation fold untouched/imbalanced)
+2026-08-12 03:57:20 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 7 fold 1 PR_AUC_macro=0.3607 AUC=0.6768 F1_macro=0.3531 QWK=0.3515 | params={'iterations': 231, 'depth': 4, 'learning_rate': 0.017096129074551335, 'l2_leaf_reg': 0.539462417029198, 'bagging_temperature': 0.04836748920022438}
+2026-08-12 03:57:20 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 7 fold 2: class counts={0: 100549, 1: 61275, 2: 20175, 3: 3211} | imbalance_ratio=31.31 (train, post-resample (used to fit))
+2026-08-12 03:57:39 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 7 fold 2: class counts={0: 63663, 1: 37842, 2: 11998, 3: 1661} | imbalance_ratio=38.33 (validation, untouched — isolation check)
+2026-08-12 03:57:39 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 7 fold 2 AUC=0.6692 F1_macro=0.3149 PR_AUC_macro=0.3329 QWK=0.2697 (validation fold untouched/imbalanced)
+2026-08-12 03:57:39 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 7 fold 2 PR_AUC_macro=0.3329 AUC=0.6692 F1_macro=0.3149 QWK=0.2697 | params={'iterations': 231, 'depth': 4, 'learning_rate': 0.017096129074551335, 'l2_leaf_reg': 0.539462417029198, 'bagging_temperature': 0.04836748920022438}
+2026-08-12 03:57:40 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 7 fold 3: class counts={0: 96934, 1: 55124, 2: 18166, 3: 3186} | imbalance_ratio=30.42 (train, post-resample (used to fit))
+2026-08-12 03:57:57 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 7 fold 3: class counts={0: 62681, 1: 34658, 2: 11203, 3: 2114} | imbalance_ratio=29.65 (validation, untouched — isolation check)
+2026-08-12 03:57:58 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 7 fold 3 AUC=0.6897 F1_macro=0.3405 PR_AUC_macro=0.3578 QWK=0.3321 (validation fold untouched/imbalanced)
+2026-08-12 03:57:58 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 7 fold 3 PR_AUC_macro=0.3578 AUC=0.6897 F1_macro=0.3405 QWK=0.3321 | params={'iterations': 231, 'depth': 4, 'learning_rate': 0.017096129074551335, 'l2_leaf_reg': 0.539462417029198, 'bagging_temperature': 0.04836748920022438}
+2026-08-12 03:57:58 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 7 fold 4: class counts={0: 102666, 1: 54883, 2: 15072, 3: 2314} | imbalance_ratio=44.37 (train, post-resample (used to fit))
+2026-08-12 03:58:15 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 7 fold 4: class counts={0: 59670, 1: 34342, 2: 11670, 3: 1917} | imbalance_ratio=31.13 (validation, untouched — isolation check)
+2026-08-12 03:58:16 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 7 fold 4 AUC=0.6582 F1_macro=0.3230 PR_AUC_macro=0.3328 QWK=0.2591 (validation fold untouched/imbalanced)
+2026-08-12 03:58:16 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 7 fold 4 PR_AUC_macro=0.3328 AUC=0.6582 F1_macro=0.3230 QWK=0.2591 | params={'iterations': 231, 'depth': 4, 'learning_rate': 0.017096129074551335, 'l2_leaf_reg': 0.539462417029198, 'bagging_temperature': 0.04836748920022438}
+2026-08-12 03:58:16 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 7 fold 5: class counts={0: 110310, 1: 65319, 2: 21921, 3: 3304} | imbalance_ratio=33.39 (train, post-resample (used to fit))
+2026-08-12 03:58:35 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 7 fold 5: class counts={0: 58341, 1: 34081, 2: 10264, 3: 1860} | imbalance_ratio=31.37 (validation, untouched — isolation check)
+2026-08-12 03:58:36 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 7 fold 5 AUC=0.6599 F1_macro=0.3181 PR_AUC_macro=0.3222 QWK=0.2589 (validation fold untouched/imbalanced)
+2026-08-12 03:58:36 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 7 fold 5 PR_AUC_macro=0.3222 AUC=0.6599 F1_macro=0.3181 QWK=0.2589 | params={'iterations': 231, 'depth': 4, 'learning_rate': 0.017096129074551335, 'l2_leaf_reg': 0.539462417029198, 'bagging_temperature': 0.04836748920022438}
+2026-08-12 03:58:37 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 8 fold 1: class counts={0: 127459, 1: 68406, 2: 19524, 3: 2824} | imbalance_ratio=45.13 (train, post-resample (used to fit))
+2026-08-12 04:00:33 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 8 fold 1: class counts={0: 59739, 1: 40786, 2: 16123, 3: 2909} | imbalance_ratio=20.54 (validation, untouched — isolation check)
+2026-08-12 04:00:34 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 8 fold 1 AUC=0.6397 F1_macro=0.2469 PR_AUC_macro=0.3305 QWK=0.0723 (validation fold untouched/imbalanced)
+2026-08-12 04:00:34 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 8 fold 1 PR_AUC_macro=0.3305 AUC=0.6397 F1_macro=0.2469 QWK=0.0723 | params={'iterations': 217, 'depth': 10, 'learning_rate': 0.24990591217180982, 'l2_leaf_reg': 0.10639290305546696, 'bagging_temperature': 0.21624119657877117}
+2026-08-12 04:00:34 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 8 fold 2: class counts={0: 100549, 1: 61275, 2: 20175, 3: 3211} | imbalance_ratio=31.31 (train, post-resample (used to fit))
+2026-08-12 04:02:19 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 8 fold 2: class counts={0: 63663, 1: 37842, 2: 11998, 3: 1661} | imbalance_ratio=38.33 (validation, untouched — isolation check)
+2026-08-12 04:02:20 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 8 fold 2 AUC=0.6288 F1_macro=0.2631 PR_AUC_macro=0.3175 QWK=0.0921 (validation fold untouched/imbalanced)
+2026-08-12 04:02:20 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 8 fold 2 PR_AUC_macro=0.3175 AUC=0.6288 F1_macro=0.2631 QWK=0.0921 | params={'iterations': 217, 'depth': 10, 'learning_rate': 0.24990591217180982, 'l2_leaf_reg': 0.10639290305546696, 'bagging_temperature': 0.21624119657877117}
+2026-08-12 04:02:20 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 9 fold 1: class counts={0: 127459, 1: 68406, 2: 19524, 3: 2824} | imbalance_ratio=45.13 (train, post-resample (used to fit))
+2026-08-12 04:03:25 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 9 fold 1: class counts={0: 59739, 1: 40786, 2: 16123, 3: 2909} | imbalance_ratio=20.54 (validation, untouched — isolation check)
+2026-08-12 04:03:26 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 9 fold 1 AUC=0.6735 F1_macro=0.3457 PR_AUC_macro=0.3604 QWK=0.3491 (validation fold untouched/imbalanced)
+2026-08-12 04:03:26 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 9 fold 1 PR_AUC_macro=0.3604 AUC=0.6735 F1_macro=0.3457 QWK=0.3491 | params={'iterations': 644, 'depth': 5, 'learning_rate': 0.004041988533133048, 'l2_leaf_reg': 2.335074189810048, 'bagging_temperature': 0.7726280235971206}
+2026-08-12 04:03:26 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 9 fold 2: class counts={0: 100549, 1: 61275, 2: 20175, 3: 3211} | imbalance_ratio=31.31 (train, post-resample (used to fit))
+2026-08-12 07:07:57 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 9 fold 2: class counts={0: 63663, 1: 37842, 2: 11998, 3: 1661} | imbalance_ratio=38.33 (validation, untouched — isolation check)
+2026-08-12 07:07:57 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 9 fold 2 AUC=0.6704 F1_macro=0.3074 PR_AUC_macro=0.3339 QWK=0.2748 (validation fold untouched/imbalanced)
+2026-08-12 07:07:58 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 9 fold 2 PR_AUC_macro=0.3339 AUC=0.6704 F1_macro=0.3074 QWK=0.2748 | params={'iterations': 644, 'depth': 5, 'learning_rate': 0.004041988533133048, 'l2_leaf_reg': 2.335074189810048, 'bagging_temperature': 0.7726280235971206}
+2026-08-12 07:07:58 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 9 fold 3: class counts={0: 96934, 1: 55124, 2: 18166, 3: 3186} | imbalance_ratio=30.42 (train, post-resample (used to fit))
+2026-08-12 07:08:17 - wildfire_susceptibility - INFO - Logger initialized: wildfire_susceptibility
+2026-08-12 07:08:17 - wildfire_susceptibility - INFO - === Running stage: static ===
+2026-08-12 07:08:17 - wildfire_susceptibility - INFO - [stage_static] Building static features...
+2026-08-12 07:08:17 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] BoundaryBuilder: outputs already exist, skipping computation
+2026-08-12 07:08:17 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] TopographyBuilder: outputs already exist, skipping computation
+2026-08-12 07:08:17 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] ProximityBuilder: outputs already exist, skipping computation
+2026-08-12 07:08:17 - wildfire_susceptibility - INFO - [stage_static] Complete — 9 output path(s).
+2026-08-12 07:08:17 - wildfire_susceptibility - INFO - === Stage complete: static ===
+2026-08-12 07:08:17 - wildfire_susceptibility - INFO - === Running stage: seasonal ===
+2026-08-12 07:08:17 - wildfire_susceptibility - INFO - [stage_seasonal] [summer] Building seasonal features...
+2026-08-12 07:08:17 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] ClimateBuilder[summer][train]: outputs already exist, skipping computation
+2026-08-12 07:08:17 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] VegetationBuilder[summer][train]: outputs already exist, skipping computation
+2026-08-12 07:08:17 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] ClimateBuilder[summer][test]: outputs already exist, skipping computation
+2026-08-12 07:08:17 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] VegetationBuilder[summer][test]: outputs already exist, skipping computation
+2026-08-12 07:08:17 - wildfire_susceptibility - INFO - === Stage complete: seasonal ===
+2026-08-12 07:08:17 - wildfire_susceptibility - INFO - === Running stage: labels ===
+2026-08-12 07:08:17 - wildfire_susceptibility - INFO - [stage_labels] [summer] Building fire labels...
+2026-08-12 07:08:17 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] FireBuilder[summer]: outputs already exist, skipping computation
+2026-08-12 07:08:18 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[kde][summer_train]: outputs already exist, skipping computation
+2026-08-12 07:08:18 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[kde][jenks][summer_train]: outputs already exist, skipping computation
+2026-08-12 07:08:18 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[kde][summer_test]: outputs already exist, skipping computation
+2026-08-12 07:08:18 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[kde][jenks][summer_test]: outputs already exist, skipping computation
+2026-08-12 07:08:19 - wildfire_susceptibility.pipeline.stage_labels - INFO - [stage_labels] [summer] comparison run: classify_method='jenks'
+2026-08-12 07:08:19 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[kde][summer_train]: outputs already exist, skipping computation
+2026-08-12 07:08:19 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[kde][jenks][summer_train]: outputs already exist, skipping computation
+2026-08-12 07:08:19 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[kde][summer_test]: outputs already exist, skipping computation
+2026-08-12 07:08:19 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[kde][jenks][summer_test]: outputs already exist, skipping computation
+2026-08-12 07:08:20 - wildfire_susceptibility.pipeline.stage_labels - INFO - [stage_labels] [summer] comparison run: classify_method='gmm'
+2026-08-12 07:08:20 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[kde][summer_train]: outputs already exist, skipping computation
+2026-08-12 07:08:20 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[kde][gmm][summer_train]: outputs already exist, skipping computation
+2026-08-12 07:08:20 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[kde][summer_test]: outputs already exist, skipping computation
+2026-08-12 07:08:20 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[kde][gmm][summer_test]: outputs already exist, skipping computation
+2026-08-12 07:08:20 - wildfire_susceptibility - INFO - === Stage complete: labels ===
+2026-08-12 07:08:20 - wildfire_susceptibility - INFO - === Running stage: integration ===
+2026-08-12 07:08:20 - wildfire_susceptibility - INFO - [stage_integration] [CACHED] summer/train -> dataset_train_summer.csv
+2026-08-12 07:08:20 - wildfire_susceptibility - INFO - [stage_integration] [CACHED] summer/test -> dataset_test_summer.csv
+2026-08-12 07:08:20 - wildfire_susceptibility - INFO - === Stage complete: integration ===
+2026-08-12 07:08:20 - wildfire_susceptibility - INFO - === Running stage: preprocessing ===
+2026-08-12 07:08:20 - wildfire_susceptibility - INFO - [stage_preprocessing] [CACHED] summer -> dataset_train_summer_clean.csv, dataset_test_summer_clean.csv
+2026-08-12 07:08:20 - wildfire_susceptibility - INFO - === Stage complete: preprocessing ===
+2026-08-12 07:08:20 - wildfire_susceptibility - INFO - === Running stage: train ===
+2026-08-12 07:08:20 - wildfire_susceptibility - INFO - [stage_train] [summer] Loading cleaned datasets...
+2026-08-12 07:08:24 - wildfire_susceptibility.modeling.dataset_prep - INFO - Assigned 1,061,566 rows to 255 spatial blocks (4 km grid)
+2026-08-12 07:08:24 - wildfire_susceptibility - INFO - [stage_train] [summer][catboost] Search + refit...
+2026-08-12 07:08:25 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] block search subsample: 557,522/1,061,566 rows across 73 block(s) (73 force-kept for rarest class 3.0)
+2026-08-12 07:08:25 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] block search subsample: class counts={0: 304094, 1: 181709, 2: 61258, 3: 10461} | imbalance_ratio=29.07
+2026-08-12 07:08:26 - wildfire_susceptibility.modeling.cv.base - INFO - [stratified_spatial_block] spatial buffer (4000m, radius=1 block(s)): dropped 219,752/437,965 train rows within the buffer ring of this fold's test blocks
+2026-08-12 07:08:26 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [stratified_spatial_block] fold 0 (validation, untouched): class counts={0: 59739, 1: 40786, 2: 16123, 3: 2909} | imbalance_ratio=20.54
+2026-08-12 07:08:26 - wildfire_susceptibility.modeling.cv.base - INFO - [stratified_spatial_block] spatial buffer (4000m, radius=1 block(s)): dropped 257,148/442,358 train rows within the buffer ring of this fold's test blocks
+2026-08-12 07:08:26 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [stratified_spatial_block] fold 1 (validation, untouched): class counts={0: 63663, 1: 37842, 2: 11998, 3: 1661} | imbalance_ratio=38.33
+2026-08-12 07:08:27 - wildfire_susceptibility.modeling.cv.base - INFO - [stratified_spatial_block] spatial buffer (4000m, radius=1 block(s)): dropped 273,456/446,866 train rows within the buffer ring of this fold's test blocks
+2026-08-12 07:08:27 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [stratified_spatial_block] fold 2 (validation, untouched): class counts={0: 62681, 1: 34658, 2: 11203, 3: 2114} | imbalance_ratio=29.65
+2026-08-12 07:08:28 - wildfire_susceptibility.modeling.cv.base - INFO - [stratified_spatial_block] spatial buffer (4000m, radius=1 block(s)): dropped 274,988/449,923 train rows within the buffer ring of this fold's test blocks
+2026-08-12 07:08:28 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [stratified_spatial_block] fold 3 (validation, untouched): class counts={0: 59670, 1: 34342, 2: 11670, 3: 1917} | imbalance_ratio=31.13
+2026-08-12 07:08:28 - wildfire_susceptibility.modeling.cv.base - INFO - [stratified_spatial_block] spatial buffer (4000m, radius=1 block(s)): dropped 252,122/452,976 train rows within the buffer ring of this fold's test blocks
+2026-08-12 07:08:28 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [stratified_spatial_block] fold 4 (validation, untouched): class counts={0: 58341, 1: 34081, 2: 10264, 3: 1860} | imbalance_ratio=31.37
+2026-08-12 07:08:28 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [stratified_spatial_block] class 0.0 proportion across folds: [np.float64(0.5), np.float64(0.553), np.float64(0.566), np.float64(0.555), np.float64(0.558)] (spread=0.067)
+2026-08-12 07:08:28 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [stratified_spatial_block] class 1.0 proportion across folds: [np.float64(0.341), np.float64(0.329), np.float64(0.313), np.float64(0.319), np.float64(0.326)] (spread=0.028)
+2026-08-12 07:08:28 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [stratified_spatial_block] class 2.0 proportion across folds: [np.float64(0.135), np.float64(0.104), np.float64(0.101), np.float64(0.108), np.float64(0.098)] (spread=0.037)
+2026-08-12 07:08:28 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [stratified_spatial_block] class 3.0 proportion across folds: [np.float64(0.024), np.float64(0.014), np.float64(0.019), np.float64(0.018), np.float64(0.018)] (spread=0.010)
+2026-08-12 07:08:28 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] removing 1 incomplete trial(s) from a previous run: [9]
+2026-08-12 07:08:28 - wildfire_susceptibility.modeling.training.search - WARNING - Could not mark trial 9 as FAILED: Cannot tell a FAIL trial.
+2026-08-12 07:08:29 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] finished=9 target=30 remaining=21
+2026-08-12 07:08:29 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 10 fold 1: class counts={0: 127459, 1: 68406, 2: 19524, 3: 2824} | imbalance_ratio=45.13 (train, post-resample (used to fit))
+2026-08-12 07:08:53 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 10 fold 1: class counts={0: 59739, 1: 40786, 2: 16123, 3: 2909} | imbalance_ratio=20.54 (validation, untouched — isolation check)
+2026-08-12 07:08:53 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 10 fold 1 AUC=0.6817 F1_macro=0.3655 PR_AUC_macro=0.3669 QWK=0.3770 (validation fold untouched/imbalanced)
+2026-08-12 07:08:53 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 10 fold 1 PR_AUC_macro=0.3669 AUC=0.6817 F1_macro=0.3655 QWK=0.3770 | params={'iterations': 419, 'depth': 4, 'learning_rate': 0.020888056931070518, 'l2_leaf_reg': 0.24432802883086377, 'bagging_temperature': 0.5860502219889548}
+2026-08-12 07:08:53 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 10 fold 2: class counts={0: 100549, 1: 61275, 2: 20175, 3: 3211} | imbalance_ratio=31.31 (train, post-resample (used to fit))
+2026-08-12 07:09:15 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 10 fold 2: class counts={0: 63663, 1: 37842, 2: 11998, 3: 1661} | imbalance_ratio=38.33 (validation, untouched — isolation check)
+2026-08-12 07:09:15 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 10 fold 2 AUC=0.6699 F1_macro=0.3169 PR_AUC_macro=0.3356 QWK=0.2922 (validation fold untouched/imbalanced)
+2026-08-12 07:09:15 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 10 fold 2 PR_AUC_macro=0.3356 AUC=0.6699 F1_macro=0.3169 QWK=0.2922 | params={'iterations': 419, 'depth': 4, 'learning_rate': 0.020888056931070518, 'l2_leaf_reg': 0.24432802883086377, 'bagging_temperature': 0.5860502219889548}
+2026-08-12 07:09:15 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 10 fold 3: class counts={0: 96934, 1: 55124, 2: 18166, 3: 3186} | imbalance_ratio=30.42 (train, post-resample (used to fit))
+2026-08-12 07:09:36 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 10 fold 3: class counts={0: 62681, 1: 34658, 2: 11203, 3: 2114} | imbalance_ratio=29.65 (validation, untouched — isolation check)
+2026-08-12 07:09:37 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 10 fold 3 AUC=0.6774 F1_macro=0.3401 PR_AUC_macro=0.3545 QWK=0.3469 (validation fold untouched/imbalanced)
+2026-08-12 07:09:37 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 10 fold 3 PR_AUC_macro=0.3545 AUC=0.6774 F1_macro=0.3401 QWK=0.3469 | params={'iterations': 419, 'depth': 4, 'learning_rate': 0.020888056931070518, 'l2_leaf_reg': 0.24432802883086377, 'bagging_temperature': 0.5860502219889548}
+2026-08-12 07:09:37 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 10 fold 4: class counts={0: 102666, 1: 54883, 2: 15072, 3: 2314} | imbalance_ratio=44.37 (train, post-resample (used to fit))
+2026-08-12 07:09:57 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 10 fold 4: class counts={0: 59670, 1: 34342, 2: 11670, 3: 1917} | imbalance_ratio=31.13 (validation, untouched — isolation check)
+2026-08-12 07:09:57 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 10 fold 4 AUC=0.6574 F1_macro=0.3175 PR_AUC_macro=0.3324 QWK=0.2592 (validation fold untouched/imbalanced)
+2026-08-12 07:09:57 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 10 fold 4 PR_AUC_macro=0.3324 AUC=0.6574 F1_macro=0.3175 QWK=0.2592 | params={'iterations': 419, 'depth': 4, 'learning_rate': 0.020888056931070518, 'l2_leaf_reg': 0.24432802883086377, 'bagging_temperature': 0.5860502219889548}
+2026-08-12 07:09:57 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 10 fold 5: class counts={0: 110310, 1: 65319, 2: 21921, 3: 3304} | imbalance_ratio=33.39 (train, post-resample (used to fit))
+2026-08-12 07:10:20 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 10 fold 5: class counts={0: 58341, 1: 34081, 2: 10264, 3: 1860} | imbalance_ratio=31.37 (validation, untouched — isolation check)
+2026-08-12 07:10:20 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 10 fold 5 AUC=0.6748 F1_macro=0.3339 PR_AUC_macro=0.3336 QWK=0.2979 (validation fold untouched/imbalanced)
+2026-08-12 07:10:20 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 10 fold 5 PR_AUC_macro=0.3336 AUC=0.6748 F1_macro=0.3339 QWK=0.2979 | params={'iterations': 419, 'depth': 4, 'learning_rate': 0.020888056931070518, 'l2_leaf_reg': 0.24432802883086377, 'bagging_temperature': 0.5860502219889548}
+2026-08-12 07:10:20 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 11 fold 1: class counts={0: 127459, 1: 68406, 2: 19524, 3: 2824} | imbalance_ratio=45.13 (train, post-resample (used to fit))
+2026-08-12 07:12:29 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 11 fold 1: class counts={0: 59739, 1: 40786, 2: 16123, 3: 2909} | imbalance_ratio=20.54 (validation, untouched — isolation check)
+2026-08-12 07:12:29 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 11 fold 1 AUC=0.6687 F1_macro=0.3499 PR_AUC_macro=0.3546 QWK=0.3536 (validation fold untouched/imbalanced)
+2026-08-12 07:12:29 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 11 fold 1 PR_AUC_macro=0.3546 AUC=0.6687 F1_macro=0.3499 QWK=0.3536 | params={'iterations': 769, 'depth': 8, 'learning_rate': 0.0013116153530870777, 'l2_leaf_reg': 7.438729510226199, 'bagging_temperature': 0.4133558857114928}
+2026-08-12 07:12:29 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 11 fold 2: class counts={0: 100549, 1: 61275, 2: 20175, 3: 3211} | imbalance_ratio=31.31 (train, post-resample (used to fit))
+2026-08-12 07:25:16 - wildfire_susceptibility - INFO - Logger initialized: wildfire_susceptibility
+2026-08-12 07:25:16 - wildfire_susceptibility - INFO - === Running stage: static ===
+2026-08-12 07:25:16 - wildfire_susceptibility - INFO - [stage_static] Building static features...
+2026-08-12 07:25:16 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] BoundaryBuilder: outputs already exist, skipping computation
+2026-08-12 07:25:16 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] TopographyBuilder: outputs already exist, skipping computation
+2026-08-12 07:25:16 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] ProximityBuilder: outputs already exist, skipping computation
+2026-08-12 07:25:16 - wildfire_susceptibility - INFO - [stage_static] Complete — 9 output path(s).
+2026-08-12 07:25:16 - wildfire_susceptibility - INFO - === Stage complete: static ===
+2026-08-12 07:25:16 - wildfire_susceptibility - INFO - === Running stage: seasonal ===
+2026-08-12 07:25:16 - wildfire_susceptibility - INFO - [stage_seasonal] [summer] Building seasonal features...
+2026-08-12 07:25:16 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] ClimateBuilder[summer][train]: outputs already exist, skipping computation
+2026-08-12 07:25:16 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] VegetationBuilder[summer][train]: outputs already exist, skipping computation
+2026-08-12 07:25:16 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] ClimateBuilder[summer][test]: outputs already exist, skipping computation
+2026-08-12 07:25:16 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] VegetationBuilder[summer][test]: outputs already exist, skipping computation
+2026-08-12 07:25:16 - wildfire_susceptibility - INFO - === Stage complete: seasonal ===
+2026-08-12 07:25:16 - wildfire_susceptibility - INFO - === Running stage: labels ===
+2026-08-12 07:25:16 - wildfire_susceptibility - INFO - [stage_labels] [summer] Building fire labels...
+2026-08-12 07:25:16 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] FireBuilder[summer]: outputs already exist, skipping computation
+2026-08-12 07:25:16 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[kde][summer_train]: outputs already exist, skipping computation
+2026-08-12 07:25:16 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[kde][jenks][summer_train]: outputs already exist, skipping computation
+2026-08-12 07:25:16 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[kde][summer_test]: outputs already exist, skipping computation
+2026-08-12 07:25:16 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[kde][jenks][summer_test]: outputs already exist, skipping computation
+2026-08-12 07:25:16 - wildfire_susceptibility - INFO - === Stage complete: labels ===
+2026-08-12 07:25:16 - wildfire_susceptibility - INFO - === Running stage: integration ===
+2026-08-12 07:25:16 - wildfire_susceptibility - INFO - [stage_integration] [CACHED] summer/train -> dataset_train_summer.csv
+2026-08-12 07:25:16 - wildfire_susceptibility - INFO - [stage_integration] [CACHED] summer/test -> dataset_test_summer.csv
+2026-08-12 07:25:16 - wildfire_susceptibility - INFO - === Stage complete: integration ===
+2026-08-12 07:25:16 - wildfire_susceptibility - INFO - === Running stage: preprocessing ===
+2026-08-12 07:25:16 - wildfire_susceptibility - INFO - [stage_preprocessing] [CACHED] summer -> dataset_train_summer_clean.csv, dataset_test_summer_clean.csv
+2026-08-12 07:25:16 - wildfire_susceptibility - INFO - === Stage complete: preprocessing ===
+2026-08-12 07:25:16 - wildfire_susceptibility - INFO - === Running stage: train ===
+2026-08-12 07:25:19 - wildfire_susceptibility - INFO - [stage_train] [summer] Loading cleaned datasets...
+2026-08-12 07:25:25 - wildfire_susceptibility.modeling.dataset_prep - INFO - Assigned 1,061,566 rows to 255 spatial blocks (4 km grid)
+2026-08-12 07:25:25 - wildfire_susceptibility - INFO - [stage_train] [summer][catboost] Search + refit...
+2026-08-12 07:25:26 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] block search subsample: 557,522/1,061,566 rows across 73 block(s) (73 force-kept for rarest class 3.0)
+2026-08-12 07:25:26 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] block search subsample: class counts={0: 304094, 1: 181709, 2: 61258, 3: 10461} | imbalance_ratio=29.07
+2026-08-12 07:25:27 - wildfire_susceptibility.modeling.cv.base - INFO - [stratified_spatial_block] spatial buffer (4000m, radius=1 block(s)): dropped 219,752/437,965 train rows within the buffer ring of this fold's test blocks
+2026-08-12 07:25:27 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [stratified_spatial_block] fold 0 (validation, untouched): class counts={0: 59739, 1: 40786, 2: 16123, 3: 2909} | imbalance_ratio=20.54
+2026-08-12 07:25:28 - wildfire_susceptibility.modeling.cv.base - INFO - [stratified_spatial_block] spatial buffer (4000m, radius=1 block(s)): dropped 257,148/442,358 train rows within the buffer ring of this fold's test blocks
+2026-08-12 07:25:28 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [stratified_spatial_block] fold 1 (validation, untouched): class counts={0: 63663, 1: 37842, 2: 11998, 3: 1661} | imbalance_ratio=38.33
+2026-08-12 07:25:29 - wildfire_susceptibility.modeling.cv.base - INFO - [stratified_spatial_block] spatial buffer (4000m, radius=1 block(s)): dropped 273,456/446,866 train rows within the buffer ring of this fold's test blocks
+2026-08-12 07:25:29 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [stratified_spatial_block] fold 2 (validation, untouched): class counts={0: 62681, 1: 34658, 2: 11203, 3: 2114} | imbalance_ratio=29.65
+2026-08-12 07:25:30 - wildfire_susceptibility.modeling.cv.base - INFO - [stratified_spatial_block] spatial buffer (4000m, radius=1 block(s)): dropped 274,988/449,923 train rows within the buffer ring of this fold's test blocks
+2026-08-12 07:25:30 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [stratified_spatial_block] fold 3 (validation, untouched): class counts={0: 59670, 1: 34342, 2: 11670, 3: 1917} | imbalance_ratio=31.13
+2026-08-12 07:25:31 - wildfire_susceptibility.modeling.cv.base - INFO - [stratified_spatial_block] spatial buffer (4000m, radius=1 block(s)): dropped 252,122/452,976 train rows within the buffer ring of this fold's test blocks
+2026-08-12 07:25:31 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [stratified_spatial_block] fold 4 (validation, untouched): class counts={0: 58341, 1: 34081, 2: 10264, 3: 1860} | imbalance_ratio=31.37
+2026-08-12 07:25:31 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [stratified_spatial_block] class 0.0 proportion across folds: [np.float64(0.5), np.float64(0.553), np.float64(0.566), np.float64(0.555), np.float64(0.558)] (spread=0.067)
+2026-08-12 07:25:31 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [stratified_spatial_block] class 1.0 proportion across folds: [np.float64(0.341), np.float64(0.329), np.float64(0.313), np.float64(0.319), np.float64(0.326)] (spread=0.028)
+2026-08-12 07:25:31 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [stratified_spatial_block] class 2.0 proportion across folds: [np.float64(0.135), np.float64(0.104), np.float64(0.101), np.float64(0.108), np.float64(0.098)] (spread=0.037)
+2026-08-12 07:25:31 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [stratified_spatial_block] class 3.0 proportion across folds: [np.float64(0.024), np.float64(0.014), np.float64(0.019), np.float64(0.018), np.float64(0.018)] (spread=0.010)
+2026-08-12 07:25:31 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] finished=0 target=30 remaining=30
+2026-08-12 07:25:31 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 0 fold 1: class counts={0: 127459, 1: 68406, 2: 19524, 3: 2824} | imbalance_ratio=45.13 (train, post-resample (used to fit))
+2026-08-12 07:26:04 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 0 fold 1: class counts={0: 59739, 1: 40786, 2: 16123, 3: 2909} | imbalance_ratio=20.54 (validation, untouched — isolation check)
+2026-08-12 07:26:04 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 0 fold 1 AUC=0.6708 F1_macro=0.3375 PR_AUC_macro=0.3558 QWK=0.3552 (validation fold untouched/imbalanced)
+2026-08-12 07:26:04 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 0 fold 1 PR_AUC_macro=0.3558 AUC=0.6708 F1_macro=0.3375 QWK=0.3552 | params={'iterations': 543, 'depth': 5, 'learning_rate': 0.0011341589583644287, 'l2_leaf_reg': 0.014591624709038097, 'bagging_temperature': 0.9382899930276345}
+2026-08-12 07:26:04 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 0 fold 2: class counts={0: 100549, 1: 61275, 2: 20175, 3: 3211} | imbalance_ratio=31.31 (train, post-resample (used to fit))
+2026-08-12 07:26:35 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 0 fold 2: class counts={0: 63663, 1: 37842, 2: 11998, 3: 1661} | imbalance_ratio=38.33 (validation, untouched — isolation check)
+2026-08-12 07:26:35 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 0 fold 2 AUC=0.6524 F1_macro=0.3115 PR_AUC_macro=0.3256 QWK=0.2359 (validation fold untouched/imbalanced)
+2026-08-12 07:26:35 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 0 fold 2 PR_AUC_macro=0.3256 AUC=0.6524 F1_macro=0.3115 QWK=0.2359 | params={'iterations': 543, 'depth': 5, 'learning_rate': 0.0011341589583644287, 'l2_leaf_reg': 0.014591624709038097, 'bagging_temperature': 0.9382899930276345}
+2026-08-12 07:26:35 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 0 fold 3: class counts={0: 96934, 1: 55124, 2: 18166, 3: 3186} | imbalance_ratio=30.42 (train, post-resample (used to fit))
+2026-08-12 07:27:05 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 0 fold 3: class counts={0: 62681, 1: 34658, 2: 11203, 3: 2114} | imbalance_ratio=29.65 (validation, untouched — isolation check)
+2026-08-12 07:27:05 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 0 fold 3 AUC=0.6936 F1_macro=0.3307 PR_AUC_macro=0.3479 QWK=0.3130 (validation fold untouched/imbalanced)
+2026-08-12 07:27:05 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 0 fold 3 PR_AUC_macro=0.3479 AUC=0.6936 F1_macro=0.3307 QWK=0.3130 | params={'iterations': 543, 'depth': 5, 'learning_rate': 0.0011341589583644287, 'l2_leaf_reg': 0.014591624709038097, 'bagging_temperature': 0.9382899930276345}
+2026-08-12 07:27:05 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 0 fold 4: class counts={0: 102666, 1: 54883, 2: 15072, 3: 2314} | imbalance_ratio=44.37 (train, post-resample (used to fit))
+2026-08-12 07:27:32 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 0 fold 4: class counts={0: 59670, 1: 34342, 2: 11670, 3: 1917} | imbalance_ratio=31.13 (validation, untouched — isolation check)
+2026-08-12 07:27:32 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 0 fold 4 AUC=0.6487 F1_macro=0.3162 PR_AUC_macro=0.3353 QWK=0.2700 (validation fold untouched/imbalanced)
+2026-08-12 07:27:32 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 0 fold 4 PR_AUC_macro=0.3353 AUC=0.6487 F1_macro=0.3162 QWK=0.2700 | params={'iterations': 543, 'depth': 5, 'learning_rate': 0.0011341589583644287, 'l2_leaf_reg': 0.014591624709038097, 'bagging_temperature': 0.9382899930276345}
+2026-08-12 07:27:32 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 0 fold 5: class counts={0: 110310, 1: 65319, 2: 21921, 3: 3304} | imbalance_ratio=33.39 (train, post-resample (used to fit))
+2026-08-12 07:28:06 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 0 fold 5: class counts={0: 58341, 1: 34081, 2: 10264, 3: 1860} | imbalance_ratio=31.37 (validation, untouched — isolation check)
+2026-08-12 07:28:07 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 0 fold 5 AUC=0.6507 F1_macro=0.3095 PR_AUC_macro=0.3198 QWK=0.2389 (validation fold untouched/imbalanced)
+2026-08-12 07:28:07 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 0 fold 5 PR_AUC_macro=0.3198 AUC=0.6507 F1_macro=0.3095 QWK=0.2389 | params={'iterations': 543, 'depth': 5, 'learning_rate': 0.0011341589583644287, 'l2_leaf_reg': 0.014591624709038097, 'bagging_temperature': 0.9382899930276345}
+2026-08-12 07:28:07 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 1 fold 1: class counts={0: 127459, 1: 68406, 2: 19524, 3: 2824} | imbalance_ratio=45.13 (train, post-resample (used to fit))
+2026-08-12 07:28:42 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 1 fold 1: class counts={0: 59739, 1: 40786, 2: 16123, 3: 2909} | imbalance_ratio=20.54 (validation, untouched — isolation check)
+2026-08-12 07:28:42 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 1 fold 1 AUC=0.6836 F1_macro=0.3498 PR_AUC_macro=0.3636 QWK=0.3517 (validation fold untouched/imbalanced)
+2026-08-12 07:28:42 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 1 fold 1 PR_AUC_macro=0.3636 AUC=0.6836 F1_macro=0.3498 QWK=0.3517 | params={'iterations': 596, 'depth': 5, 'learning_rate': 0.020290090184493254, 'l2_leaf_reg': 1.2845541526369824, 'bagging_temperature': 0.3151621135971555}
+2026-08-12 07:28:42 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 1 fold 2: class counts={0: 100549, 1: 61275, 2: 20175, 3: 3211} | imbalance_ratio=31.31 (train, post-resample (used to fit))
+2026-08-12 07:29:18 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 1 fold 2: class counts={0: 63663, 1: 37842, 2: 11998, 3: 1661} | imbalance_ratio=38.33 (validation, untouched — isolation check)
+2026-08-12 07:29:18 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 1 fold 2 AUC=0.6689 F1_macro=0.3182 PR_AUC_macro=0.3359 QWK=0.2860 (validation fold untouched/imbalanced)
+2026-08-12 07:29:18 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 1 fold 2 PR_AUC_macro=0.3359 AUC=0.6689 F1_macro=0.3182 QWK=0.2860 | params={'iterations': 596, 'depth': 5, 'learning_rate': 0.020290090184493254, 'l2_leaf_reg': 1.2845541526369824, 'bagging_temperature': 0.3151621135971555}
+2026-08-12 07:29:18 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 1 fold 3: class counts={0: 96934, 1: 55124, 2: 18166, 3: 3186} | imbalance_ratio=30.42 (train, post-resample (used to fit))
+2026-08-12 07:29:54 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 1 fold 3: class counts={0: 62681, 1: 34658, 2: 11203, 3: 2114} | imbalance_ratio=29.65 (validation, untouched — isolation check)
+2026-08-12 07:29:54 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 1 fold 3 AUC=0.6714 F1_macro=0.3235 PR_AUC_macro=0.3498 QWK=0.3280 (validation fold untouched/imbalanced)
+2026-08-12 07:29:54 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 1 fold 3 PR_AUC_macro=0.3498 AUC=0.6714 F1_macro=0.3235 QWK=0.3280 | params={'iterations': 596, 'depth': 5, 'learning_rate': 0.020290090184493254, 'l2_leaf_reg': 1.2845541526369824, 'bagging_temperature': 0.3151621135971555}
+2026-08-12 07:29:54 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 1 fold 4: class counts={0: 102666, 1: 54883, 2: 15072, 3: 2314} | imbalance_ratio=44.37 (train, post-resample (used to fit))
+2026-08-12 07:30:26 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 1 fold 4: class counts={0: 59670, 1: 34342, 2: 11670, 3: 1917} | imbalance_ratio=31.13 (validation, untouched — isolation check)
+2026-08-12 07:30:27 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 1 fold 4 AUC=0.6537 F1_macro=0.3210 PR_AUC_macro=0.3324 QWK=0.2669 (validation fold untouched/imbalanced)
+2026-08-12 07:30:27 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 1 fold 4 PR_AUC_macro=0.3324 AUC=0.6537 F1_macro=0.3210 QWK=0.2669 | params={'iterations': 596, 'depth': 5, 'learning_rate': 0.020290090184493254, 'l2_leaf_reg': 1.2845541526369824, 'bagging_temperature': 0.3151621135971555}
+2026-08-12 07:30:27 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 1 fold 5: class counts={0: 110310, 1: 65319, 2: 21921, 3: 3304} | imbalance_ratio=33.39 (train, post-resample (used to fit))
+2026-08-12 07:31:01 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 1 fold 5: class counts={0: 58341, 1: 34081, 2: 10264, 3: 1860} | imbalance_ratio=31.37 (validation, untouched — isolation check)
+2026-08-12 07:31:02 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 1 fold 5 AUC=0.6582 F1_macro=0.3116 PR_AUC_macro=0.3267 QWK=0.2009 (validation fold untouched/imbalanced)
+2026-08-12 07:31:02 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 1 fold 5 PR_AUC_macro=0.3267 AUC=0.6582 F1_macro=0.3116 QWK=0.2009 | params={'iterations': 596, 'depth': 5, 'learning_rate': 0.020290090184493254, 'l2_leaf_reg': 1.2845541526369824, 'bagging_temperature': 0.3151621135971555}
+2026-08-12 07:31:02 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 2 fold 1: class counts={0: 127459, 1: 68406, 2: 19524, 3: 2824} | imbalance_ratio=45.13 (train, post-resample (used to fit))
+2026-08-12 07:31:41 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 2 fold 1: class counts={0: 59739, 1: 40786, 2: 16123, 3: 2909} | imbalance_ratio=20.54 (validation, untouched — isolation check)
+2026-08-12 07:31:42 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 2 fold 1 AUC=0.6825 F1_macro=0.3366 PR_AUC_macro=0.3620 QWK=0.3390 (validation fold untouched/imbalanced)
+2026-08-12 07:31:42 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 2 fold 1 PR_AUC_macro=0.3620 AUC=0.6825 F1_macro=0.3366 QWK=0.3390 | params={'iterations': 414, 'depth': 7, 'learning_rate': 0.01392229258290649, 'l2_leaf_reg': 0.692360110657621, 'bagging_temperature': 0.8719194037475158}
+2026-08-12 07:31:42 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 2 fold 2: class counts={0: 100549, 1: 61275, 2: 20175, 3: 3211} | imbalance_ratio=31.31 (train, post-resample (used to fit))
+2026-08-12 07:42:39 - wildfire_susceptibility - INFO - Logger initialized: wildfire_susceptibility
+2026-08-12 07:42:39 - wildfire_susceptibility - INFO - === Running stage: static ===
+2026-08-12 07:42:39 - wildfire_susceptibility - INFO - [stage_static] Building static features...
+2026-08-12 07:42:39 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] BoundaryBuilder: outputs already exist, skipping computation
+2026-08-12 07:42:39 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] TopographyBuilder: outputs already exist, skipping computation
+2026-08-12 07:42:39 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] ProximityBuilder: outputs already exist, skipping computation
+2026-08-12 07:42:39 - wildfire_susceptibility - INFO - [stage_static] Complete — 9 output path(s).
+2026-08-12 07:42:39 - wildfire_susceptibility - INFO - === Stage complete: static ===
+2026-08-12 07:42:39 - wildfire_susceptibility - INFO - === Running stage: seasonal ===
+2026-08-12 07:42:39 - wildfire_susceptibility - INFO - [stage_seasonal] [summer] Building seasonal features...
+2026-08-12 07:42:39 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] ClimateBuilder[summer][train]: outputs already exist, skipping computation
+2026-08-12 07:42:39 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] VegetationBuilder[summer][train]: outputs already exist, skipping computation
+2026-08-12 07:42:39 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] ClimateBuilder[summer][test]: outputs already exist, skipping computation
+2026-08-12 07:42:39 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] VegetationBuilder[summer][test]: outputs already exist, skipping computation
+2026-08-12 07:42:39 - wildfire_susceptibility - INFO - === Stage complete: seasonal ===
+2026-08-12 07:42:39 - wildfire_susceptibility - INFO - === Running stage: labels ===
+2026-08-12 07:42:39 - wildfire_susceptibility - INFO - [stage_labels] [summer] Building fire labels...
+2026-08-12 07:42:39 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] FireBuilder[summer]: outputs already exist, skipping computation
+2026-08-12 07:42:39 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[kde][summer_train]: outputs already exist, skipping computation
+2026-08-12 07:42:39 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[kde][jenks][summer_train]: outputs already exist, skipping computation
+2026-08-12 07:42:39 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[kde][summer_test]: outputs already exist, skipping computation
+2026-08-12 07:42:39 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[kde][jenks][summer_test]: outputs already exist, skipping computation
+2026-08-12 07:42:39 - wildfire_susceptibility - INFO - === Stage complete: labels ===
+2026-08-12 07:42:39 - wildfire_susceptibility - INFO - === Running stage: integration ===
+2026-08-12 07:44:08 - wildfire_susceptibility - INFO - Logger initialized: wildfire_susceptibility
+2026-08-12 07:44:08 - wildfire_susceptibility - INFO - === Running stage: static ===
+2026-08-12 07:44:08 - wildfire_susceptibility - INFO - [stage_static] Building static features...
+2026-08-12 07:44:08 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] BoundaryBuilder: outputs already exist, skipping computation
+2026-08-12 07:44:08 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] TopographyBuilder: outputs already exist, skipping computation
+2026-08-12 07:44:08 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] ProximityBuilder: outputs already exist, skipping computation
+2026-08-12 07:44:08 - wildfire_susceptibility - INFO - [stage_static] Complete — 9 output path(s).
+2026-08-12 07:44:08 - wildfire_susceptibility - INFO - === Stage complete: static ===
+2026-08-12 07:44:08 - wildfire_susceptibility - INFO - === Running stage: seasonal ===
+2026-08-12 07:44:08 - wildfire_susceptibility - INFO - [stage_seasonal] [summer] Building seasonal features...
+2026-08-12 07:44:08 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] ClimateBuilder[summer][train]: outputs already exist, skipping computation
+2026-08-12 07:44:08 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] VegetationBuilder[summer][train]: outputs already exist, skipping computation
+2026-08-12 07:44:08 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] ClimateBuilder[summer][test]: outputs already exist, skipping computation
+2026-08-12 07:44:08 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] VegetationBuilder[summer][test]: outputs already exist, skipping computation
+2026-08-12 07:44:08 - wildfire_susceptibility - INFO - === Stage complete: seasonal ===
+2026-08-12 07:44:08 - wildfire_susceptibility - INFO - === Running stage: labels ===
+2026-08-12 07:44:08 - wildfire_susceptibility - INFO - [stage_labels] [summer] Building fire labels...
+2026-08-12 07:44:08 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] FireBuilder[summer]: outputs already exist, skipping computation
+2026-08-12 07:44:09 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[kde][summer_train]: outputs already exist, skipping computation
+2026-08-12 07:44:09 - wildfire_susceptibility - INFO - Selected optimal K=2 (Silhouette Score: -1.0000)
+2026-08-12 07:45:02 - wildfire_susceptibility - INFO - [summer_train][kde][jenks] class counts: {0: 161274, 1: 31089} | unlabelled/trimmed cells: 3658752 | out-of-domain NaN cells: 2606943 | thresholds: ['3.463e-09']
+2026-08-12 07:45:02 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[kde][summer_test]: outputs already exist, skipping computation
+2026-08-12 07:45:03 - wildfire_susceptibility - INFO - [summer_test][kde][jenks] applied FROZEN fit from paired split (no refit).
+2026-08-12 07:45:03 - wildfire_susceptibility - INFO - [summer_test][kde][jenks] class counts: {0: 159980, 1: 32383} | unlabelled/trimmed cells: 3658752 | out-of-domain NaN cells: 2606943 | thresholds: ['3.463e-09']
+2026-08-12 07:45:03 - wildfire_susceptibility - INFO - === Stage complete: labels ===
+2026-08-12 07:45:03 - wildfire_susceptibility - INFO - === Running stage: integration ===
+2026-08-12 07:45:03 - wildfire_susceptibility - INFO - [stage_integration] [CACHED] summer/train -> dataset_train_summer.csv
+2026-08-12 07:46:04 - wildfire_susceptibility.core.raster - INFO - Dataset saved to data\silver\model_datasets\dataset_test_summer.csv (3,851,115 rows, 18 columns)
+2026-08-12 07:46:04 - wildfire_susceptibility - INFO - [stage_integration] [summer][test] Assembled -> dataset_test_summer.csv
+2026-08-12 07:46:04 - wildfire_susceptibility - INFO - === Stage complete: integration ===
+2026-08-12 07:56:31 - wildfire_susceptibility - INFO - Logger initialized: wildfire_susceptibility
+2026-08-12 07:56:31 - wildfire_susceptibility - INFO - === Running stage: static ===
+2026-08-12 07:56:31 - wildfire_susceptibility - INFO - [stage_static] Building static features...
+2026-08-12 07:56:31 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] BoundaryBuilder: outputs already exist, skipping computation
+2026-08-12 07:56:31 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] TopographyBuilder: outputs already exist, skipping computation
+2026-08-12 07:56:31 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] ProximityBuilder: outputs already exist, skipping computation
+2026-08-12 07:56:31 - wildfire_susceptibility - INFO - [stage_static] Complete — 9 output path(s).
+2026-08-12 07:56:31 - wildfire_susceptibility - INFO - === Stage complete: static ===
+2026-08-12 07:56:31 - wildfire_susceptibility - INFO - === Running stage: seasonal ===
+2026-08-12 07:56:31 - wildfire_susceptibility - INFO - [stage_seasonal] [summer] Building seasonal features...
+2026-08-12 07:56:31 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] ClimateBuilder[summer][train]: outputs already exist, skipping computation
+2026-08-12 07:56:31 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] VegetationBuilder[summer][train]: outputs already exist, skipping computation
+2026-08-12 07:56:31 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] ClimateBuilder[summer][test]: outputs already exist, skipping computation
+2026-08-12 07:56:31 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] VegetationBuilder[summer][test]: outputs already exist, skipping computation
+2026-08-12 07:56:31 - wildfire_susceptibility - INFO - === Stage complete: seasonal ===
+2026-08-12 07:56:31 - wildfire_susceptibility - INFO - === Running stage: labels ===
+2026-08-12 07:56:31 - wildfire_susceptibility - INFO - [stage_labels] [summer] Building fire labels...
+2026-08-12 07:56:31 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] FireBuilder[summer]: outputs already exist, skipping computation
+2026-08-12 07:56:32 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[kde][summer_train]: outputs already exist, skipping computation
+2026-08-12 07:58:27 - wildfire_susceptibility - INFO - [summer_train][kde][jenks] class counts: {0: 101564, 1: 53820, 2: 22232, 3: 10774, 4: 3973} | unlabelled/trimmed cells: 3658752 | out-of-domain NaN cells: 2606943 | thresholds: ['2.105e-09', '3.166e-09', '4.527e-09', '6.548e-09']
+2026-08-12 07:58:27 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[kde][summer_test]: outputs already exist, skipping computation
+2026-08-12 07:58:27 - wildfire_susceptibility - INFO - [summer_test][kde][jenks] applied FROZEN fit from paired split (no refit).
+2026-08-12 07:58:27 - wildfire_susceptibility - INFO - [summer_test][kde][jenks] class counts: {0: 101776, 1: 50359, 2: 25670, 3: 12262, 4: 2296} | unlabelled/trimmed cells: 3658752 | out-of-domain NaN cells: 2606943 | thresholds: ['2.105e-09', '3.166e-09', '4.527e-09', '6.548e-09']
+2026-08-12 07:58:27 - wildfire_susceptibility - INFO - === Stage complete: labels ===
+2026-08-12 07:58:27 - wildfire_susceptibility - INFO - === Running stage: integration ===
+2026-08-12 07:59:44 - wildfire_susceptibility.core.raster - INFO - Dataset saved to data\silver\model_datasets\dataset_train_summer.csv (3,851,115 rows, 18 columns)
+2026-08-12 07:59:44 - wildfire_susceptibility - INFO - [stage_integration] [summer][train] Assembled -> dataset_train_summer.csv
+2026-08-12 08:00:51 - wildfire_susceptibility.core.raster - INFO - Dataset saved to data\silver\model_datasets\dataset_test_summer.csv (3,851,115 rows, 18 columns)
+2026-08-12 08:00:51 - wildfire_susceptibility - INFO - [stage_integration] [summer][test] Assembled -> dataset_test_summer.csv
+2026-08-12 08:00:51 - wildfire_susceptibility - INFO - === Stage complete: integration ===
+2026-08-12 08:06:11 - wildfire_susceptibility - INFO - Logger initialized: wildfire_susceptibility
+2026-08-12 08:06:11 - wildfire_susceptibility - INFO - === Running stage: static ===
+2026-08-12 08:06:11 - wildfire_susceptibility - INFO - [stage_static] Building static features...
+2026-08-12 08:06:11 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] BoundaryBuilder: outputs already exist, skipping computation
+2026-08-12 08:06:11 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] TopographyBuilder: outputs already exist, skipping computation
+2026-08-12 08:06:11 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] ProximityBuilder: outputs already exist, skipping computation
+2026-08-12 08:06:11 - wildfire_susceptibility - INFO - [stage_static] Complete — 9 output path(s).
+2026-08-12 08:06:11 - wildfire_susceptibility - INFO - === Stage complete: static ===
+2026-08-12 08:06:11 - wildfire_susceptibility - INFO - === Running stage: seasonal ===
+2026-08-12 08:06:11 - wildfire_susceptibility - INFO - [stage_seasonal] [summer] Building seasonal features...
+2026-08-12 08:06:11 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] ClimateBuilder[summer][train]: outputs already exist, skipping computation
+2026-08-12 08:06:12 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] VegetationBuilder[summer][train]: outputs already exist, skipping computation
+2026-08-12 08:06:12 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] ClimateBuilder[summer][test]: outputs already exist, skipping computation
+2026-08-12 08:06:12 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] VegetationBuilder[summer][test]: outputs already exist, skipping computation
+2026-08-12 08:06:12 - wildfire_susceptibility - INFO - === Stage complete: seasonal ===
+2026-08-12 08:06:12 - wildfire_susceptibility - INFO - === Running stage: labels ===
+2026-08-12 08:06:12 - wildfire_susceptibility - INFO - [stage_labels] [summer] Building fire labels...
+2026-08-12 08:06:12 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] FireBuilder[summer]: outputs already exist, skipping computation
+2026-08-12 08:06:12 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[kde][summer_train]: outputs already exist, skipping computation
+2026-08-12 08:06:12 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[kde][jenks][summer_train]: outputs already exist, skipping computation
+2026-08-12 08:06:12 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[kde][summer_test]: outputs already exist, skipping computation
+2026-08-12 08:06:12 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[kde][jenks][summer_test]: outputs already exist, skipping computation
+2026-08-12 08:06:12 - wildfire_susceptibility - INFO - === Stage complete: labels ===
+2026-08-12 08:06:12 - wildfire_susceptibility - INFO - === Running stage: integration ===
+2026-08-12 08:06:12 - wildfire_susceptibility - INFO - [stage_integration] [CACHED] summer/train -> dataset_train_summer.csv
+2026-08-12 08:06:12 - wildfire_susceptibility - INFO - [stage_integration] [CACHED] summer/test -> dataset_test_summer.csv
+2026-08-12 08:06:12 - wildfire_susceptibility - INFO - === Stage complete: integration ===
+2026-08-12 08:06:12 - wildfire_susceptibility - INFO - === Running stage: preprocessing ===
+2026-08-12 08:06:12 - wildfire_susceptibility - INFO - [stage_preprocessing] [CACHED] summer -> dataset_train_summer_clean.csv, dataset_test_summer_clean.csv
+2026-08-12 08:06:12 - wildfire_susceptibility - INFO - === Stage complete: preprocessing ===
+2026-08-12 08:06:12 - wildfire_susceptibility - INFO - === Running stage: train ===
+2026-08-12 08:06:15 - wildfire_susceptibility - INFO - [stage_train] [summer] Loading cleaned datasets...
+2026-08-12 08:06:19 - wildfire_susceptibility.modeling.dataset_prep - INFO - Assigned 1,061,566 rows to 255 spatial blocks (4 km grid)
+2026-08-12 08:06:19 - wildfire_susceptibility - INFO - [stage_train] [summer][catboost] Search + refit...
+2026-08-12 08:06:19 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] block search subsample: 557,522/1,061,566 rows across 73 block(s) (73 force-kept for rarest class 3.0)
+2026-08-12 08:06:19 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] block search subsample: class counts={0: 304094, 1: 181709, 2: 61258, 3: 10461} | imbalance_ratio=29.07
+2026-08-12 08:06:20 - wildfire_susceptibility.modeling.cv.base - INFO - [stratified_spatial_block] spatial buffer (4000m, radius=1 block(s)): dropped 219,752/437,965 train rows within the buffer ring of this fold's test blocks
+2026-08-12 08:06:20 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [stratified_spatial_block] fold 0 (validation, untouched): class counts={0: 59739, 1: 40786, 2: 16123, 3: 2909} | imbalance_ratio=20.54
+2026-08-12 08:06:21 - wildfire_susceptibility.modeling.cv.base - INFO - [stratified_spatial_block] spatial buffer (4000m, radius=1 block(s)): dropped 257,148/442,358 train rows within the buffer ring of this fold's test blocks
+2026-08-12 08:06:21 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [stratified_spatial_block] fold 1 (validation, untouched): class counts={0: 63663, 1: 37842, 2: 11998, 3: 1661} | imbalance_ratio=38.33
+2026-08-12 08:06:22 - wildfire_susceptibility.modeling.cv.base - INFO - [stratified_spatial_block] spatial buffer (4000m, radius=1 block(s)): dropped 273,456/446,866 train rows within the buffer ring of this fold's test blocks
+2026-08-12 08:06:22 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [stratified_spatial_block] fold 2 (validation, untouched): class counts={0: 62681, 1: 34658, 2: 11203, 3: 2114} | imbalance_ratio=29.65
+2026-08-12 08:06:22 - wildfire_susceptibility.modeling.cv.base - INFO - [stratified_spatial_block] spatial buffer (4000m, radius=1 block(s)): dropped 274,988/449,923 train rows within the buffer ring of this fold's test blocks
+2026-08-12 08:06:22 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [stratified_spatial_block] fold 3 (validation, untouched): class counts={0: 59670, 1: 34342, 2: 11670, 3: 1917} | imbalance_ratio=31.13
+2026-08-12 08:06:23 - wildfire_susceptibility.modeling.cv.base - INFO - [stratified_spatial_block] spatial buffer (4000m, radius=1 block(s)): dropped 252,122/452,976 train rows within the buffer ring of this fold's test blocks
+2026-08-12 08:06:23 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [stratified_spatial_block] fold 4 (validation, untouched): class counts={0: 58341, 1: 34081, 2: 10264, 3: 1860} | imbalance_ratio=31.37
+2026-08-12 08:06:23 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [stratified_spatial_block] class 0.0 proportion across folds: [np.float64(0.5), np.float64(0.553), np.float64(0.566), np.float64(0.555), np.float64(0.558)] (spread=0.067)
+2026-08-12 08:06:23 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [stratified_spatial_block] class 1.0 proportion across folds: [np.float64(0.341), np.float64(0.329), np.float64(0.313), np.float64(0.319), np.float64(0.326)] (spread=0.028)
+2026-08-12 08:06:23 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [stratified_spatial_block] class 2.0 proportion across folds: [np.float64(0.135), np.float64(0.104), np.float64(0.101), np.float64(0.108), np.float64(0.098)] (spread=0.037)
+2026-08-12 08:06:23 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [stratified_spatial_block] class 3.0 proportion across folds: [np.float64(0.024), np.float64(0.014), np.float64(0.019), np.float64(0.018), np.float64(0.018)] (spread=0.010)
+2026-08-12 08:06:23 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] finished=0 target=30 remaining=30
+2026-08-12 08:06:23 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 0 fold 1: class counts={0: 127459, 1: 68406, 2: 19524, 3: 2824} | imbalance_ratio=45.13 (train, post-resample (used to fit))
+2026-08-12 08:07:19 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 0 fold 1: class counts={0: 59739, 1: 40786, 2: 16123, 3: 2909} | imbalance_ratio=20.54 (validation, untouched — isolation check)
+2026-08-12 08:07:20 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 0 fold 1 AUC=0.6707 F1_macro=0.3469 PR_AUC_macro=0.3591 QWK=0.3543 (validation fold untouched/imbalanced)
+2026-08-12 08:07:20 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 0 fold 1 PR_AUC_macro=0.3591 AUC=0.6707 F1_macro=0.3469 QWK=0.3543 | params={'iterations': 774, 'depth': 6, 'learning_rate': 0.001943514085915298, 'l2_leaf_reg': 0.8958097897988636, 'bagging_temperature': 0.9544521405394637}
+2026-08-12 08:07:20 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 0 fold 2: class counts={0: 100549, 1: 61275, 2: 20175, 3: 3211} | imbalance_ratio=31.31 (train, post-resample (used to fit))
+2026-08-12 08:08:19 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 0 fold 2: class counts={0: 63663, 1: 37842, 2: 11998, 3: 1661} | imbalance_ratio=38.33 (validation, untouched — isolation check)
+2026-08-12 08:08:20 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 0 fold 2 AUC=0.6683 F1_macro=0.3062 PR_AUC_macro=0.3329 QWK=0.2704 (validation fold untouched/imbalanced)
+2026-08-12 08:08:20 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 0 fold 2 PR_AUC_macro=0.3329 AUC=0.6683 F1_macro=0.3062 QWK=0.2704 | params={'iterations': 774, 'depth': 6, 'learning_rate': 0.001943514085915298, 'l2_leaf_reg': 0.8958097897988636, 'bagging_temperature': 0.9544521405394637}
+2026-08-12 08:08:20 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 0 fold 3: class counts={0: 96934, 1: 55124, 2: 18166, 3: 3186} | imbalance_ratio=30.42 (train, post-resample (used to fit))
+2026-08-12 08:09:18 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 0 fold 3: class counts={0: 62681, 1: 34658, 2: 11203, 3: 2114} | imbalance_ratio=29.65 (validation, untouched — isolation check)
+2026-08-12 08:09:18 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 0 fold 3 AUC=0.6919 F1_macro=0.3357 PR_AUC_macro=0.3499 QWK=0.3344 (validation fold untouched/imbalanced)
+2026-08-12 08:09:18 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 0 fold 3 PR_AUC_macro=0.3499 AUC=0.6919 F1_macro=0.3357 QWK=0.3344 | params={'iterations': 774, 'depth': 6, 'learning_rate': 0.001943514085915298, 'l2_leaf_reg': 0.8958097897988636, 'bagging_temperature': 0.9544521405394637}
+2026-08-12 08:09:18 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 0 fold 4: class counts={0: 102666, 1: 54883, 2: 15072, 3: 2314} | imbalance_ratio=44.37 (train, post-resample (used to fit))
+2026-08-12 08:21:56 - wildfire_susceptibility - INFO - Logger initialized: wildfire_susceptibility
+2026-08-12 08:21:56 - wildfire_susceptibility - INFO - === Running stage: static ===
+2026-08-12 08:21:56 - wildfire_susceptibility - INFO - [stage_static] Building static features...
+2026-08-12 08:21:56 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] BoundaryBuilder: outputs already exist, skipping computation
+2026-08-12 08:21:56 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] TopographyBuilder: outputs already exist, skipping computation
+2026-08-12 08:21:56 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] ProximityBuilder: outputs already exist, skipping computation
+2026-08-12 08:21:56 - wildfire_susceptibility - INFO - [stage_static] Complete — 9 output path(s).
+2026-08-12 08:21:56 - wildfire_susceptibility - INFO - === Stage complete: static ===
+2026-08-12 08:21:56 - wildfire_susceptibility - INFO - === Running stage: seasonal ===
+2026-08-12 08:21:56 - wildfire_susceptibility - INFO - [stage_seasonal] [summer] Building seasonal features...
+2026-08-12 08:21:56 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] ClimateBuilder[summer][train]: outputs already exist, skipping computation
+2026-08-12 08:21:56 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] VegetationBuilder[summer][train]: outputs already exist, skipping computation
+2026-08-12 08:21:56 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] ClimateBuilder[summer][test]: outputs already exist, skipping computation
+2026-08-12 08:21:56 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] VegetationBuilder[summer][test]: outputs already exist, skipping computation
+2026-08-12 08:21:56 - wildfire_susceptibility - INFO - === Stage complete: seasonal ===
+2026-08-12 08:21:56 - wildfire_susceptibility - INFO - === Running stage: labels ===
+2026-08-12 08:21:56 - wildfire_susceptibility - INFO - [stage_labels] [summer] Building fire labels...
+2026-08-12 08:21:56 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] FireBuilder[summer]: outputs already exist, skipping computation
+2026-08-12 08:21:56 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[kde][summer_train]: outputs already exist, skipping computation
+2026-08-12 08:21:56 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[kde][jenks][summer_train]: outputs already exist, skipping computation
+2026-08-12 08:21:56 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[kde][summer_test]: outputs already exist, skipping computation
+2026-08-12 08:21:56 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[kde][jenks][summer_test]: outputs already exist, skipping computation
+2026-08-12 08:21:56 - wildfire_susceptibility - INFO - === Stage complete: labels ===
+2026-08-12 08:21:56 - wildfire_susceptibility - INFO - === Running stage: integration ===
+2026-08-12 08:21:56 - wildfire_susceptibility - INFO - [stage_integration] [CACHED] summer/train -> dataset_train_summer.csv
+2026-08-12 08:21:56 - wildfire_susceptibility - INFO - [stage_integration] [CACHED] summer/test -> dataset_test_summer.csv
+2026-08-12 08:21:56 - wildfire_susceptibility - INFO - === Stage complete: integration ===
+2026-08-12 08:21:56 - wildfire_susceptibility - INFO - === Running stage: preprocessing ===
+2026-08-12 08:21:56 - wildfire_susceptibility - INFO - [stage_preprocessing] [CACHED] summer -> dataset_train_summer_clean.csv, dataset_test_summer_clean.csv
+2026-08-12 08:21:56 - wildfire_susceptibility - INFO - === Stage complete: preprocessing ===
+2026-08-12 08:21:56 - wildfire_susceptibility - INFO - === Running stage: train ===
+2026-08-12 08:21:59 - wildfire_susceptibility - INFO - [stage_train] [summer] Loading cleaned datasets...
+2026-08-12 08:22:03 - wildfire_susceptibility - INFO - Training with the following features: ['elevation', 'slope', 'aspect', 'd_roads', 'd_rivers', 'd_buildings', 'landuse_class', 'tasmax', 'rainfall', 'sfcWind', 'hurs', 'diurnal_range', 'ndvi']
+2026-08-12 08:22:03 - wildfire_susceptibility.modeling.dataset_prep - INFO - Assigned 1,061,566 rows to 255 spatial blocks (4 km grid)
+2026-08-12 08:22:03 - wildfire_susceptibility - INFO - [stage_train] [summer][catboost] Search + refit...
+2026-08-12 08:22:03 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] block search subsample: 557,522/1,061,566 rows across 73 block(s) (73 force-kept for rarest class 3.0)
+2026-08-12 08:22:04 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] block search subsample: class counts={0: 304094, 1: 181709, 2: 61258, 3: 10461} | imbalance_ratio=29.07
+2026-08-12 08:22:05 - wildfire_susceptibility.modeling.cv.base - INFO - [stratified_spatial_block] spatial buffer (4000m, radius=1 block(s)): dropped 219,752/437,965 train rows within the buffer ring of this fold's test blocks
+2026-08-12 08:22:05 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [stratified_spatial_block] fold 0 (validation, untouched): class counts={0: 59739, 1: 40786, 2: 16123, 3: 2909} | imbalance_ratio=20.54
+2026-08-12 08:22:05 - wildfire_susceptibility.modeling.cv.base - INFO - [stratified_spatial_block] spatial buffer (4000m, radius=1 block(s)): dropped 257,148/442,358 train rows within the buffer ring of this fold's test blocks
+2026-08-12 08:22:05 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [stratified_spatial_block] fold 1 (validation, untouched): class counts={0: 63663, 1: 37842, 2: 11998, 3: 1661} | imbalance_ratio=38.33
+2026-08-12 08:22:06 - wildfire_susceptibility.modeling.cv.base - INFO - [stratified_spatial_block] spatial buffer (4000m, radius=1 block(s)): dropped 273,456/446,866 train rows within the buffer ring of this fold's test blocks
+2026-08-12 08:22:06 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [stratified_spatial_block] fold 2 (validation, untouched): class counts={0: 62681, 1: 34658, 2: 11203, 3: 2114} | imbalance_ratio=29.65
+2026-08-12 08:22:07 - wildfire_susceptibility.modeling.cv.base - INFO - [stratified_spatial_block] spatial buffer (4000m, radius=1 block(s)): dropped 274,988/449,923 train rows within the buffer ring of this fold's test blocks
+2026-08-12 08:22:07 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [stratified_spatial_block] fold 3 (validation, untouched): class counts={0: 59670, 1: 34342, 2: 11670, 3: 1917} | imbalance_ratio=31.13
+2026-08-12 08:22:07 - wildfire_susceptibility.modeling.cv.base - INFO - [stratified_spatial_block] spatial buffer (4000m, radius=1 block(s)): dropped 252,122/452,976 train rows within the buffer ring of this fold's test blocks
+2026-08-12 08:22:07 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [stratified_spatial_block] fold 4 (validation, untouched): class counts={0: 58341, 1: 34081, 2: 10264, 3: 1860} | imbalance_ratio=31.37
+2026-08-12 08:22:07 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [stratified_spatial_block] class 0.0 proportion across folds: [np.float64(0.5), np.float64(0.553), np.float64(0.566), np.float64(0.555), np.float64(0.558)] (spread=0.067)
+2026-08-12 08:22:07 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [stratified_spatial_block] class 1.0 proportion across folds: [np.float64(0.341), np.float64(0.329), np.float64(0.313), np.float64(0.319), np.float64(0.326)] (spread=0.028)
+2026-08-12 08:22:07 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [stratified_spatial_block] class 2.0 proportion across folds: [np.float64(0.135), np.float64(0.104), np.float64(0.101), np.float64(0.108), np.float64(0.098)] (spread=0.037)
+2026-08-12 08:22:07 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [stratified_spatial_block] class 3.0 proportion across folds: [np.float64(0.024), np.float64(0.014), np.float64(0.019), np.float64(0.018), np.float64(0.018)] (spread=0.010)
+2026-08-12 08:22:08 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] finished=0 target=30 remaining=30
+2026-08-12 08:22:08 - wildfire_susceptibility.modeling.cv.stratified_spatial - INFO - [summer][catboost] trial 0 fold 1: class counts={0: 127459, 1: 68406, 2: 19524, 3: 2824} | imbalance_ratio=45.13 (train, post-resample (used to fit))

@@ -42,7 +42,7 @@ class PostTrainingEvaluator:
         ref_path, fire_test_gdf, x_coords, y_coords,
     ):
         defaults = {
-            "shap_path": None, "time_forward_validation": None,
+            "shap_path": None, "shap_dependence_path": None, "time_forward_validation": None,
             "susceptibility_map_path": None, "full_metrics_path": None,
         }
 

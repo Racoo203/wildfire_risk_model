@@ -55,6 +55,8 @@ def stage_train(config: dict, input_paths: dict) -> Dict[str, Dict[str, Path]]:
         excluded = set(config["modeling"].get("excluded_features", []))
         feature_cols = [c for c in X_train.columns if not c.startswith("_") and c not in excluded]
 
+        logger.info(f"Training with the following features: {feature_cols}")
+
         cv_groups = (
             prep.assign_spatial_blocks(X_train, block_size_m=block_size)
             if needs_groups
