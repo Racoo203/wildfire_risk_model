@@ -24,7 +24,7 @@ import numpy as np
 import pandas as pd
 import geopandas as gpd
 import mlflow
-from sklearn.metrics import roc_auc_score, f1_score
+from sklearn.metrics import roc_auc_score, f1_score, cohen_kappa_score
 
 from ...core.registry import MODELS
 from .. import models  # noqa: F401 — registers model wrappers (two dots: training/ -> modeling/)
@@ -136,16 +136,30 @@ class ModelTrainer:
         )
 
         with mlflow.start_run(run_name=f"{season}_{model_name}"):
-            self._log_run_setup(season, model_name, best_params, best_value, search_uses_groups)
+            # Optuna's objective is PR-AUC-macro (best_value) — AUC/F1-macro/
+            # QWK for the searched side come "for free" from the best
+            # trial's per-fold mean user_attrs (search.py's _make_objective
+            # logs them every trial), the same role best_value alone used
+            # to play for AUC before the objective swapped metrics.
+            best_trial_metrics = study.best_trial.user_attrs
+            self._log_run_setup(season, model_name, best_params, best_value, search_uses_groups, best_trial_metrics)
 
             cv_auc_spatial, cv_auc_standard, cv_auc_spatial_folds = None, None, None
             cv_f1_macro_standard, cv_f1_macro_spatial = None, None
             cv_pr_auc_macro_standard, cv_pr_auc_macro_spatial = None, None
+            cv_qwk_standard, cv_qwk_spatial = None, None
             cv_optimism_gap = None
+
             if search_uses_groups:
-                cv_auc_spatial = best_value
+                cv_pr_auc_macro_spatial = best_value
+                cv_auc_spatial = best_trial_metrics.get("auc")
+                cv_f1_macro_spatial = best_trial_metrics.get("f1_macro")
+                cv_qwk_spatial = best_trial_metrics.get("qwk")
             else:
-                cv_auc_standard = best_value
+                cv_pr_auc_macro_standard = best_value
+                cv_auc_standard = best_trial_metrics.get("auc")
+                cv_f1_macro_standard = best_trial_metrics.get("f1_macro")
+                cv_qwk_standard = best_trial_metrics.get("qwk")
 
             if cv_strategy == "both":
                 diagnostic_strategy_name = "standard" if search_uses_groups else "spatial"
@@ -154,18 +168,28 @@ class ModelTrainer:
                 )
 
                 # Diagnostic side always runs — same cost this code has
-                # always paid, predating the F1-macro/PR-AUC-macro gap
+                # always paid, predating the F1-macro/PR-AUC-macro/QWK gap
                 # feature. The cv/base.py Bug A fix (multiclass AUC
                 # ValueError silently scored as 0.0) makes this AUC correct
                 # regardless of the flag below; that fix is unconditional.
+                # It's a full metrics pass, so AUC/F1-macro/PR-AUC-macro/QWK
+                # are all available on the diagnostic side "for free" too —
+                # only the searched side's full-training-set recompute is
+                # gated behind log_full_cv_diagnostics below.
                 diagnostic_mean, diagnostic_folds = self._run_full_metrics_pass(
                     diagnostic_strategy, model_cls, best_params, X_tr, y_train, groups_train,
                     season, model_name, role="diagnostic",
                 )
                 if search_uses_groups:
                     cv_auc_standard = diagnostic_mean["auc"]
+                    cv_f1_macro_standard = diagnostic_mean["f1_macro"]
+                    cv_pr_auc_macro_standard = diagnostic_mean["pr_auc_macro"]
+                    cv_qwk_standard = diagnostic_mean["qwk"]
                 else:
                     cv_auc_spatial = diagnostic_mean["auc"]
+                    cv_f1_macro_spatial = diagnostic_mean["f1_macro"]
+                    cv_pr_auc_macro_spatial = diagnostic_mean["pr_auc_macro"]
+                    cv_qwk_spatial = diagnostic_mean["qwk"]
 
                 # Primary side's full-training-set re-scoring pass is the
                 # NEW cost this feature adds (~doubles this block's extra
@@ -173,10 +197,10 @@ class ModelTrainer:
                 # modeling.log_full_cv_diagnostics (default False) so
                 # routine iteration runs don't pay it; the dissertation's
                 # baseline.yaml sets it True. Only with this on can
-                # F1-macro/PR-AUC-macro gaps and cv_auc_spatial_folds
-                # (needed by stage_selection's Kruskal-Wallis) be computed
-                # at all — Optuna's search never captures per-fold F1/PR-AUC,
-                # and only ever scores the primary strategy on a subsample.
+                # AUC/F1-macro/QWK gaps and cv_auc_spatial_folds (needed by
+                # stage_selection's Kruskal-Wallis) be computed on the
+                # primary side's full training set rather than its search
+                # subsample.
                 if self.config["modeling"].get("log_full_cv_diagnostics", False):
                     primary_mean, primary_folds = self._run_full_metrics_pass(
                         self.cv_strategy, model_cls, best_params, X_tr, y_train, groups_train,
@@ -184,44 +208,66 @@ class ModelTrainer:
                     )
 
                     if search_uses_groups:
-                        # existing cv_auc_standard/cv_auc_spatial semantics
-                        # unchanged: standard = diagnostic's full-pass AUC,
-                        # spatial = Optuna's best_value (already set above).
+                        # Searched (primary) side keeps its PR-AUC as the
+                        # cheap/subsample value Optuna actually selected on
+                        # (continuity with model selection), same override
+                        # convention AUC used under the old objective — but
+                        # AUC/F1-macro/QWK now use the full-pass recompute
+                        # since it's available and more accurate than the
+                        # subsample-based user_attrs fallback.
                         cv_auc_spatial_folds = [f["auc"] for f in primary_folds]
-                        standard_metrics = {**diagnostic_mean, "auc": cv_auc_standard}
-                        spatial_metrics = {**primary_mean, "auc": cv_auc_spatial}
+                        standard_metrics = dict(diagnostic_mean)
+                        spatial_metrics = {**primary_mean, "pr_auc_macro": cv_pr_auc_macro_spatial}
                         standard_folds, spatial_folds = diagnostic_folds, primary_folds
                     else:
                         cv_auc_spatial_folds = [f["auc"] for f in diagnostic_folds]
-                        standard_metrics = {**primary_mean, "auc": cv_auc_standard}
-                        spatial_metrics = {**diagnostic_mean, "auc": cv_auc_spatial}
+                        standard_metrics = {**primary_mean, "pr_auc_macro": cv_pr_auc_macro_standard}
+                        spatial_metrics = dict(diagnostic_mean)
                         standard_folds, spatial_folds = primary_folds, diagnostic_folds
 
+                    cv_auc_standard, cv_auc_spatial = standard_metrics["auc"], spatial_metrics["auc"]
                     cv_f1_macro_standard = standard_metrics["f1_macro"]
                     cv_f1_macro_spatial = spatial_metrics["f1_macro"]
                     cv_pr_auc_macro_standard = standard_metrics["pr_auc_macro"]
                     cv_pr_auc_macro_spatial = spatial_metrics["pr_auc_macro"]
+                    cv_qwk_standard = standard_metrics["qwk"]
+                    cv_qwk_spatial = spatial_metrics["qwk"]
                     cv_optimism_gap = self._log_optimism_gap(
                         diagnostic_strategy_name, standard_metrics, spatial_metrics,
                         standard_folds, spatial_folds,
                     )
                 else:
-                    # Cheap path (default): AUC-only gap, exactly matching
-                    # this feature's pre-existing behavior (just numerically
-                    # correct now). cv_auc_spatial_folds/F1-macro/PR-AUC-macro
-                    # stay None — see log_full_cv_diagnostics above.
-                    gap_auc = compute_optimism_gap(
-                        {"auc": cv_auc_standard}, {"auc": cv_auc_spatial}, metrics=("auc",),
-                    )["auc"]
+                    # Cheap path (default): the diagnostic full-pass and the
+                    # searched side's Optuna best-trial (best_value +
+                    # user_attrs) already gave every metric on both sides
+                    # above, at no extra fit cost, so the gap covers all
+                    # four. Only cv_auc_spatial_folds (needs a full pass on
+                    # the *searched* side specifically, for
+                    # stage_selection's Kruskal-Wallis) still requires
+                    # log_full_cv_diagnostics — see that branch above.
+                    cheap_standard = {
+                        "auc": cv_auc_standard, "f1_macro": cv_f1_macro_standard,
+                        "pr_auc_macro": cv_pr_auc_macro_standard, "qwk": cv_qwk_standard,
+                    }
+                    cheap_spatial = {
+                        "auc": cv_auc_spatial, "f1_macro": cv_f1_macro_spatial,
+                        "pr_auc_macro": cv_pr_auc_macro_spatial, "qwk": cv_qwk_spatial,
+                    }
+                    gap = compute_optimism_gap(cheap_standard, cheap_spatial)
                     mlflow.log_metric(f"cv_auc_{diagnostic_strategy_name}", diagnostic_mean["auc"])
-                    mlflow.log_metric("cv_auc_optimism_gap", gap_auc)
-                    cv_optimism_gap = {"auc": gap_auc}
+                    mlflow.log_metric(f"cv_pr_auc_macro_{diagnostic_strategy_name}", diagnostic_mean["pr_auc_macro"])
+                    mlflow.log_metric(f"cv_f1_macro_{diagnostic_strategy_name}", diagnostic_mean["f1_macro"])
+                    mlflow.log_metric(f"cv_qwk_{diagnostic_strategy_name}", diagnostic_mean["qwk"])
+                    for metric, value in gap.items():
+                        mlflow.log_metric(f"cv_{metric}_optimism_gap", value)
+                    cv_optimism_gap = gap
 
-            final_model, val_auc, val_f1 = self._fit_final_and_validate(
+            final_model, val_auc, val_f1, val_qwk = self._fit_final_and_validate(
                 model_cls, best_params, X_tr, y_train, X_va, y_val, season, model_name,
             )
             mlflow.log_metric("val_auc", val_auc)
             mlflow.log_metric("val_f1", val_f1)
+            mlflow.log_metric("val_qwk", val_qwk)
             self._log_model_artifact(model_name, final_model)
 
             eval_results = {}
@@ -241,9 +287,12 @@ class ModelTrainer:
             "cv_f1_macro_spatial": cv_f1_macro_spatial,
             "cv_pr_auc_macro_standard": cv_pr_auc_macro_standard,
             "cv_pr_auc_macro_spatial": cv_pr_auc_macro_spatial,
+            "cv_qwk_standard": cv_qwk_standard,
+            "cv_qwk_spatial": cv_qwk_spatial,
             "cv_optimism_gap": cv_optimism_gap,
             "val_auc": val_auc,
             "val_f1": val_f1,
+            "val_qwk": val_qwk,
             "study": study,
             **eval_results,
         }
@@ -257,18 +306,32 @@ class ModelTrainer:
         X_tr, X_va, _ = self.dataset_prep.scale_for_model_family(X_train, X_val, needs_scaling)
         return X_tr, X_va
 
-    def _log_run_setup(self, season, model_name, best_params, best_value, search_uses_groups):
+    def _log_run_setup(self, season, model_name, best_params, best_value, search_uses_groups, best_trial_metrics):
         mlflow.set_tags({
             "season": season,
             "model": model_name,
             "cv_strategy": self.config["modeling"].get("cv_strategy", "both"),
             "search_cv_strategy": self.cv_strategy.name,
             "search_metric": "spatial" if search_uses_groups else "standard",
+            "search_objective_metric": "pr_auc_macro",
             "use_smote": self.config["modeling"].get("use_smote", False),
         })
         mlflow.log_params(best_params)
-        metric_key = "cv_auc_spatial" if search_uses_groups else "cv_auc_standard"
-        mlflow.log_metric(metric_key, best_value)
+
+        side = "spatial" if search_uses_groups else "standard"
+        # best_value is Optuna's directly-optimized metric (PR-AUC-macro,
+        # see search.py's _make_objective) — logged under cv_prauc_*, not
+        # cv_auc_*, so it isn't mistaken for the AUC metric downstream.
+        # AUC/F1-macro/QWK for the same (searched) side come from the best
+        # trial's user_attrs — cheap/subsample-based, same role best_value
+        # alone used to play for AUC before the objective swapped metrics.
+        # generate_report_figures.py's plot_cv_comparison needs cv_auc_* on
+        # both sides to render at all, so this must not be skipped.
+        mlflow.log_metric(f"cv_prauc_{side}", best_value)
+        for metric_name in ("auc", "f1_macro", "qwk"):
+            value = best_trial_metrics.get(metric_name)
+            if value is not None:
+                mlflow.log_metric(f"cv_{metric_name}_{side}", value)
 
     def _run_full_metrics_pass(
         self, strategy, model_cls, best_params, X_tr, y_train, groups_train,
@@ -293,11 +356,11 @@ class ModelTrainer:
         ]
         mean = {
             metric: float(np.mean([f[metric] for f in per_fold]))
-            for metric in ("auc", "f1_macro", "pr_auc_macro")
+            for metric in ("auc", "f1_macro", "pr_auc_macro", "qwk")
         }
         logger.info(
             f"{context}: AUC={mean['auc']:.4f} F1_macro={mean['f1_macro']:.4f} "
-            f"PR_AUC_macro={mean['pr_auc_macro']:.4f}"
+            f"PR_AUC_macro={mean['pr_auc_macro']:.4f} QWK={mean['qwk']:.4f}"
         )
         return mean, per_fold
 
@@ -307,12 +370,12 @@ class ModelTrainer:
         standard_folds: list, spatial_folds: list,
     ) -> dict:
         """Logs the standard-vs-spatial optimism gap (standard - spatial)
-        for AUC, F1-macro, and PR-AUC-macro, plus the per-side aggregate
-        values and per-fold breakdowns (mlflow step metrics). cv_auc_{the
-        PRIMARY side} is already logged by _log_run_setup from Optuna's
-        best_value, so only the diagnostic side's AUC is (re-)logged here;
-        F1-macro/PR-AUC-macro were never logged for either side before this
-        method, so both sides are logged for those two.
+        for AUC, F1-macro, PR-AUC-macro, and QWK, plus the per-side
+        aggregate values and per-fold breakdowns (mlflow step metrics).
+        cv_prauc_{the PRIMARY side} is already logged by _log_run_setup
+        from Optuna's best_value, so only the diagnostic side's AUC is
+        (re-)logged here; F1-macro/PR-AUC-macro/QWK were never logged for
+        either side before this method, so both sides are logged for those.
 
         Per-fold standard[i] and spatial[i] are NOT paired into a per-fold
         gap: fold i means something different under each strategy
@@ -332,18 +395,20 @@ class ModelTrainer:
         mlflow.log_metric("cv_f1_macro_spatial", spatial_metrics["f1_macro"])
         mlflow.log_metric("cv_pr_auc_macro_standard", standard_metrics["pr_auc_macro"])
         mlflow.log_metric("cv_pr_auc_macro_spatial", spatial_metrics["pr_auc_macro"])
+        mlflow.log_metric("cv_qwk_standard", standard_metrics["qwk"])
+        mlflow.log_metric("cv_qwk_spatial", spatial_metrics["qwk"])
 
         for metric, value in gap.items():
             mlflow.log_metric(f"cv_{metric}_optimism_gap", value)
 
         for fold_list, role in ((standard_folds, "standard"), (spatial_folds, "spatial")):
             for i, fold_metrics in enumerate(fold_list):
-                for metric in ("auc", "f1_macro", "pr_auc_macro"):
+                for metric in ("auc", "f1_macro", "pr_auc_macro", "qwk"):
                     mlflow.log_metric(f"cv_{metric}_{role}_fold", fold_metrics[metric], step=i)
 
         logger.info(
-            f"[optimism gap] standard-spatial: AUC={gap['auc']:.4f} "
-            f"F1_macro={gap['f1_macro']:.4f} PR_AUC_macro={gap['pr_auc_macro']:.4f}"
+            f"[optimism gap] standard-spatial: AUC={gap['auc']:.4f} F1_macro={gap['f1_macro']:.4f} "
+            f"PR_AUC_macro={gap['pr_auc_macro']:.4f} QWK={gap['qwk']:.4f}"
         )
         return gap
 
@@ -356,9 +421,11 @@ class ModelTrainer:
         final_model.fit(X_fit, y_fit)
 
         val_proba = final_model.predict_proba(X_va.values)
+        val_pred = np.argmax(val_proba, axis=1)
         val_auc = roc_auc_score(y_val, val_proba, multi_class="ovr")
-        val_f1 = f1_score(y_val, np.argmax(val_proba, axis=1), average="macro")
-        return final_model, val_auc, val_f1
+        val_f1 = f1_score(y_val, val_pred, average="macro")
+        val_qwk = cohen_kappa_score(y_val, val_pred, weights="quadratic")
+        return final_model, val_auc, val_f1, val_qwk
 
     @staticmethod
     def _log_model_artifact(model_name: str, fitted_model) -> None:

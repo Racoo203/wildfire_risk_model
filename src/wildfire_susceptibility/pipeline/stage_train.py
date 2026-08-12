@@ -92,9 +92,12 @@ def _write_artifact(config: dict, season: str, model_name: str, result: dict) ->
         "cv_f1_macro_spatial": result.get("cv_f1_macro_spatial"),
         "cv_pr_auc_macro_standard": result.get("cv_pr_auc_macro_standard"),
         "cv_pr_auc_macro_spatial": result.get("cv_pr_auc_macro_spatial"),
+        "cv_qwk_standard": result.get("cv_qwk_standard"),
+        "cv_qwk_spatial": result.get("cv_qwk_spatial"),
         "cv_optimism_gap": result.get("cv_optimism_gap"),
         "val_auc": result.get("val_auc"),
         "val_f1": result.get("val_f1"),
+        "val_qwk": result.get("val_qwk"),
         "config_snapshot": config,
     }
     (out_dir / "manifest.json").write_text(json.dumps(manifest, indent=2, default=str))

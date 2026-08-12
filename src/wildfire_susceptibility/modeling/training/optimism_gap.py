@@ -12,7 +12,7 @@ that metric.
 """
 from typing import Dict, Sequence
 
-DEFAULT_GAP_METRICS = ("auc", "f1_macro", "pr_auc_macro")
+DEFAULT_GAP_METRICS = ("auc", "f1_macro", "pr_auc_macro", "qwk")
 
 
 def compute_optimism_gap(
