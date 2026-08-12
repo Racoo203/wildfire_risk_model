@@ -1,6 +1,8 @@
 """Blend NaN pixels into a desaturated hillshade backdrop instead of
 rendering them blank/white, so maps read as 'no data here' rather than
-'broken here' (Section 9)."""
+'broken here' (Section 9). Also adds the cartographic chrome (scale bar,
+north arrow, coordinate gridlines) every map figure needs for
+publication use."""
 
 from pathlib import Path
 from typing import Optional
@@ -8,7 +10,68 @@ from typing import Optional
 import numpy as np
 import rasterio
 from matplotlib.colors import LightSource
+from mpl_toolkits.axes_grid1.anchored_artists import AnchoredSizeBar
 import matplotlib.pyplot as plt
+
+
+def _nice_scalebar_length(span_m: float) -> float:
+    """Round `span_m * 0.2` up to the nearest 1/2/5 x 10^n metres, so the
+    scale bar reads as a round number rather than an arbitrary fraction
+    of the visible extent."""
+    target = span_m * 0.2
+    if target <= 0:
+        return 1.0
+    magnitude = 10 ** np.floor(np.log10(target))
+    for mult in (1, 2, 5, 10):
+        candidate = mult * magnitude
+        if candidate >= target:
+            return candidate
+    return 10 * magnitude
+
+
+def _add_scalebar(ax: plt.Axes, transform, width_px: int) -> AnchoredSizeBar:
+    px_size_m = abs(transform.a)
+    length_m = _nice_scalebar_length(width_px * px_size_m)
+    length_px = length_m / px_size_m
+    label = f"{length_m / 1000:.3g} km" if length_m >= 1000 else f"{length_m:.0f} m"
+
+    scalebar = AnchoredSizeBar(
+        ax.transData, length_px, label, loc="lower right",
+        pad=0.5, color="black", frameon=True,
+        size_vertical=max(1.0, width_px * 0.01),
+    )
+    ax.add_artist(scalebar)
+    return scalebar
+
+
+def _add_north_arrow(ax: plt.Axes) -> None:
+    ax.annotate(
+        "N", xy=(0.95, 0.90), xytext=(0.95, 0.72),
+        xycoords="axes fraction", textcoords="axes fraction",
+        ha="center", va="center", fontsize=12, fontweight="bold",
+        arrowprops=dict(facecolor="black", width=4, headwidth=12, headlength=10),
+    )
+
+
+def _add_gridlines(ax: plt.Axes, transform, height: int, width: int, n_ticks: int = 5) -> None:
+    """Coordinate-labeled gridlines. Tick *positions* stay in pixel-index
+    units (matching imshow's default, extent-less coordinate system);
+    only the tick *labels* are converted to CRS easting/northing via the
+    raster's affine transform."""
+    row_ticks = np.linspace(0, height - 1, n_ticks)
+    col_ticks = np.linspace(0, width - 1, n_ticks)
+
+    xs, _ = rasterio.transform.xy(transform, [0] * len(col_ticks), col_ticks)
+    _, ys = rasterio.transform.xy(transform, row_ticks, [0] * len(row_ticks))
+
+    ax.set_xticks(col_ticks)
+    ax.set_xticklabels([f"{x:,.0f}" for x in xs], fontsize=7, rotation=45)
+    ax.set_yticks(row_ticks)
+    ax.set_yticklabels([f"{y:,.0f}" for y in ys], fontsize=7)
+    ax.set_xlabel("Easting (m)", fontsize=8)
+    ax.set_ylabel("Northing (m)", fontsize=8)
+    ax.grid(True, alpha=0.3, linestyle="--", linewidth=0.5)
+    ax.tick_params(length=0)
 
 
 def render_with_terrain_backdrop(
@@ -19,6 +82,9 @@ def render_with_terrain_backdrop(
     backdrop_alpha: float = 0.25,
     title: Optional[str] = None,
     colorbar_label: Optional[str] = None,
+    show_scalebar: bool = True,
+    show_north_arrow: bool = True,
+    show_gridlines: bool = True,
 ) -> plt.Axes:
     """
     Render `data_path` on top of a desaturated hillshade of `dem_path`.
@@ -29,6 +95,8 @@ def render_with_terrain_backdrop(
         dem = dem_src.read(1)
     with rasterio.open(data_path) as src:
         data = src.read(1)
+        transform = src.transform
+        height, width = src.height, src.width
 
     ls = LightSource(azdeg=315, altdeg=45)
     hillshade = ls.hillshade(np.nan_to_num(dem, nan=0.0), vert_exag=2)
@@ -39,7 +107,17 @@ def render_with_terrain_backdrop(
 
     if title:
         ax.set_title(title)
-    ax.axis("off")
+
+    if show_gridlines:
+        _add_gridlines(ax, transform, height, width)
+    else:
+        ax.axis("off")
+
+    if show_scalebar:
+        _add_scalebar(ax, transform, width)
+
+    if show_north_arrow:
+        _add_north_arrow(ax)
 
     if colorbar_label:
         cbar = plt.colorbar(im, ax=ax, fraction=0.04, pad=0.02)
@@ -57,6 +135,9 @@ def save_terrain_map(
     colorbar_label: Optional[str] = None,
     figsize: tuple = (8, 6),
     dpi: int = 150,
+    show_scalebar: bool = True,
+    show_north_arrow: bool = True,
+    show_gridlines: bool = True,
 ) -> Path:
     """Convenience wrapper: render_with_terrain_backdrop + save to disk."""
     out_path = Path(out_path)
@@ -66,6 +147,8 @@ def save_terrain_map(
     render_with_terrain_backdrop(
         data_path, dem_path, cmap, ax,
         title=title, colorbar_label=colorbar_label,
+        show_scalebar=show_scalebar, show_north_arrow=show_north_arrow,
+        show_gridlines=show_gridlines,
     )
     fig.tight_layout()
     fig.savefig(out_path, dpi=dpi)
