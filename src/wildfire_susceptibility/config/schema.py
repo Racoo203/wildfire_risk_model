@@ -134,8 +134,10 @@ class LabelsConfig(BaseModel):
 # wildfire_susceptibility/config/schema.py — ModelingConfig
 
 class ModelingConfig(BaseModel):
-    models: List[Literal["random_forest", "svm", "xgboost", "neural_net"]] = Field(
-        default_factory=lambda: ["random_forest", "svm", "xgboost", "neural_net"]
+    models: List[Literal[
+        "random_forest", "svm", "xgboost", "neural_net", "catboost", "ordinal_lr"
+    ]] = Field(
+        default_factory=lambda: ["random_forest", "catboost", "ordinal_lr", "neural_net"]
     )
     optuna_n_trials: int = 30
     cv_folds: int = 5

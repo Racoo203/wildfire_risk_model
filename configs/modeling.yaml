@@ -1,5 +1,8 @@
 modeling:
-  models: ["random_forest", "svm", "xgboost", "neural_net"]
+  # Finalized roster: ordinal LR replaces SVC, CatBoost replaces XGBoost.
+  # "svm"/"xgboost" remain valid registry entries (not deleted) for
+  # reproducing prior results, just no longer in the default roster.
+  models: ["random_forest", "catboost", "ordinal_lr", "neural_net"]
   optuna_n_trials: 30
   cv_folds: 5
   mlflow_experiment: "wildfire-susceptibility-essex"

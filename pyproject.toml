@@ -37,9 +37,11 @@ dependencies = [
 
 [project.optional-dependencies]
 modeling = [
+    "catboost",
     "imbalanced-learn",
     "lightgbm",
     "mlflow",
+    "mord",
     "optuna",
     "shap",
     "torch",

@@ -49,7 +49,7 @@ def test_load_experiment_overrides_only_specified_keys():
     assert exp_cfg.modeling.smote_during_search is True
     assert exp_cfg.modeling.search_resample_target_size == 100_000
     assert exp_cfg.modeling.smote_sampling_strategy == {1: 400000, 2: 200000, 3: 100000}
-    assert exp_cfg.modeling.models == ["xgboost"]
+    assert exp_cfg.modeling.models == ["catboost"]
     assert exp_cfg.labels.density_method == "convolution"
     assert exp_cfg.labels.classify_method == "gmm"
 

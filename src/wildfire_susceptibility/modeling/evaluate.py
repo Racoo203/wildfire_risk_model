@@ -73,7 +73,7 @@ def _try_shap_summary(final_model, X_test, feature_names, season, model_name, co
             np.random.default_rng(42).choice(len(X_test), 2000, replace=False)
         ]
 
-        if model_name in ("random_forest", "xgboost"):
+        if model_name in ("random_forest", "xgboost", "catboost"):
             explainer = shap.TreeExplainer(underlying)
             shap_values = explainer.shap_values(sample)
         else:

@@ -17,7 +17,9 @@ def synthetic_classification_data():
     return X, y
 
 
-@pytest.mark.parametrize("model_name", ["random_forest", "svm", "xgboost"])
+@pytest.mark.parametrize(
+    "model_name", ["random_forest", "svm", "xgboost", "catboost", "ordinal_lr"]
+)
 def test_model_contract(model_name, synthetic_classification_data):
     X, y = synthetic_classification_data
     model_cls = MODELS[model_name]
@@ -32,6 +34,19 @@ def test_model_contract(model_name, synthetic_classification_data):
     assert (proba >= 0).all() and (proba <= 1).all()
 
     assert isinstance(model.needs_scaling(), bool)
+
+
+@pytest.mark.parametrize("model_name", ["catboost", "ordinal_lr"])
+def test_new_model_proba_shape_matches_4class_metrics_contract(model_name, synthetic_classification_data):
+    """metrics.py's compute_full_metrics (PR-AUC/F1-macro/QWK, and the
+    Optuna HPO objective built on top of it) all index y_proba as an
+    (n_samples, 4) array — confirm both new models produce exactly that
+    shape, not just "some" 2D array."""
+    X, y = synthetic_classification_data
+    model = MODELS[model_name]().fit(X, y)
+
+    proba = model.predict_proba(X)
+    assert proba.shape == (X.shape[0], 4)
 
 
 def test_neural_net_contract(synthetic_classification_data):
@@ -52,7 +67,7 @@ def test_param_space_returns_dict_optuna_can_consume(synthetic_classification_da
     optuna = pytest.importorskip("optuna")
     X, y = synthetic_classification_data
 
-    for name in ["random_forest", "svm", "xgboost"]:
+    for name in ["random_forest", "svm", "xgboost", "catboost", "ordinal_lr"]:
         model = MODELS[name]()
         study = optuna.create_study()
         trial = study.ask()
