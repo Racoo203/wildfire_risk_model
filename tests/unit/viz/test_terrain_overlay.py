@@ -65,3 +65,40 @@ def test_save_terrain_map_writes_nonempty_png(tmp_path, synthetic_dem, synthetic
     assert result == out_path
     assert out_path.exists()
     assert out_path.stat().st_size > 0
+
+
+def test_points_gdf_overlays_scatter_and_legend(synthetic_dem, synthetic_reference_raster, synthetic_fire_points):
+    fig, ax = plt.subplots()
+    render_with_terrain_backdrop(
+        synthetic_reference_raster, synthetic_dem, "viridis", ax,
+        points_gdf=synthetic_fire_points, points_label="Test-period fires",
+    )
+
+    collections_with_offsets = [c for c in ax.collections if len(c.get_offsets()) > 0]
+    assert len(collections_with_offsets) >= 1
+    assert collections_with_offsets[0].get_offsets().shape[0] == len(synthetic_fire_points)
+
+    legend = ax.get_legend()
+    assert legend is not None
+    assert legend.get_texts()[0].get_text() == "Test-period fires"
+    plt.close(fig)
+
+
+def test_no_points_gdf_means_no_legend(synthetic_dem, synthetic_reference_raster):
+    fig, ax = plt.subplots()
+    render_with_terrain_backdrop(synthetic_reference_raster, synthetic_dem, "viridis", ax)
+
+    assert ax.get_legend() is None
+    plt.close(fig)
+
+
+def test_save_terrain_map_with_points_gdf(tmp_path, synthetic_dem, synthetic_reference_raster, synthetic_fire_points):
+    out_path = tmp_path / "map_with_points.png"
+    result = save_terrain_map(
+        synthetic_reference_raster, synthetic_dem, out_path,
+        points_gdf=synthetic_fire_points, points_label="Test-period fires",
+    )
+
+    assert result == out_path
+    assert out_path.exists()
+    assert out_path.stat().st_size > 0
