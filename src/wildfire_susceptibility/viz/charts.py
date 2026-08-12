@@ -61,11 +61,30 @@ def plot_roc_curves(
     return _save_and_log(fig, out_path, figures_dir, "roc_curve", "viz.charts.plot_roc_curves", season)
 
 
+def _split_shap_by_class(shap_values) -> List[np.ndarray]:
+    """Normalize the several shapes SHAP explainers return into a list of
+    per-class (n_samples, n_features) arrays: a per-class list
+    (TreeExplainer, some SHAP versions), a single stacked
+    (n_samples, n_features, n_classes) array (this project's installed
+    SHAP version's TreeExplainer.shap_values() for multiclass models), or
+    a plain 2D array (single-output case) wrapped as a one-item list."""
+    if isinstance(shap_values, list):
+        return shap_values
+    if shap_values.ndim == 3:
+        return [shap_values[:, :, k] for k in range(shap_values.shape[-1])]
+    return [shap_values]
+
+
 def plot_shap_summary(shap_values, feature_names, figures_dir, season=None, model_name=None):
     import shap
     import matplotlib.pyplot as plt
 
-    shap.summary_plot(shap_values, feature_names=feature_names, show=False)
+    by_class = _split_shap_by_class(shap_values)
+    # shap.summary_plot's legacy code path only accepts a bare 2D array or
+    # a list of per-class 2D arrays — not the single stacked 3D array some
+    # SHAP versions' TreeExplainer.shap_values() returns for multiclass
+    # models, which raises inside its internal sorting logic.
+    shap.summary_plot(by_class if len(by_class) > 1 else by_class[0], feature_names=feature_names, show=False)
     fig = plt.gcf()          # capture AFTER the call, not before
     fig.set_size_inches(8, 6)
 
@@ -73,6 +92,57 @@ def plot_shap_summary(shap_values, feature_names, figures_dir, season=None, mode
     out_path = Path(figures_dir) / (season or "static") / "models" / fname
     return _save_and_log(fig, out_path, figures_dir, "shap_summary", "viz.charts.plot_shap_summary",
                           season, params={"model": model_name})
+
+
+def _shap_values_to_2d(shap_values) -> np.ndarray:
+    """Collapse any SHAP explainer output down to a single
+    (n_samples, n_features) array, averaging across classes for the
+    multiclass case — gives an overview of each feature's average effect
+    rather than a per-class breakdown."""
+    by_class = _split_shap_by_class(shap_values)
+    return np.mean(np.stack(by_class, axis=-1), axis=-1)
+
+
+def plot_shap_dependence(
+    shap_values,
+    X: np.ndarray,
+    feature_names: List[str],
+    figures_dir: Path,
+    season: Optional[str] = None,
+    model_name: Optional[str] = None,
+    top_n: int = 5,
+) -> Path:
+    """Dependence plots (SHAP value vs. feature value) for the top-N
+    features by mean |SHAP|, as one multi-panel figure rather than N
+    separate files. `X` must be the same array passed to the explainer
+    that produced `shap_values` (same rows, same column order as
+    `feature_names`)."""
+    import shap
+
+    shap_2d = _shap_values_to_2d(shap_values)
+    mean_abs = np.abs(shap_2d).mean(axis=0)
+    top_idx = np.argsort(mean_abs)[::-1][: min(top_n, len(feature_names))]
+
+    n = len(top_idx)
+    ncols = min(3, n)
+    nrows = int(np.ceil(n / ncols))
+    fig, axes = plt.subplots(nrows, ncols, figsize=(5 * ncols, 4 * nrows), squeeze=False)
+
+    for i, feat_idx in enumerate(top_idx):
+        ax = axes[i // ncols][i % ncols]
+        shap.dependence_plot(
+            int(feat_idx), shap_2d, X, feature_names=feature_names,
+            interaction_index=None, ax=ax, show=False,
+        )
+    for j in range(n, nrows * ncols):
+        axes[j // ncols][j % ncols].axis("off")
+
+    fig.suptitle("SHAP dependence — top features" + (f" ({model_name}, {season})" if model_name else ""))
+
+    fname = f"shap_dependence_{model_name or 'model'}.png"
+    out_path = Path(figures_dir) / (season or "static") / "models" / fname
+    return _save_and_log(fig, out_path, figures_dir, "shap_dependence", "viz.charts.plot_shap_dependence",
+                          season, params={"model": model_name, "top_n": top_n})
 
 def plot_vif_correlation(
     df: pd.DataFrame,

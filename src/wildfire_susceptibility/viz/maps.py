@@ -4,6 +4,8 @@ and logged to figures/manifest.json (Section 9)."""
 from pathlib import Path
 from typing import Dict, Optional
 
+import geopandas as gpd
+
 from .terrain_overlay import save_terrain_map
 from .manifest import append_to_manifest
 
@@ -65,6 +67,7 @@ def render_susceptibility_map(
     season: Optional[str] = None,
     model_name: Optional[str] = None,
     include_d_fires_as_feature: Optional[bool] = None,
+    fire_points_gdf: Optional[gpd.GeoDataFrame] = None,
 ) -> Path:
     figures_dir = Path(figures_dir)
     fname = f"{model_name}.png" if model_name else "default.png"
@@ -81,6 +84,8 @@ def render_susceptibility_map(
         cmap=_SUSCEPTIBILITY_CMAP,
         title=title,
         colorbar_label="Class (0=Low .. 3=Very High)",
+        points_gdf=fire_points_gdf,
+        points_label="Test-period fires" if fire_points_gdf is not None else None,
     )
 
     append_to_manifest(
@@ -88,7 +93,11 @@ def render_susceptibility_map(
         category="susceptibility_map",
         generated_by="viz.maps.render_susceptibility_map",
         season=season,
-        params={"model": model_name, "include_d_fires_as_feature": include_d_fires_as_feature},
+        params={
+            "model": model_name,
+            "include_d_fires_as_feature": include_d_fires_as_feature,
+            "fire_points_overlaid": fire_points_gdf is not None,
+        },
     )
     return out_path
 

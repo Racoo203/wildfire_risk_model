@@ -30,11 +30,13 @@ Categories (--only accepts a comma-separated subset):
 from __future__ import annotations
 
 import argparse
+import json
 import logging
 import sys
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 
+import geopandas as gpd
 import numpy as np
 import pandas as pd
 import rasterio
@@ -103,7 +105,40 @@ def discover_feature_rasters(cfg: dict, season: str) -> Dict[str, Path]:
 
 
 def discover_susceptibility_raster(cfg: dict, season: str) -> Optional[Path]:
+    """Ground-truth density/classification label raster (from
+    stage_labels), NOT a model's predicted output — used only for the EDA
+    class-balance comparison. For the model-predicted risk map, see
+    discover_predicted_susceptibility_rasters below."""
     path = _layers_dir(cfg) / f"risk_labels_clean_{season}.tif"
+    return path if path.exists() else None
+
+
+def discover_predicted_susceptibility_rasters(cfg: dict, season: str) -> Dict[str, Path]:
+    """Every model-predicted susceptibility raster for `season`, as written
+    by modeling/evaluate.py::generate_susceptibility_raster during
+    stage_evaluate (`susceptibility_<model_name>_<season>.tif`), keyed by
+    model name."""
+    layers_dir = _layers_dir(cfg)
+    suffix = f"_{season}.tif"
+    found = {}
+    for path in layers_dir.glob(f"susceptibility_*{suffix}"):
+        model_name = path.stem[len("susceptibility_"):-len(f"_{season}")]
+        found[model_name] = path
+    return found
+
+
+def discover_selected_model(cfg: dict, season: str) -> Optional[str]:
+    """The best model per season, as chosen by stage_selection.py's
+    selection_rule. Returns None if stage_selection hasn't run yet."""
+    summary_path = _figures_dir(cfg) / "selection_summary.json"
+    if not summary_path.exists():
+        return None
+    summary = json.loads(summary_path.read_text())
+    return summary.get(season, {}).get("selected_model")
+
+
+def discover_fire_test_points(cfg: dict, season: str) -> Optional[Path]:
+    path = _layers_dir(cfg) / f"fire_points_test_{season}.gpkg"
     return path if path.exists() else None
 
 
@@ -132,18 +167,54 @@ def generate_factor_maps(cfg: dict, season: str) -> None:
 
 
 def generate_susceptibility_map(cfg: dict, season: str) -> None:
+    """
+    Renders the dissertation's headline figure: the model-predicted 0-3
+    risk class across Essex, with test-period fire incident locations
+    overlaid. Uses stage_selection.py's chosen best model per season when
+    available; otherwise falls back to rendering every model that has a
+    predicted raster on disk, so the script stays usable before
+    stage_selection has run.
+    """
     dem_path = _dem_path(cfg)
-    labels_path = discover_susceptibility_raster(cfg, season)
-    if labels_path is None:
-        logger.warning(f"[{season}] No cleaned susceptibility raster found; skipping.")
+    if not dem_path.exists():
+        logger.warning(f"[{season}] No DEM found at {dem_path}; skipping susceptibility map.")
         return
 
+    predicted_rasters = discover_predicted_susceptibility_rasters(cfg, season)
+    if not predicted_rasters:
+        logger.warning(f"[{season}] No model-predicted susceptibility raster found; skipping.")
+        return
+
+    selected_model = discover_selected_model(cfg, season)
+    if selected_model and selected_model in predicted_rasters:
+        to_render = {selected_model: predicted_rasters[selected_model]}
+    else:
+        if selected_model:
+            logger.warning(
+                f"[{season}] selection_summary.json names '{selected_model}' but no matching "
+                f"raster was found; rendering all {len(predicted_rasters)} available model(s) instead."
+            )
+        else:
+            logger.info(
+                f"[{season}] No selection_summary.json yet; rendering all "
+                f"{len(predicted_rasters)} available model(s)."
+            )
+        to_render = predicted_rasters
+
+    fire_points_path = discover_fire_test_points(cfg, season)
+    fire_points_gdf = gpd.read_file(fire_points_path) if fire_points_path else None
+    if fire_points_path is None:
+        logger.info(f"[{season}] No fire-test points found; rendering susceptibility map without overlay.")
+
     include_d_fires = cfg["labels"].get("include_d_fires_as_feature", True)
-    viz.render_susceptibility_map(
-        labels_path, dem_path, _figures_dir(cfg),
-        season=season, include_d_fires_as_feature=include_d_fires,
-    )
-    logger.info(f"[{season}] Rendered susceptibility map.")
+    for model_name, labels_path in to_render.items():
+        viz.render_susceptibility_map(
+            labels_path, dem_path, _figures_dir(cfg),
+            season=season, model_name=model_name,
+            include_d_fires_as_feature=include_d_fires,
+            fire_points_gdf=fire_points_gdf,
+        )
+    logger.info(f"[{season}] Rendered susceptibility map(s) for: {sorted(to_render)}.")
 
 
 def generate_eda_figures(cfg: dict, season: str) -> None:
