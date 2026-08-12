@@ -7,6 +7,7 @@ publication use."""
 from pathlib import Path
 from typing import Optional
 
+import geopandas as gpd
 import numpy as np
 import rasterio
 from matplotlib.colors import LightSource
@@ -74,6 +75,29 @@ def _add_gridlines(ax: plt.Axes, transform, height: int, width: int, n_ticks: in
     ax.tick_params(length=0)
 
 
+def _add_points(
+    ax: plt.Axes,
+    transform,
+    points_gdf: gpd.GeoDataFrame,
+    label: Optional[str] = None,
+) -> None:
+    """Scatter point geometries (assumed already in the raster's CRS) onto
+    the map, converted from CRS coordinates to the pixel-index units
+    imshow uses by default — the same convention `_add_gridlines` relies
+    on for tick placement."""
+    if len(points_gdf) == 0:
+        return
+    rows, cols = rasterio.transform.rowcol(
+        transform, points_gdf.geometry.x.values, points_gdf.geometry.y.values
+    )
+    ax.scatter(
+        cols, rows, s=20, facecolor="none", edgecolor="black",
+        linewidth=0.9, zorder=2, label=label,
+    )
+    if label:
+        ax.legend(loc="upper left", fontsize=7, framealpha=0.8)
+
+
 def render_with_terrain_backdrop(
     data_path: Path,
     dem_path: Path,
@@ -85,11 +109,15 @@ def render_with_terrain_backdrop(
     show_scalebar: bool = True,
     show_north_arrow: bool = True,
     show_gridlines: bool = True,
+    points_gdf: Optional[gpd.GeoDataFrame] = None,
+    points_label: Optional[str] = None,
 ) -> plt.Axes:
     """
     Render `data_path` on top of a desaturated hillshade of `dem_path`.
     NaN cells in `data_path` become fully transparent, revealing the
-    hillshade underneath instead of a blank patch.
+    hillshade underneath instead of a blank patch. If `points_gdf` is
+    given, its point geometries are scattered on top (e.g. fire incident
+    locations over a predicted susceptibility map).
     """
     with rasterio.open(dem_path) as dem_src:
         dem = dem_src.read(1)
@@ -104,6 +132,9 @@ def render_with_terrain_backdrop(
 
     masked = np.ma.masked_invalid(data)
     im = ax.imshow(masked, cmap=cmap, alpha=1.0, zorder=1)
+
+    if points_gdf is not None:
+        _add_points(ax, transform, points_gdf, label=points_label)
 
     if title:
         ax.set_title(title)
@@ -138,6 +169,8 @@ def save_terrain_map(
     show_scalebar: bool = True,
     show_north_arrow: bool = True,
     show_gridlines: bool = True,
+    points_gdf: Optional[gpd.GeoDataFrame] = None,
+    points_label: Optional[str] = None,
 ) -> Path:
     """Convenience wrapper: render_with_terrain_backdrop + save to disk."""
     out_path = Path(out_path)
@@ -149,6 +182,7 @@ def save_terrain_map(
         title=title, colorbar_label=colorbar_label,
         show_scalebar=show_scalebar, show_north_arrow=show_north_arrow,
         show_gridlines=show_gridlines,
+        points_gdf=points_gdf, points_label=points_label,
     )
     fig.tight_layout()
     fig.savefig(out_path, dpi=dpi)
