@@ -15,7 +15,7 @@ labels:
 
 modeling:
   mlflow_experiment: "wildfire-summer-baseline"
-  cv_strategy: "both"                       # was stratified_spatial_block — needed for Kruskal-Wallis + standard-vs-stratified comparison
+  cv_strategy: "standard"                       # was stratified_spatial_block — needed for Kruskal-Wallis + standard-vs-stratified comparison
   log_full_cv_diagnostics: true             # this is the reported run — pays the extra CV pass for the full standard-vs-spatial gap + Kruskal-Wallis fold data
   models: ["catboost"]  # was ["xgboost"] — xgboost replaced by catboost in the finalized roster
   imbalance_strategy: "cost_weighted"       # smoketest for cost-weighted vs SMOTE hypothesis; makes use_smote/smote_* below inert (SMOTEResampler.resample() no-ops per model when resolved to cost_weighted)

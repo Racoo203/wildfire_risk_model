@@ -60,9 +60,7 @@
   },
   "train": {
     "summer": {
-      "random_forest": "models\\summer\\random_forest\\9c476ed1",
-      "xgboost": "models\\summer\\xgboost\\9c476ed1",
-      "neural_net": "models\\summer\\neural_net\\9c476ed1"
+      "catboost": "models\\summer\\catboost\\2b38c67a"
     }
   },
   "evaluate": {
