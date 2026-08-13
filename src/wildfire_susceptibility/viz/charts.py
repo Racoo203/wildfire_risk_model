@@ -14,6 +14,7 @@ import statsmodels.api as sm
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 
 from .manifest import append_to_manifest
+from ..modeling.class_labels import class_names_for
 
 import logging
 
@@ -213,16 +214,17 @@ def plot_class_balance(
     season: Optional[str] = None,
 ) -> Path:
     """Side-by-side class counts before/after k-means Low-cleaning."""
-    classes = ["Low", "Medium", "High", "Very High"]
+    n_classes = int(np.nanmax([np.nanmax(labels_before), np.nanmax(labels_after)])) + 1
+    classes = class_names_for(n_classes)
 
     def _counts(arr):
         valid = arr[~np.isnan(arr)]
-        return [int(np.sum(valid == c)) for c in range(4)]
+        return [int(np.sum(valid == c)) for c in range(n_classes)]
 
     before, after = _counts(labels_before), _counts(labels_after)
 
     fig, ax = plt.subplots(figsize=(7, 5))
-    x = np.arange(4)
+    x = np.arange(n_classes)
     width = 0.35
     ax.bar(x - width / 2, before, width, label="Before cleaning", color="steelblue")
     ax.bar(x + width / 2, after, width, label="After cleaning", color="darkorange")

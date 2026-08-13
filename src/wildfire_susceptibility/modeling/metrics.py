@@ -14,14 +14,14 @@ from sklearn.metrics import (
     log_loss, cohen_kappa_score, balanced_accuracy_score, matthews_corrcoef,
 )
 
-logger = logging.getLogger(__name__)
+from .class_labels import class_names_for
 
-CLASS_NAMES = ["Low", "Medium", "High", "Very High"]
+logger = logging.getLogger(__name__)
 
 def compute_full_metrics(
     y_true: np.ndarray,
     y_proba: np.ndarray,
-    class_names: List[str] = CLASS_NAMES,
+    class_names: Optional[List[str]] = None,
 ) -> Dict:
     """
     Returns a flat dict of scalar metrics (mlflow-loggable) plus a
@@ -30,6 +30,8 @@ def compute_full_metrics(
     """
     y_pred = np.argmax(y_proba, axis=1)
     n_classes = y_proba.shape[1]
+    if class_names is None:
+        class_names = class_names_for(n_classes)
 
     precision, recall, f1, support = precision_recall_fscore_support(
         y_true, y_pred, labels=range(n_classes), zero_division=0

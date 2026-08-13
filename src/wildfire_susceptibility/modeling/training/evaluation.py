@@ -4,11 +4,11 @@ import logging
 
 import mlflow
 
+from ..class_labels import class_names_for
 from ..metrics import compute_full_metrics, log_metrics_to_mlflow, save_metrics_sidecar
 from ..evaluate import evaluate_on_test, generate_susceptibility_raster
 
 logger = logging.getLogger(__name__)
-CLASS_NAMES = ["Low", "Medium", "High", "Very High"]
 
 class PostTrainingEvaluator:
     def __init__(self, config: dict):
@@ -55,8 +55,9 @@ class PostTrainingEvaluator:
 
         try:
             from ...viz.charts import plot_confusion_matrix
+            class_names = class_names_for(len(full_metrics["confusion_matrix"]))
             plot_confusion_matrix(
-                full_metrics["confusion_matrix"], CLASS_NAMES, figures_dir,
+                full_metrics["confusion_matrix"], class_names, figures_dir,
                 season=season, model_name=model_name,
             )
         except Exception as exc:

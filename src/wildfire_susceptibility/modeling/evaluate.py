@@ -19,9 +19,9 @@ import rasterio
 import mlflow
 import logging
 
-logger = logging.getLogger(__name__)
+from .class_labels import class_names_for
 
-CLASS_NAMES = ["Low", "Medium", "High", "Very High"]
+logger = logging.getLogger(__name__)
 
 
 def evaluate_on_test(
@@ -119,6 +119,7 @@ def _try_time_forward_validation(
 
         proba = final_model.predict_proba(X_test)
         pred_class = np.argmax(proba, axis=1)
+        class_names = class_names_for(proba.shape[1])
 
         # Nearest-pixel lookup: match each fire point to the closest (x, y)
         # row in the test feature table via a simple KD-tree.
@@ -129,7 +130,7 @@ def _try_time_forward_validation(
         _, nearest_idx = tree.query(fire_xy, k=1)
 
         matched_classes = pred_class[nearest_idx]
-        counts = {name: int(np.sum(matched_classes == i)) for i, name in enumerate(CLASS_NAMES)}
+        counts = {name: int(np.sum(matched_classes == i)) for i, name in enumerate(class_names)}
         total = len(matched_classes)
         pct = {f"pct_{name.lower().replace(' ', '_')}": 100 * c / total for name, c in counts.items()}
         pct["pct_medium_plus"] = 100 * int(np.sum(matched_classes >= 1)) / total
