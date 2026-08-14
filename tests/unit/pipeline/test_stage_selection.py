@@ -9,6 +9,7 @@ import pytest
 from wildfire_susceptibility.pipeline.stage_selection import (
     _select_best_per_season,
     _kruskal_wallis_per_season,
+    _kruskal_results_to_csv,
 )
 
 
@@ -119,3 +120,45 @@ def test_kruskal_wallis_handles_unequal_fold_counts_across_models():
     result = _kruskal_wallis_per_season(manifests)
     assert "p_value" in result["summer"]
     assert "skipped" not in result["summer"]
+
+
+def test_kruskal_results_to_csv_has_one_row_per_season_with_expected_columns():
+    """kruskal_wallis.json was replaced with kruskal_wallis.csv to match
+    every other stat table's export format (vif.csv, correlation_spearman.csv,
+    stationarity_summary.csv, spatial_correlogram.csv, model_comparison.csv)."""
+    manifests = {
+        "summer": {
+            "rf": _manifest(0.9, 0.9, 0.9, folds=[0.90, 0.91, 0.89]),
+            "svm": _manifest(0.5, 0.5, 0.5, folds=[0.50, 0.51, 0.49]),
+        }
+    }
+    kruskal_results = _kruskal_wallis_per_season(manifests)
+    df = _kruskal_results_to_csv(kruskal_results)
+
+    assert list(df.columns) == [
+        "season", "statistic", "p_value", "significant_at_0.05",
+        "n_models_compared", "models_compared", "skip_reason",
+    ]
+    assert len(df) == 1
+    row = df.iloc[0]
+    assert row["season"] == "summer"
+    assert row["n_models_compared"] == 2
+    assert set(row["models_compared"].split(";")) == {"rf", "svm"}
+    assert row["skip_reason"] is None
+
+
+def test_kruskal_results_to_csv_represents_skipped_season_as_a_row_not_a_dropped_one():
+    manifests = {
+        "summer": {
+            "rf": _manifest(0.8, 0.8, 0.75, folds=[0.75, 0.76, 0.74]),
+            "svm": _manifest(0.8, 0.8, 0.75, folds=None),
+        }
+    }
+    kruskal_results = _kruskal_wallis_per_season(manifests)
+    df = _kruskal_results_to_csv(kruskal_results)
+
+    assert len(df) == 1
+    row = df.iloc[0]
+    assert row["season"] == "summer"
+    assert row["statistic"] is None
+    assert row["skip_reason"] == "fewer than 2 models with fold-level scores"

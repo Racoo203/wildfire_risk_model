@@ -4,7 +4,16 @@ fallback path used for ordinal_lr/neural_net. The fallback path had only
 ever been exercised historically against old neural_net/xgboost rosters —
 never against ordinal_lr specifically, and mord.LogisticAT has had
 numpy-compat issues before (see modeling/models/ordinal_logistic.py's
-np.int shim), so it needs its own coverage."""
+np.int shim), so it needs its own coverage.
+
+CatBoost and neural_net (MLP) were confirmed working against these same
+paths during the post-merge reporting audit via a standalone smoke
+script, but were never ported into the permanent suite — the two tests
+below close that gap (RandomForest/ordinal_lr above already covered
+each explainer path in the abstract; these confirm the two remaining
+roster models concretely, since "same code path" isn't a substitute for
+"actually exercised against this model's predict_proba output shape and
+serialization details")."""
 
 import json
 from pathlib import Path
@@ -15,6 +24,8 @@ from sklearn.ensemble import RandomForestClassifier
 
 from wildfire_susceptibility.modeling.evaluate import _try_shap_plots
 from wildfire_susceptibility.modeling.models.ordinal_logistic import OrdinalLogisticModel
+from wildfire_susceptibility.modeling.models.catboost_model import CatBoostModel
+from wildfire_susceptibility.modeling.models.ann import NeuralNetModel
 
 
 @pytest.fixture
@@ -60,6 +71,42 @@ def test_kernel_explainer_path_works_for_ordinal_lr(synthetic_tabular_4class, sh
     model = OrdinalLogisticModel().fit(X, y)
 
     result = _try_shap_plots(model, X, feature_names, "summer", "ordinal_lr", shap_config)
+
+    assert result is not None
+    assert result["shap_summary_path"].exists()
+    assert result["shap_dependence_path"].exists()
+    assert {"shap_summary", "shap_dependence"} <= _manifest_categories(shap_config)
+
+
+@pytest.mark.slow
+def test_tree_explainer_path_works_for_catboost(synthetic_tabular_4class, shap_config):
+    """catboost is the other model routed through the TreeExplainer branch
+    (`model_name in ("random_forest", "xgboost", "catboost")`), and is now
+    the finalized-roster tree model replacing xgboost — confirmed working
+    empirically during the reporting audit against a real trained model,
+    ported here as permanent coverage."""
+    X, y, feature_names = synthetic_tabular_4class
+    model = CatBoostModel(iterations=20).fit(X, y)
+
+    result = _try_shap_plots(model, X, feature_names, "summer", "catboost", shap_config)
+
+    assert result is not None
+    assert result["shap_summary_path"].exists()
+    assert result["shap_dependence_path"].exists()
+    assert {"shap_summary", "shap_dependence"} <= _manifest_categories(shap_config)
+
+
+@pytest.mark.slow
+def test_kernel_explainer_path_works_for_neural_net(synthetic_tabular_4class, shap_config):
+    """neural_net (the PyTorch MLP) goes through the same KernelExplainer
+    fallback as ordinal_lr, via the shared predict_proba contract — but
+    had never been exercised against a torch model specifically, where
+    tensor conversion / eval-mode handling could plausibly break
+    KernelExplainer's repeated background-perturbation calls."""
+    X, y, feature_names = synthetic_tabular_4class
+    model = NeuralNetModel(epochs=5, hidden_dim=16, n_layers=1).fit(X, y)
+
+    result = _try_shap_plots(model, X, feature_names, "summer", "neural_net", shap_config)
 
     assert result is not None
     assert result["shap_summary_path"].exists()
