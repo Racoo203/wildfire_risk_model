@@ -44,10 +44,14 @@ GEN_ONLY = [
 ]
 
 TRAIN_ONLY = [
-    "preprocessing", "eda", "temporal_eda", "train", "evaluate", "selection",
+    "preprocessing", "train", "evaluate", "selection",
 ]
 
-STAGE_ORDER = GEN_ONLY + TRAIN_ONLY
+EDA_ONLY = [
+    "eda", "temporal_eda",
+]
+
+STAGE_ORDER = GEN_ONLY + TRAIN_ONLY + EDA_ONLY
 
 STATE_PATH = Path("models/.pipeline_state.json")
 
@@ -151,7 +155,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     elif args.stage == "dataset":
         stages = GEN_ONLY
     elif args.stage == "train":
-        stages = GEN_ONLY + TRAIN_ONLY
+        stages = TRAIN_ONLY
+    elif args.stage == "eda":
+        stages = EDA_ONLY
     else: 
         stages = [args.stage]
 
