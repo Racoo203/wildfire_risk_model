@@ -19,7 +19,11 @@ from wildfire_susceptibility.reporting.generate_report_figures import (
 )
 
 
-def _write_dummy_raster(path, reference_transform, value: float = 1.0):
+def _write_dummy_raster(path, reference_transform, value: float = 2.0):
+    """Uniform-value raster. Default value=2.0 (not 0.0/1.0) so the max
+    class index is 2 -> class_names_for(3) resolves to a real scheme;
+    render_susceptibility_map derives n_classes from the raster's own
+    max value, and class_names_for only supports {3, 4, 5}."""
     meta = {
         "driver": "GTiff", "height": 10, "width": 10, "count": 1,
         "dtype": "float32", "crs": "EPSG:27700",
