@@ -7,6 +7,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from wildfire_susceptibility.core.registry import MODELS
+from wildfire_susceptibility.modeling import models as _models  # noqa: F401 — registers wrappers
 from wildfire_susceptibility.modeling.cv.stratified_spatial import StratifiedSpatialBlockCV
 from wildfire_susceptibility.modeling.resampling import SMOTEResampler
 
@@ -87,6 +89,40 @@ def test_make_folds_raises_without_groups():
     y = pd.Series([0, 1, 0])
     with pytest.raises(ValueError):
         strategy.make_folds(X, y, groups=None)
+
+
+def test_fit_and_score_full_survives_a_fold_that_lost_a_class_in_training():
+    """Regression test: with a small/adjacent-block rare class (e.g. class
+    4 confined to two neighboring blocks in real data), spatial buffering
+    can strip a class out of a fold's training split entirely while the
+    fold's own validation split - built from the untouched held-out
+    blocks - still contains it. predict_proba then returns fewer columns
+    than the full label space, and building the one-hot y_va_bin as
+    np.eye(proba.shape[1])[y_va] raised IndexError uncaught (unlike
+    cv/base.py's fit_and_score_full, which already guards this same
+    average_precision_score call with try/except). This must degrade to a
+    logged warning + pr_auc_macro=0.0, not crash the whole Optuna trial."""
+    rng = np.random.default_rng(7)
+    n = 60
+    X = pd.DataFrame({"f0": rng.normal(size=n), "f1": rng.normal(size=n)})
+    y = pd.Series([0, 1] * (n // 2))
+
+    # Training split never sees class 2 at all; validation split does -
+    # mirrors a fold whose training blocks lost the rare class to buffering
+    # while its own test blocks (never buffered) retained it.
+    train_idx = np.arange(0, 40)
+    test_idx = np.arange(40, 60)
+    y.iloc[test_idx[:3]] = 2
+
+    resampler = SMOTEResampler({"modeling": {"use_smote": False}})
+    strategy = StratifiedSpatialBlockCV({"modeling": {"cv_folds": 4}}, resampler)
+
+    result = strategy.fit_and_score_full(
+        MODELS["random_forest"], {}, X, y, train_idx, test_idx, context="test",
+    )
+
+    assert result["pr_auc_macro"] == 0.0
+    assert set(result.keys()) == {"auc", "f1_macro", "pr_auc_macro", "qwk"}
 
 
 def test_stratify_blocks_into_folds_gives_every_fold_the_rarest_class():

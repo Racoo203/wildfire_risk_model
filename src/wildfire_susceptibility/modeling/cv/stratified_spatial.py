@@ -167,6 +167,9 @@ class StratifiedSpatialBlockCV(CVStrategy):
         docstring."""
         y_tr_raw = y.iloc[train_idx]
         log_class_balance(logger, context, y_tr_raw, note="train, pre-resample", level=logging.DEBUG)
+        warn_if_class_missing(
+            logger, f"{context} (train, pre-resample)", y_tr_raw, expected_classes=sorted(y.unique()),
+        )
 
         X_tr = X.iloc[train_idx].values
         y_tr = y_tr_raw.values
@@ -190,8 +193,14 @@ class StratifiedSpatialBlockCV(CVStrategy):
             auc = 0.0
 
         f1_macro = float(f1_score(y_va, pred, average="macro"))
-        y_va_bin = np.eye(proba.shape[1])[y_va.astype(int)]
-        pr_auc_macro = float(average_precision_score(y_va_bin, proba, average="macro"))
+
+        try:
+            y_va_bin = np.eye(proba.shape[1])[y_va.astype(int)]
+            pr_auc_macro = float(average_precision_score(y_va_bin, proba, average="macro"))
+        except Exception as exc:
+            logger.warning(f"{context}: PR-AUC scoring failed ({exc}); scoring as 0.0")
+            pr_auc_macro = 0.0
+
         qwk = float(cohen_kappa_score(y_va, pred, weights="quadratic"))
 
         logger.info(
