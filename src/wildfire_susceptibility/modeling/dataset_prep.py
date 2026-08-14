@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -109,66 +109,112 @@ class DatasetPrep:
             if False else values[nearest_idx[0]][nan_mask]
         return pd.Series(filled, index=series.index)
 
-    def encode_categoricals_for_model_family(
+    def fit_categorical_encoding(
         self,
         X_train: pd.DataFrame,
-        X_test: pd.DataFrame,
         model_cls,
         categorical_cols: Tuple[str, ...] = CATEGORICAL_FEATURES,
-    ) -> Tuple[pd.DataFrame, pd.DataFrame, List[str]]:
+    ) -> Tuple[pd.DataFrame, dict]:
         """
+        Derives the categorical encoding for `model_cls`'s family from
+        TRAIN data only, and returns (X_train_encoded, encoding_meta).
+        `encoding_meta` is JSON-serializable (persisted verbatim into
+        manifest.json by stage_train.py) and is everything
+        apply_categorical_encoding needs to reproduce this exact encoding
+        against any other split (test/full) without seeing X_train again.
+
         Route each configured categorical column (currently just
         landuse_class — an arbitrary human_fclasses config-list position,
         not a real ordinal quantity; see features/proximity.py and
         modeling/categorical.py) to the encoding its model family needs:
 
           - Native-categorical-support models (CatBoost): the column is
-            cast to int and left as a single column, returned by name in
-            cat_feature_names so the caller can wire it into
-            CatBoostClassifier's cat_features. Must NOT be one-hot or
-            ordinal-encoded first — that would defeat CatBoost's own
-            internal target-statistics encoding.
+            cast to int and left as a single column. encoding_meta's
+            "columns" list doubles as cat_feature_names for the caller to
+            wire into CatBoostClassifier's cat_features. Must NOT be
+            one-hot or ordinal-encoded first — that would defeat
+            CatBoost's own internal target-statistics encoding.
           - Every other model family: one-hot expanded, with dummy
-            columns fixed to the categories observed in X_train (X_test
-            never introduces new/reordered columns), so 0 ("no
-            human-activity land use") gets its own distinct dummy
+            columns keyed to the categories observed in X_train, so 0
+            ("no human-activity land use") gets its own distinct dummy
             instead of being collapsed into an adjacent category.
 
-        Returns (X_train, X_test, cat_feature_names) — cat_feature_names
-        is non-empty only for the native-categorical-support branch.
+        encoding_meta = {"kind": "none"} when no configured categorical
+        column is present in X_train, otherwise
+        {"kind": "native" | "onehot", "columns": [...], "categories": {col: [sorted int categories]}}.
         """
         present = [c for c in categorical_cols if c in X_train.columns]
         if not present:
-            return X_train, X_test, []
+            return X_train, {"kind": "none", "columns": [], "categories": {}}
 
         X_train = X_train.copy()
-        X_test = X_test.copy()
 
         if model_cls().native_categorical_support():
+            categories = {}
             for col in present:
                 X_train[col] = X_train[col].astype(int)
-                X_test[col] = X_test[col].astype(int)
-            return X_train, X_test, present
+                categories[col] = sorted(int(c) for c in X_train[col].unique())
+            return X_train, {"kind": "native", "columns": present, "categories": categories}
 
+        categories = {}
         for col in present:
             # Nullable Int64 first (raster-derived columns arrive as
             # float64) so dummy column names read "landuse_class_3", not
             # "landuse_class_3.0" — cosmetic, but that name is what ends
             # up in SHAP plots / feature-importance charts downstream.
             X_train[col] = X_train[col].astype("Int64")
-            X_test[col] = X_test[col].astype("Int64")
-            categories = sorted(X_train[col].dropna().unique())
-            cat_dtype = pd.CategoricalDtype(categories=categories)
+            col_categories = sorted(X_train[col].dropna().unique())
+            cat_dtype = pd.CategoricalDtype(categories=col_categories)
             X_train[col] = X_train[col].astype(cat_dtype)
-            X_test[col] = X_test[col].astype(cat_dtype)
+            categories[col] = [int(c) for c in col_categories]
 
         X_train = pd.get_dummies(X_train, columns=list(present), prefix=list(present), dtype=np.int8)
-        X_test = pd.get_dummies(X_test, columns=list(present), prefix=list(present), dtype=np.int8)
-        # Defensive: CategoricalDtype above already guarantees identical
-        # dummy columns on both sides, but reindex is a cheap no-op safety
-        # net against an unseen test-only category slipping through.
-        X_test = X_test.reindex(columns=X_train.columns, fill_value=0)
-        return X_train, X_test, []
+        return X_train, {"kind": "onehot", "columns": present, "categories": categories}
+
+    def apply_categorical_encoding(self, X: pd.DataFrame, encoding_meta: dict) -> pd.DataFrame:
+        """
+        Applies a previously-fit encoding (from fit_categorical_encoding,
+        possibly reloaded from manifest.json by a later pipeline stage) to
+        any DataFrame — test, full-domain, or otherwise.
+
+        A category value present in `encoding_meta` but absent from `X`
+        still gets its own (all-zero, for the one-hot case) column, via
+        the persisted CategoricalDtype — a split simply not containing
+        every training category is normal. A category value in `X` that
+        is NOT in `encoding_meta`, however, means this data was never
+        seen during fitting: encoding it would either silently misalign
+        columns (one-hot) or feed CatBoost a category it has no learned
+        statistics for (native), so this raises instead of guessing.
+        """
+        kind = encoding_meta.get("kind", "none")
+        columns = encoding_meta.get("columns", [])
+        present = [c for c in columns if c in X.columns]
+        if kind == "none" or not present:
+            return X
+
+        categories = encoding_meta["categories"]
+        X = X.copy()
+        for col in present:
+            observed = set(int(v) for v in X[col].dropna().unique())
+            unseen = observed - set(categories[col])
+            if unseen:
+                raise ValueError(
+                    f"Column '{col}' contains category value(s) {sorted(unseen)} not present "
+                    f"in the persisted training-time categories {categories[col]} — this split "
+                    f"was never seen during fitting and cannot be encoded consistently with the "
+                    f"trained model."
+                )
+
+        if kind == "native":
+            for col in present:
+                X[col] = X[col].astype(int)
+            return X
+
+        for col in present:
+            X[col] = X[col].astype("Int64")
+            X[col] = X[col].astype(pd.CategoricalDtype(categories=categories[col]))
+
+        return pd.get_dummies(X, columns=present, prefix=present, dtype=np.int8)
 
     def scale_for_model_family(
         self,

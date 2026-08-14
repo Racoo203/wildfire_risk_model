@@ -87,6 +87,7 @@ def _write_artifact(config: dict, season: str, model_name: str, result: dict) ->
         "season": season,
         "model_name": model_name,
         "cfg_sig": compute_cfg_sig(config),
+        "categorical_encoding": result.get("categorical_encoding", {"kind": "none", "columns": [], "categories": {}}),
         "cv_auc_standard": result.get("cv_auc_standard"),
         "cv_auc_spatial": result.get("cv_auc_spatial"),
         "cv_auc_spatial_folds": result.get("cv_auc_spatial_folds"),

@@ -122,8 +122,10 @@ class ModelTrainer:
                 f"first, or set cv_strategy='standard' if spatial CV isn't needed here."
             )
 
-        X_train, X_val, cat_feature_names = self.dataset_prep.encode_categoricals_for_model_family(
-            X_train, X_val, model_cls,
+        X_train, categorical_encoding = self.dataset_prep.fit_categorical_encoding(X_train, model_cls)
+        X_val = self.dataset_prep.apply_categorical_encoding(X_val, categorical_encoding)
+        cat_feature_names = (
+            categorical_encoding["columns"] if categorical_encoding["kind"] == "native" else []
         )
         X_tr, X_va = self._scale_features(model_cls, X_train, X_val)
 
@@ -131,7 +133,7 @@ class ModelTrainer:
             # landuse_class (or any future native-categorical column) must
             # reach this model as an actual categorical column, not a
             # one-hot/ordinal encoding — see dataset_prep.py's
-            # encode_categoricals_for_model_family and
+            # fit_categorical_encoding/apply_categorical_encoding and
             # modeling/categorical.py. Binding cat_features onto model_cls
             # here (rather than passing it separately) means every
             # downstream model_cls(**params) call — HyperparamSearch's
@@ -301,6 +303,7 @@ class ModelTrainer:
         return {
             "model": final_model,
             "best_params": best_params,
+            "categorical_encoding": categorical_encoding,
             "cv_auc_standard": cv_auc_standard,
             "cv_auc_spatial": cv_auc_spatial,
             "cv_auc_spatial_folds": cv_auc_spatial_folds,

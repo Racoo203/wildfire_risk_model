@@ -7,8 +7,8 @@ as the 1-indexed position of each fclass in the configured human_fclasses
 list (0 = no human-activity land use). That position is arbitrary config
 list order, not a real ordinal relationship between land-use types, so it
 must never reach a model as a plain numeric column — see
-DatasetPrep.encode_categoricals_for_model_family for the per-model-family
-handling.
+DatasetPrep.fit_categorical_encoding / DatasetPrep.apply_categorical_encoding
+for the per-model-family handling.
 """
 from typing import List, Sequence
 

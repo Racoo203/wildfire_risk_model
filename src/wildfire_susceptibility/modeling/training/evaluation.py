@@ -4,6 +4,7 @@ import logging
 
 import mlflow
 
+from ..categorical import cat_features_of, to_model_array
 from ..class_labels import class_names_for
 from ..metrics import compute_full_metrics, log_metrics_to_mlflow, save_metrics_sidecar
 from ..evaluate import evaluate_on_test, generate_susceptibility_raster
@@ -33,6 +34,14 @@ class PostTrainingEvaluator:
         x_coords/y_coords, which stay label-filtered because metrics need
         real ground truth. When omitted, the raster falls back to the
         label-filtered X_val/x_coords/y_coords, matching prior behavior.
+
+        X_val and X_full (when given) must already be encoded consistently
+        with how `final_model` was trained — i.e. already passed through
+        DatasetPrep.apply_categorical_encoding using the training-fitted
+        encoding_meta. This method only handles the DataFrame -> model
+        array conversion (to_model_array, via cat_features_of(final_model)
+        to recover which column(s) CatBoost needs as raw categoricals
+        rather than a plain float array).
         """
         if mlflow.active_run() is None:
             with mlflow.start_run(run_name=f"{season}_{model_name}_eval"):
@@ -57,7 +66,10 @@ class PostTrainingEvaluator:
             "susceptibility_map_path": None, "full_metrics_path": None,
         }
 
-        y_proba = final_model.predict_proba(X_val.values)
+        cat_positions = cat_features_of(final_model)
+        X_val_arr = to_model_array(X_val, cat_positions)
+
+        y_proba = final_model.predict_proba(X_val_arr)
         full_metrics = compute_full_metrics(y_val.values, y_proba)
         log_metrics_to_mlflow(full_metrics)
 
@@ -80,7 +92,7 @@ class PostTrainingEvaluator:
 
         results = evaluate_on_test(
             final_model=final_model,
-            X_test=X_val.values,
+            X_test=X_val_arr,
             y_test=y_val.values,
             feature_names=list(X_val.columns),
             season=season,
@@ -91,7 +103,7 @@ class PostTrainingEvaluator:
             y_coords=y_coords,
         )
 
-        raster_X = X_full if X_full is not None else X_val.values
+        raster_X = to_model_array(X_full, cat_positions) if X_full is not None else X_val_arr
         raster_x_coords = full_x_coords if full_x_coords is not None else x_coords
         raster_y_coords = full_y_coords if full_y_coords is not None else y_coords
 

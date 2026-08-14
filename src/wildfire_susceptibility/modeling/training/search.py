@@ -25,8 +25,11 @@ FINISHED_STATES = {optuna.trial.TrialState.COMPLETE, optuna.trial.TrialState.PRU
 # objective-only change would otherwise silently resume/append trials from
 # an incompatible old study (see get_or_create_study). v2: objective
 # switched from mean CV AUC to mean CV PR-AUC-macro (AUC/F1-macro/QWK
-# logged as trial user_attrs instead).
-OBJECTIVE_VERSION = "objv2-prauc"
+# logged as trial user_attrs instead). v3: forces fresh studies after the
+# landuse_class categorical-encoding fix (fit/transform split in
+# dataset_prep.py) — old v2 trials were scored under the broken encoding
+# and are not comparable to post-fix trials.
+OBJECTIVE_VERSION = "objv3-catfix"
 
 
 class HyperparamSearch:

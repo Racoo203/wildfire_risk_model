@@ -53,7 +53,10 @@ def _full_domain(synthetic_reference_raster):
         transform = ref.transform
     valid_rows, valid_cols = np.where(~np.isnan(data))
     xs, ys = rasterio.transform.xy(transform, valid_rows, valid_cols)
-    X_full = np.zeros((len(xs), 2))
+    # A DataFrame, matching X_val's contract — PostTrainingEvaluator.evaluate()
+    # expects X_full pre-encoded but not yet converted to a model array (that
+    # conversion, via to_model_array, happens inside evaluate() itself).
+    X_full = pd.DataFrame({"f1": np.zeros(len(xs)), "f2": np.zeros(len(xs))})
     return X_full, np.array(xs), np.array(ys), int((~np.isnan(data)).sum())
 
 
