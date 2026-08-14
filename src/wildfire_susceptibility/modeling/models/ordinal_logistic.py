@@ -42,7 +42,12 @@ class OrdinalLogisticModel:
 
     def fit(self, X: np.ndarray, y: np.ndarray, sample_weight: np.ndarray | None = None) -> "OrdinalLogisticModel":
         self.model = mord.LogisticAT(**self.params)
-        self.model.fit(X, y, sample_weight=sample_weight)
+        # Labels reach us as float (raster stacking casts every column,
+        # including labels, to float32 for NaN/nodata support). mord derives
+        # n_class_ from y's own dtype (classes_.max() - classes_.min() + 1)
+        # rather than casting it, so a float y makes n_class_ a numpy.float64
+        # and mord's internal np.zeros((n_class_ - 1, ...)) raises TypeError.
+        self.model.fit(X, y.astype(int), sample_weight=sample_weight)
         return self
 
     def predict_proba(self, X: np.ndarray) -> np.ndarray:

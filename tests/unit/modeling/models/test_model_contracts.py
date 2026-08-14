@@ -161,6 +161,23 @@ def test_random_forest_param_space_excludes_class_weight(synthetic_classificatio
     assert "class_weight" not in space
 
 
+def test_ordinal_lr_fits_float_labels(synthetic_classification_data):
+    """Real pipeline labels are float (raster stacking in core/raster.py's
+    stack_to_dataframe casts every column, including labels, to float32),
+    not the int64 labels synthetic_classification_data otherwise supplies.
+    mord.LogisticAT derives n_class_ from y's own dtype rather than casting
+    it, so a float64 y previously made n_class_ a numpy.float64 and crashed
+    mord's internal np.zeros((n_class_ - 1, ...)) allocation with
+    TypeError: 'numpy.float64' object cannot be interpreted as an integer."""
+    X, y = synthetic_classification_data
+    y_float = y.astype("float64")
+
+    model = MODELS["ordinal_lr"]().fit(X, y_float)
+
+    proba = model.predict_proba(X)
+    assert proba.shape == (X.shape[0], 4)
+
+
 def test_param_space_returns_dict_optuna_can_consume(synthetic_classification_data):
     optuna = pytest.importorskip("optuna")
     X, y = synthetic_classification_data
