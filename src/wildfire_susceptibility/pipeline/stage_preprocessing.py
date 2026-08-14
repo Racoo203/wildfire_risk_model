@@ -6,9 +6,14 @@ layer. Per-model scaling is intentionally NOT done here — it depends
 on each model's needs_scaling() and stays inside stage_train.
 
     stage_preprocessing(config, input_paths) -> {
-        "<season>": {"train": Path, "test": Path},
+        "<season>": {"train": Path, "test": Path, "full": Path},
         ...
     }
+
+"full" is the test split's feature domain with every in-domain pixel
+kept (no drop on missing `label`) — used by stage_evaluate to predict a
+susceptibility class for every pixel, not just ones with a ground-truth
+density label.
 
 `input_paths` must contain:
     "ref_path": Path
@@ -40,14 +45,15 @@ def stage_preprocessing(config: dict, input_paths: dict) -> Dict[str, dict]:
 
         train_out = gold_dir / f"dataset_train_{season}_clean.csv"
         test_out = gold_dir / f"dataset_test_{season}_clean.csv"
+        full_out = gold_dir / f"dataset_full_{season}_clean.csv"
         sig_path = gold_dir / f"dataset_{season}_clean.sig.json"
         stage_inputs = {"train": splits["train"], "test": splits["test"]}
 
         if not config["processing"]["force_recompute"] and cache_is_valid(
-            [train_out, test_out], sig_path, config, stage_inputs
+            [train_out, test_out, full_out], sig_path, config, stage_inputs
         ):
-            logger.info(f"[stage_preprocessing] [CACHED] {season} -> {train_out.name}, {test_out.name}")
-            out[season] = {"train": train_out, "test": test_out}
+            logger.info(f"[stage_preprocessing] [CACHED] {season} -> {train_out.name}, {test_out.name}, {full_out.name}")
+            out[season] = {"train": train_out, "test": test_out, "full": full_out}
             continue
 
         logger.info(f"[stage_preprocessing] [{season}] Imputing + cleaning labels...")
@@ -56,10 +62,12 @@ def stage_preprocessing(config: dict, input_paths: dict) -> Dict[str, dict]:
 
         df_train = prep.prepare_train(df_train_raw, season, ref_path, climate_vars)
         df_test = prep.prepare_test(df_test_raw, season, climate_vars)
+        df_full = prep.prepare_full_domain(df_test_raw, season, climate_vars)
 
         df_train.to_csv(train_out, index=False)
         df_test.to_csv(test_out, index=False)
+        df_full.to_csv(full_out, index=False)
         write_cache_signature(sig_path, compute_cache_signature(config, stage_inputs))
-        out[season] = {"train": train_out, "test": test_out}
+        out[season] = {"train": train_out, "test": test_out, "full": full_out}
 
     return out

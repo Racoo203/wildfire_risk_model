@@ -91,8 +91,8 @@ def _add_points(
         transform, points_gdf.geometry.x.values, points_gdf.geometry.y.values
     )
     ax.scatter(
-        cols, rows, s=20, facecolor="none", edgecolor="black",
-        linewidth=0.9, zorder=2, label=label,
+        cols, rows, s=8, facecolor="black", edgecolor="black",
+        alpha=0.9, linewidth=0, zorder=2, label=label,
     )
     if label:
         ax.legend(loc="upper left", fontsize=7, framealpha=0.8)

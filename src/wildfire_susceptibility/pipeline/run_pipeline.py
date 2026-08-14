@@ -107,6 +107,7 @@ def run_stage(stage: str, config: dict, state: dict) -> dict:
         for season, splits in state["preprocessing"].items():
             eval_input[season] = {
                 "test": splits["test"],
+                "full": splits["full"],
                 "fire_test": state["labels"][season]["fire_test"],
                 "artifacts": state["train"][season],
             }
