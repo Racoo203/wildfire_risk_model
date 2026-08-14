@@ -5,9 +5,12 @@ from pathlib import Path
 from typing import Dict, Optional
 
 import geopandas as gpd
+import numpy as np
+import rasterio
 
 from .terrain_overlay import save_terrain_map
 from .manifest import append_to_manifest
+from ..modeling.class_labels import class_names_for
 
 _FACTOR_CMAPS = {
     "elevation": "terrain",
@@ -79,11 +82,17 @@ def render_susceptibility_map(
     if model_name:
         title += f" ({model_name})"
 
+    with rasterio.open(labels_path) as src:
+        labels_data = src.read(1)
+    n_classes = int(np.nanmax(labels_data)) + 1
+    class_names = class_names_for(n_classes)
+    colorbar_label = f"Class (0={class_names[0]} .. {n_classes - 1}={class_names[-1]})"
+
     save_terrain_map(
         labels_path, dem_path, out_path,
         cmap=_SUSCEPTIBILITY_CMAP,
         title=title,
-        colorbar_label="Class (0=Low .. 3=Very High)",
+        colorbar_label=colorbar_label,
         points_gdf=fire_points_gdf,
         points_label="Test-period fires" if fire_points_gdf is not None else None,
     )
