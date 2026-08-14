@@ -92,6 +92,25 @@ def test_no_points_gdf_means_no_legend(synthetic_dem, synthetic_reference_raster
     plt.close(fig)
 
 
+def test_points_are_small_and_highly_opaque(synthetic_dem, synthetic_reference_raster, synthetic_fire_points):
+    """Fire-incident circles should read as small, solid, high-opacity
+    markers -- not the previous larger hollow-ring style."""
+    fig, ax = plt.subplots()
+    render_with_terrain_backdrop(
+        synthetic_reference_raster, synthetic_dem, "viridis", ax,
+        points_gdf=synthetic_fire_points, points_label="Test-period fires",
+    )
+
+    collections_with_offsets = [c for c in ax.collections if len(c.get_offsets()) > 0]
+    points_collection = collections_with_offsets[0]
+
+    assert points_collection.get_sizes()[0] < 20  # smaller than the old s=20
+    assert points_collection.get_alpha() is not None and points_collection.get_alpha() >= 0.8
+    facecolor = points_collection.get_facecolor()[0]
+    assert facecolor[3] > 0.0  # filled, not fully transparent facecolor="none"
+    plt.close(fig)
+
+
 def test_save_terrain_map_with_points_gdf(tmp_path, synthetic_dem, synthetic_reference_raster, synthetic_fire_points):
     out_path = tmp_path / "map_with_points.png"
     result = save_terrain_map(

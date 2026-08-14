@@ -215,3 +215,26 @@ class DatasetPrep:
             drop_if_any_nan_in=("label",),
             domain_mask=domain_mask,
         )
+
+    def prepare_full_domain(
+        self,
+        df_test: pd.DataFrame,
+        season: str,
+        climate_vars: Tuple[str, ...],
+    ) -> pd.DataFrame:
+        """
+        Model-ready prep for full-raster susceptibility prediction: same
+        imputation as prepare_test, but rows are never dropped for a
+        missing `label`. Every in-domain pixel (elevation not NaN) must
+        get a predicted risk class regardless of whether it has a
+        ground-truth density label — e.g. the bottom trim_bottom_pct of
+        the density distribution, which KernelDensityClassifier.classify()
+        trims to NaN, still needs a prediction on the output map.
+        """
+        domain_mask = df_test["elevation"].notna().to_numpy()
+        return self.resolve_missing(
+            df_test,
+            nearest_neighbor_cols=("ndvi", *climate_vars),
+            drop_if_any_nan_in=(),
+            domain_mask=domain_mask,
+        )

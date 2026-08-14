@@ -50,7 +50,11 @@ def fake_integration_state(fake_seasonal_labels_state):
 def fake_preprocessing_state(fake_integration_state):
     state = dict(fake_integration_state)
     state["preprocessing"] = {
-        "spring": {"train": Path("dataset_train_spring_clean.csv"), "test": Path("dataset_test_spring_clean.csv")}
+        "spring": {
+            "train": Path("dataset_train_spring_clean.csv"),
+            "test": Path("dataset_test_spring_clean.csv"),
+            "full": Path("dataset_full_spring_clean.csv"),
+        }
     }
     return state
 
@@ -172,6 +176,7 @@ def test_evaluate_stage_wires_artifacts_from_train_state(monkeypatch, fake_prepr
 
     assert captured["ref_path"] == Path("ref.tif")
     assert captured["spring"]["test"] == Path("dataset_test_spring_clean.csv")
+    assert captured["spring"]["full"] == Path("dataset_full_spring_clean.csv")
     assert captured["spring"]["fire_test"] == Path("fire_test.gpkg")
     assert captured["spring"]["artifacts"] == {"random_forest": Path("models/spring/random_forest/abc12345")}
 

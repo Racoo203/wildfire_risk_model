@@ -17,6 +17,7 @@ class PostTrainingEvaluator:
     def evaluate(
         self, final_model, X_val, y_val, season, model_name,
         ref_path, fire_test_gdf, x_coords, y_coords,
+        X_full=None, full_x_coords=None, full_y_coords=None,
     ):
         """
         If called from ModelTrainer.train_one(), an mlflow run is already
@@ -25,21 +26,31 @@ class PostTrainingEvaluator:
         active — start and properly close one here instead of letting
         mlflow.log_metric() implicitly auto-start a run that never gets
         ended, which leaks into every subsequent test/run in-process.
+
+        X_full/full_x_coords/full_y_coords, when given, scope the
+        susceptibility *raster* to every in-domain pixel (regardless of
+        whether it has a ground-truth label) — separate from X_val/
+        x_coords/y_coords, which stay label-filtered because metrics need
+        real ground truth. When omitted, the raster falls back to the
+        label-filtered X_val/x_coords/y_coords, matching prior behavior.
         """
         if mlflow.active_run() is None:
             with mlflow.start_run(run_name=f"{season}_{model_name}_eval"):
                 return self._evaluate(
                     final_model, X_val, y_val, season, model_name,
                     ref_path, fire_test_gdf, x_coords, y_coords,
+                    X_full, full_x_coords, full_y_coords,
                 )
         return self._evaluate(
             final_model, X_val, y_val, season, model_name,
             ref_path, fire_test_gdf, x_coords, y_coords,
+            X_full, full_x_coords, full_y_coords,
         )
 
     def _evaluate(
         self, final_model, X_val, y_val, season, model_name,
         ref_path, fire_test_gdf, x_coords, y_coords,
+        X_full=None, full_x_coords=None, full_y_coords=None,
     ):
         defaults = {
             "shap_path": None, "shap_dependence_path": None, "time_forward_validation": None,
@@ -80,13 +91,17 @@ class PostTrainingEvaluator:
             y_coords=y_coords,
         )
 
+        raster_X = X_full if X_full is not None else X_val.values
+        raster_x_coords = full_x_coords if full_x_coords is not None else x_coords
+        raster_y_coords = full_y_coords if full_y_coords is not None else y_coords
+
         results["susceptibility_map_path"] = None
-        if x_coords is not None and y_coords is not None:
+        if raster_x_coords is not None and raster_y_coords is not None:
             results["susceptibility_map_path"] = generate_susceptibility_raster(
                 final_model=final_model,
-                X_full=X_val.values,
-                x_coords=x_coords,
-                y_coords=y_coords,
+                X_full=raster_X,
+                x_coords=raster_x_coords,
+                y_coords=raster_y_coords,
                 ref_path=ref_path,
                 season=season,
                 model_name=model_name,
