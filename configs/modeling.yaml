@@ -1,27 +1,10 @@
 modeling:
-  # Finalized roster: ordinal LR replaces SVC, CatBoost replaces XGBoost.
-  # "svm"/"xgboost" remain valid registry entries (not deleted) for
-  # reproducing prior results, just no longer in the default roster.
-  models: ["random_forest", "catboost", "ordinal_lr", "neural_net"]
+  models: ["ordinal_lr", "random_forest", "catboost", "neural_net"]
   optuna_n_trials: 30
   cv_folds: 5
-  mlflow_experiment: "wildfire-susceptibility-essex"
+  mlflow_experiment: "wf-default"
   selection_rule: "best_auc"      # options: "best_auc" | "most_conservative"
   cv_strategy: "both"             # options: "standard" | "spatial" | "stratified_spatial_block" | "both"
-  # spatial_block_size_m / spatial_buffer_m: empirically set (not defaults) from
-  # notebooks/01_eda.ipynb, "8. Spatial EDA" (spatial_correlogram) — a Moran's I
-  # correlogram (esda/libpysal, distance bands 150m-30km) on fire_density_conv
-  # (the target proxy), ndvi, elevation, and tasmax for the summer season
-  # (spring/fall layers not yet built as of 2026-08-11). fire_density_conv's
-  # autocorrelation drops to practically negligible (I<0.05) by ~3,000-4,000m,
-  # which anchors both values below. Set equal so CVStrategy._apply_spatial_buffer's
-  # block-quantized buffer (radius = ceil(spatial_buffer_m / spatial_block_size_m))
-  # resolves to radius=1 and enforces exactly this gap, not a silently-rounded-up
-  # multiple — see cv/base.py. ndvi decays slower (I<0.05 not until ~11-14km) and
-  # elevation/tasmax show domain-scale trends that never plateau within 30km
-  # (regional terrain/smooth interpolated climate surface, not local leakage a
-  # buffer can fix) — documented as a residual-optimism limitation, not chased
-  # here. Re-validate once spring/fall layers exist.
   spatial_block_size_m: 4000.0
   spatial_buffer_m: 4000.0        # exclusion-zone width (m) around test blocks for spatial/stratified_spatial_block CV
   log_full_cv_diagnostics: false  # opt-in, ~2x extra CV-fold fitting cost — set true for the run being reported, not routine iteration; see schema.py

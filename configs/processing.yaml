@@ -6,7 +6,7 @@ processing:
   force_recompute: false          # Set true to bypass caches and force feature generation
 
 seasons:
-  active: ["spring", "summer", "fall"] # Seasons calculated this iteration
+  active: ["spring", "summer", "fall", "winter"] # Seasons calculated this iteration
   seasonal_ndvi: true                 # Recompute NDVI per season if true; else compute static
   definitions:
     spring: [3, 4, 5]
