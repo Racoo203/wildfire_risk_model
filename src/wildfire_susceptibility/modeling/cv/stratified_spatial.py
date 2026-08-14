@@ -29,6 +29,7 @@ from sklearn.metrics import roc_auc_score, f1_score, average_precision_score, co
 
 from .base import CVStrategy
 from ..balance import log_class_balance, warn_if_class_missing
+from ..categorical import cat_features_of, to_model_array
 
 logger = logging.getLogger(__name__)
 
@@ -171,7 +172,8 @@ class StratifiedSpatialBlockCV(CVStrategy):
             logger, f"{context} (train, pre-resample)", y_tr_raw, expected_classes=sorted(y.unique()),
         )
 
-        X_tr = X.iloc[train_idx].values
+        cat_positions = cat_features_of(model_cls)
+        X_tr = to_model_array(X.iloc[train_idx], cat_positions)
         y_tr = y_tr_raw.values
         X_tr, y_tr = self.resampler.resample(X_tr, y_tr, context=context, model_name=model_name)
         log_class_balance(logger, context, y_tr, note="train, post-resample (used to fit)")
@@ -180,7 +182,7 @@ class StratifiedSpatialBlockCV(CVStrategy):
         model = model_cls(**params)
         model.fit(X_tr, y_tr, sample_weight=sample_weight)
 
-        X_va, y_va = X.iloc[test_idx].values, y.iloc[test_idx].values
+        X_va, y_va = to_model_array(X.iloc[test_idx], cat_positions), y.iloc[test_idx].values
         log_class_balance(logger, context, y_va, note="validation, untouched — isolation check")
         proba = model.predict_proba(X_va)
         pred = np.argmax(proba, axis=1)

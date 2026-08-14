@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import roc_auc_score, f1_score, average_precision_score, cohen_kappa_score
 
+from ..categorical import cat_features_of, to_model_array
 from ..resampling import SMOTEResampler
 from ..imbalance import ImbalanceStrategy
 
@@ -113,7 +114,8 @@ class CVStrategy(ABC):
         is 'cost_weighted'. model_name=None (e.g. ad-hoc/test callers)
         preserves old behavior: resampler runs as configured, no weighting."""
         logger.info(f"{context}: fitting on {len(train_idx):,} rows...")
-        X_tr = X.iloc[train_idx].values
+        cat_positions = cat_features_of(model_cls)
+        X_tr = to_model_array(X.iloc[train_idx], cat_positions)
         y_tr = y.iloc[train_idx].values
         X_tr, y_tr = self.resampler.resample(X_tr, y_tr, context=context, model_name=model_name)
 
@@ -122,7 +124,7 @@ class CVStrategy(ABC):
         model.fit(X_tr, y_tr, sample_weight=sample_weight)
 
         y_va = y.iloc[test_idx].values
-        proba = model.predict_proba(X.iloc[test_idx].values)
+        proba = model.predict_proba(to_model_array(X.iloc[test_idx], cat_positions))
         pred = np.argmax(proba, axis=1)
 
         try:

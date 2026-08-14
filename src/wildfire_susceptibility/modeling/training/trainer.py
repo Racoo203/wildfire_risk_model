@@ -18,6 +18,7 @@ trainer.py itself should only ever be orchestration glue.
 
 from typing import Dict, Optional, Tuple
 from pathlib import Path
+import functools
 import logging
 
 import numpy as np
@@ -28,6 +29,7 @@ from sklearn.metrics import roc_auc_score, f1_score, cohen_kappa_score
 
 from ...core.registry import MODELS
 from .. import models  # noqa: F401 — registers model wrappers (two dots: training/ -> modeling/)
+from ..categorical import cat_features_of, to_model_array
 from ..dataset_prep import DatasetPrep
 from ..resampling import SMOTEResampler
 from ..imbalance import ImbalanceStrategy
@@ -120,7 +122,24 @@ class ModelTrainer:
                 f"first, or set cv_strategy='standard' if spatial CV isn't needed here."
             )
 
+        X_train, X_val, cat_feature_names = self.dataset_prep.encode_categoricals_for_model_family(
+            X_train, X_val, model_cls,
+        )
         X_tr, X_va = self._scale_features(model_cls, X_train, X_val)
+
+        if cat_feature_names:
+            # landuse_class (or any future native-categorical column) must
+            # reach this model as an actual categorical column, not a
+            # one-hot/ordinal encoding — see dataset_prep.py's
+            # encode_categoricals_for_model_family and
+            # modeling/categorical.py. Binding cat_features onto model_cls
+            # here (rather than passing it separately) means every
+            # downstream model_cls(**params) call — HyperparamSearch's
+            # Optuna trials, the diagnostic/primary full-metrics CV
+            # passes, and the final refit below — picks it up automatically
+            # with no signature changes required at any of those call sites.
+            cat_positions = [X_tr.columns.get_loc(c) for c in cat_feature_names]
+            model_cls = functools.partial(model_cls, cat_features=cat_positions)
 
         # --- Hyperparameter search: subsampling, fold building, and the
         # Optuna study itself all live inside HyperparamSearch now. ---
@@ -417,8 +436,9 @@ class ModelTrainer:
         return gap
 
     def _fit_final_and_validate(self, model_cls, best_params, X_tr, y_train, X_va, y_val, season, model_name):
+        cat_positions = cat_features_of(model_cls)
         X_fit, y_fit = self.final_resampler.resample(
-            X_tr.values, y_train.values, context=f"[{season}][{model_name}] final refit",
+            to_model_array(X_tr, cat_positions), y_train.values, context=f"[{season}][{model_name}] final refit",
             model_name=model_name,
         )
 
@@ -426,7 +446,7 @@ class ModelTrainer:
         final_model = model_cls(**best_params)
         final_model.fit(X_fit, y_fit, sample_weight=sample_weight)
 
-        val_proba = final_model.predict_proba(X_va.values)
+        val_proba = final_model.predict_proba(to_model_array(X_va, cat_positions))
         val_pred = np.argmax(val_proba, axis=1)
         val_auc = roc_auc_score(y_val, val_proba, multi_class="ovr")
         val_f1 = f1_score(y_val, val_pred, average="macro")

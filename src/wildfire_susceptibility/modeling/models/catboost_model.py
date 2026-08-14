@@ -36,3 +36,6 @@ class CatBoostModel:
 
     def needs_scaling(self) -> bool:
         return False
+
+    def native_categorical_support(self) -> bool:
+        return True

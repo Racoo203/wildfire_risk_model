@@ -21,3 +21,9 @@ class BaseWildfireModel(Protocol):
     def needs_scaling(self) -> bool:
         """Whether dataset_prep should feed this model a StandardScaler'd copy."""
         ...
+
+    def native_categorical_support(self) -> bool:
+        """Whether this model can consume a raw categorical column
+        directly (via cat_features) rather than needing it one-hot
+        encoded upstream by DatasetPrep.encode_categoricals_for_model_family."""
+        ...

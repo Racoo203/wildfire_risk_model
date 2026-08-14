@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Dict, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -7,6 +7,7 @@ from scipy.ndimage import distance_transform_edt
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
+from .categorical import CATEGORICAL_FEATURES
 from .label_cleaning import LabelCleaner
 
 import logging
@@ -107,6 +108,67 @@ class DatasetPrep:
         filled[nan_mask] = values[valid_idx[np.searchsorted(valid_idx, nearest_idx[0][nan_mask]) - 1]] \
             if False else values[nearest_idx[0]][nan_mask]
         return pd.Series(filled, index=series.index)
+
+    def encode_categoricals_for_model_family(
+        self,
+        X_train: pd.DataFrame,
+        X_test: pd.DataFrame,
+        model_cls,
+        categorical_cols: Tuple[str, ...] = CATEGORICAL_FEATURES,
+    ) -> Tuple[pd.DataFrame, pd.DataFrame, List[str]]:
+        """
+        Route each configured categorical column (currently just
+        landuse_class — an arbitrary human_fclasses config-list position,
+        not a real ordinal quantity; see features/proximity.py and
+        modeling/categorical.py) to the encoding its model family needs:
+
+          - Native-categorical-support models (CatBoost): the column is
+            cast to int and left as a single column, returned by name in
+            cat_feature_names so the caller can wire it into
+            CatBoostClassifier's cat_features. Must NOT be one-hot or
+            ordinal-encoded first — that would defeat CatBoost's own
+            internal target-statistics encoding.
+          - Every other model family: one-hot expanded, with dummy
+            columns fixed to the categories observed in X_train (X_test
+            never introduces new/reordered columns), so 0 ("no
+            human-activity land use") gets its own distinct dummy
+            instead of being collapsed into an adjacent category.
+
+        Returns (X_train, X_test, cat_feature_names) — cat_feature_names
+        is non-empty only for the native-categorical-support branch.
+        """
+        present = [c for c in categorical_cols if c in X_train.columns]
+        if not present:
+            return X_train, X_test, []
+
+        X_train = X_train.copy()
+        X_test = X_test.copy()
+
+        if model_cls().native_categorical_support():
+            for col in present:
+                X_train[col] = X_train[col].astype(int)
+                X_test[col] = X_test[col].astype(int)
+            return X_train, X_test, present
+
+        for col in present:
+            # Nullable Int64 first (raster-derived columns arrive as
+            # float64) so dummy column names read "landuse_class_3", not
+            # "landuse_class_3.0" — cosmetic, but that name is what ends
+            # up in SHAP plots / feature-importance charts downstream.
+            X_train[col] = X_train[col].astype("Int64")
+            X_test[col] = X_test[col].astype("Int64")
+            categories = sorted(X_train[col].dropna().unique())
+            cat_dtype = pd.CategoricalDtype(categories=categories)
+            X_train[col] = X_train[col].astype(cat_dtype)
+            X_test[col] = X_test[col].astype(cat_dtype)
+
+        X_train = pd.get_dummies(X_train, columns=list(present), prefix=list(present), dtype=np.int8)
+        X_test = pd.get_dummies(X_test, columns=list(present), prefix=list(present), dtype=np.int8)
+        # Defensive: CategoricalDtype above already guarantees identical
+        # dummy columns on both sides, but reindex is a cheap no-op safety
+        # net against an unseen test-only category slipping through.
+        X_test = X_test.reindex(columns=X_train.columns, fill_value=0)
+        return X_train, X_test, []
 
     def scale_for_model_family(
         self,

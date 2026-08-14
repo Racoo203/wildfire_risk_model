@@ -108,3 +108,6 @@ class NeuralNetModel:
 
     def needs_scaling(self) -> bool:
         return True
+
+    def native_categorical_support(self) -> bool:
+        return False
