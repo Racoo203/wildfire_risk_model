@@ -9,7 +9,7 @@ statistically significant — not just numerically different.
     stage_selection(config, input_paths) -> {
         "comparison_table": Path,      # csv
         "selection_summary": Path,     # json
-        "kruskal_results": Path,       # json
+        "kruskal_results": Path,       # csv
     }
 
 `input_paths` must contain:
@@ -74,8 +74,8 @@ def stage_selection(config: dict, input_paths: dict) -> Dict[str, Path]:
     selection_path.write_text(json.dumps(selection_summary, indent=2))
 
     kruskal_results = _kruskal_wallis_per_season(manifests)
-    kruskal_path = figures_dir / "kruskal_wallis.json"
-    kruskal_path.write_text(json.dumps(kruskal_results, indent=2))
+    kruskal_path = figures_dir / "kruskal_wallis.csv"
+    _kruskal_results_to_csv(kruskal_results).to_csv(kruskal_path, index=False)
 
     logger.info(f"[stage_selection] Comparison table -> {comparison_path.name}")
     logger.info(f"[stage_selection] Selection summary -> {selection_path.name}")
@@ -142,3 +142,36 @@ def _kruskal_wallis_per_season(manifests: Dict[str, Dict[str, dict]]) -> Dict[st
             "models_compared": list(groups.keys()),
         }
     return results
+
+
+def _kruskal_results_to_csv(kruskal_results: Dict[str, dict]) -> pd.DataFrame:
+    """Flattens _kruskal_wallis_per_season's per-season dict into one row
+    per season, matching the row-per-entity convention every other stat
+    table in figures/ uses (e.g. temporal_eda/stationarity_summary.csv) —
+    rather than the nested kruskal_wallis.json this replaces."""
+    rows = []
+    for season, result in kruskal_results.items():
+        if "skipped" in result:
+            rows.append({
+                "season": season,
+                "statistic": None,
+                "p_value": None,
+                "significant_at_0.05": None,
+                "n_models_compared": None,
+                "models_compared": None,
+                "skip_reason": result["skipped"],
+            })
+        else:
+            rows.append({
+                "season": season,
+                "statistic": result["statistic"],
+                "p_value": result["p_value"],
+                "significant_at_0.05": result["significant_at_0.05"],
+                "n_models_compared": len(result["models_compared"]),
+                "models_compared": ";".join(result["models_compared"]),
+                "skip_reason": None,
+            })
+    return pd.DataFrame(rows, columns=[
+        "season", "statistic", "p_value", "significant_at_0.05",
+        "n_models_compared", "models_compared", "skip_reason",
+    ])
