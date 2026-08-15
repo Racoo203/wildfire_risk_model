@@ -61,8 +61,8 @@
   },
   "train": {
     "spring": {
-      "ordinal_lr": "models\\spring\\ordinal_lr\\a45a460e",
-      "random_forest": "models\\spring\\random_forest\\a45a460e"
+      "ordinal_lr": "models\\spring\\ordinal_lr\\670bfa23",
+      "random_forest": "models\\spring\\random_forest\\670bfa23"
     }
   },
   "evaluate": {
@@ -91,14 +91,14 @@
         "time_forward_validation": {
           "n_fires": 1189,
           "counts": {
-            "Low": 720,
-            "Medium": 468,
-            "High": 1
+            "Low": 1189,
+            "Medium": 0,
+            "High": 0
           },
-          "pct_low": 60.55508830950379,
-          "pct_medium": 39.36080740117746,
-          "pct_high": 0.08410428931875526,
-          "pct_medium_plus": 39.44491169049621
+          "pct_low": 100.0,
+          "pct_medium": 0.0,
+          "pct_high": 0.0,
+          "pct_medium_plus": 0.0
         },
         "susceptibility_map_path": "data\\silver\\layers\\susceptibility_random_forest_spring.tif",
         "full_metrics_path": "figures\\spring\\models\\metrics_random_forest.json"
