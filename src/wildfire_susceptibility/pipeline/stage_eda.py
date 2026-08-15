@@ -5,8 +5,18 @@ Reproduces eda.ipynb's figures as a pipeline stage: NaN coverage
 class balance before/after label cleaning. All figures land in
 figures/manifest.json via viz/.
 
+Also writes a full-dataset Spearman significance export (every column,
+not just the modeling feature subset the vif/spearman heatmap covers --
+see viz/spearman_significance.py) as a flat CSV alongside those figures.
+It's a diagnostic table, not a rendered figure, so it does not go through
+figures/manifest.json (matching vif.csv/correlation_spearman.csv's
+existing convention).
+
     stage_eda(config, input_paths) -> {
-        "<season>": {"vif": Path, "spearman": Path, "class_balance": Path, "nan_coverage": Path},
+        "<season>": {
+            "vif": Path, "spearman": Path, "class_balance": Path, "nan_coverage": Path,
+            "spearman_significance_full": Path,
+        },
         ...
     }
 
@@ -50,6 +60,12 @@ def stage_eda(config: dict, input_paths: dict) -> Dict[str, dict]:
 
         vif_paths = viz.plot_vif_correlation(df_clean, feature_cols, figures_dir, season=season)
 
+        spearman_sig = viz.compute_spearman_significance_export(df_clean, figures_dir, season=season)
+        logger.info(
+            f"[stage_eda] [{season}] Spearman significance export: "
+            f"{spearman_sig['n_cols']} columns, {spearman_sig['n_rows']} pairs -> {spearman_sig['out_path']}"
+        )
+
         # Class balance: raw label column pre-cleaning vs clean label column
         # post-cleaning. plot_class_balance's internal counting is shape-
         # agnostic, so flat 1-D arrays work the same as the old raster inputs.
@@ -62,6 +78,7 @@ def stage_eda(config: dict, input_paths: dict) -> Dict[str, dict]:
             "vif": vif_paths["vif"],
             "spearman": vif_paths["spearman"],
             "class_balance": class_balance_path,
+            "spearman_significance_full": spearman_sig["out_path"],
         }
 
     return out
