@@ -93,7 +93,7 @@ class LabelCleaner:
         clustering_exclude_features) rather than being derived here.
         """
         exclude = set(self.config["labels"].get(
-            "clustering_exclude_features", ["tas", "tasmin", "landuse_class"]
+            "clustering_exclude_features", ["tas", "tasmin", "landuse_class", "d_fires"]
         ))
         keep_cols = [c for c in feature_cols if c not in exclude]
         return df[keep_cols].copy()

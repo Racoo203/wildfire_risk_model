@@ -40,7 +40,7 @@ def report_cfg(tmp_path):
             "output_dir": str(tmp_path / "layers"),
             "figures_dir": str(tmp_path / "figures"),
         },
-        "labels": {"include_d_fires_as_feature": False, "n_classes": 3},
+        "labels": {"n_classes": 3},
     }
 
 
@@ -104,7 +104,7 @@ def test_generate_susceptibility_map_renders_only_selected_model(
 
     cfg = {
         "base": {"output_dir": str(layers_dir), "figures_dir": str(figures_dir)},
-        "labels": {"include_d_fires_as_feature": False, "n_classes": 3},
+        "labels": {"n_classes": 3},
     }
 
     generate_susceptibility_map(cfg, "summer")
@@ -126,7 +126,7 @@ def test_generate_susceptibility_map_falls_back_to_all_models_without_selection(
 
     cfg = {
         "base": {"output_dir": str(layers_dir), "figures_dir": str(figures_dir)},
-        "labels": {"include_d_fires_as_feature": False, "n_classes": 3},
+        "labels": {"n_classes": 3},
     }
 
     generate_susceptibility_map(cfg, "summer")
@@ -143,7 +143,7 @@ def test_generate_susceptibility_map_skips_when_no_predicted_rasters(tmp_path, s
 
     cfg = {
         "base": {"output_dir": str(layers_dir), "figures_dir": str(figures_dir)},
-        "labels": {"include_d_fires_as_feature": False, "n_classes": 3},
+        "labels": {"n_classes": 3},
     }
 
     generate_susceptibility_map(cfg, "summer")  # should not raise

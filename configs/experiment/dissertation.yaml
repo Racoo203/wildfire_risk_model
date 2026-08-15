@@ -8,7 +8,6 @@ labels:
   compare_classify_methods: []
   clean_labels: false
   auto_find_k: false
-  include_d_fires_as_feature: false
 
 modeling:
   mlflow_experiment: "wf-diss"

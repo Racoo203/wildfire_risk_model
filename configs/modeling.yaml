@@ -13,4 +13,4 @@ modeling:
   smote_k_neighbors: 5
   optuna_search_subsample_by_model:
     svm: 6000
-  excluded_features: ["tas", "tasmin"]
+  excluded_features: ["tas", "tasmin", "d_fires"]

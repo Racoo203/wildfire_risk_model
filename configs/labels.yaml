@@ -9,7 +9,6 @@ labels:
   kde_zero_percentile: 95.0              # KDE-only: percentile of the raster's own density
                                           # distribution treated as background/zero (see kernel_density.py).
   trim_bottom_pct: 0.1                   # Trims lower 0.1% of valid densities (replaces hard zero)
-  include_d_fires_as_feature: false
 
   # --- Risk Classification & Dynamic K ---
   classify_method: "gmm"                 # Options: "percentile" | "jenks" | "gmm"
@@ -33,5 +32,8 @@ labels:
   sensitivity_seeds: [7, 123]
   sensitivity_n_reweight_trials: 3
   sensitivity_feature_noise_std: 0.05
-  clustering_exclude_features: ["tas", "tasmin", "landuse_class"]
+  clustering_exclude_features: ["tas", "tasmin", "landuse_class", "d_fires"]  # d_fires excluded here too now that
+                                          # it's always computed (see modeling.excluded_features for the analogous
+                                          # training-feature exclusion) -- keeps label-cleaning k-means geometry
+                                          # unchanged from before d_fires was unconditional.
   clustering_variance_floor_pct: 0.01
