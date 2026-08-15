@@ -111,6 +111,8 @@ def render_with_terrain_backdrop(
     show_gridlines: bool = True,
     points_gdf: Optional[gpd.GeoDataFrame] = None,
     points_label: Optional[str] = None,
+    vmin: Optional[float] = None,
+    vmax: Optional[float] = None,
 ) -> plt.Axes:
     """
     Render `data_path` on top of a desaturated hillshade of `dem_path`.
@@ -118,6 +120,12 @@ def render_with_terrain_backdrop(
     hillshade underneath instead of a blank patch. If `points_gdf` is
     given, its point geometries are scattered on top (e.g. fire incident
     locations over a predicted susceptibility map).
+
+    `vmin`/`vmax` fix the color scale explicitly (e.g. to a config's full
+    class range) instead of matplotlib's default of scaling to this
+    raster's own data min/max — needed so a class entirely absent from one
+    raster doesn't shift the color mapping relative to a raster where every
+    class is present.
     """
     with rasterio.open(dem_path) as dem_src:
         dem = dem_src.read(1)
@@ -131,7 +139,7 @@ def render_with_terrain_backdrop(
     ax.imshow(hillshade, cmap="gray", alpha=backdrop_alpha, zorder=0)
 
     masked = np.ma.masked_invalid(data)
-    im = ax.imshow(masked, cmap=cmap, alpha=1.0, zorder=1)
+    im = ax.imshow(masked, cmap=cmap, alpha=1.0, zorder=1, vmin=vmin, vmax=vmax)
 
     if points_gdf is not None:
         _add_points(ax, transform, points_gdf, label=points_label)
@@ -171,6 +179,8 @@ def save_terrain_map(
     show_gridlines: bool = True,
     points_gdf: Optional[gpd.GeoDataFrame] = None,
     points_label: Optional[str] = None,
+    vmin: Optional[float] = None,
+    vmax: Optional[float] = None,
 ) -> Path:
     """Convenience wrapper: render_with_terrain_backdrop + save to disk."""
     out_path = Path(out_path)
@@ -183,6 +193,7 @@ def save_terrain_map(
         show_scalebar=show_scalebar, show_north_arrow=show_north_arrow,
         show_gridlines=show_gridlines,
         points_gdf=points_gdf, points_label=points_label,
+        vmin=vmin, vmax=vmax,
     )
     fig.tight_layout()
     fig.savefig(out_path, dpi=dpi)

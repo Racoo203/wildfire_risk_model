@@ -116,6 +116,7 @@ def stage_evaluate(config: dict, input_paths: dict) -> Dict[str, Dict[str, dict]
                 try:
                     viz.render_susceptibility_map(
                         raster_path, dem_path, figures_dir,
+                        n_classes=config["labels"].get("n_classes", 4),
                         season=season, model_name=model_name,
                         fire_points_gdf=fire_test_gdf,
                     )

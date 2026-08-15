@@ -20,10 +20,10 @@ from wildfire_susceptibility.reporting.generate_report_figures import (
 
 
 def _write_dummy_raster(path, reference_transform, value: float = 2.0):
-    """Uniform-value raster. Default value=2.0 (not 0.0/1.0) so the max
-    class index is 2 -> class_names_for(3) resolves to a real scheme;
-    render_susceptibility_map derives n_classes from the raster's own
-    max value, and class_names_for only supports {3, 4, 5}."""
+    """Uniform-value raster. Value doesn't need to span the full class
+    range any more -- render_susceptibility_map now reads n_classes from
+    cfg["labels"]["n_classes"] (see report_cfg fixture) rather than
+    inferring it from the raster's own max value."""
     meta = {
         "driver": "GTiff", "height": 10, "width": 10, "count": 1,
         "dtype": "float32", "crs": "EPSG:27700",
@@ -40,7 +40,7 @@ def report_cfg(tmp_path):
             "output_dir": str(tmp_path / "layers"),
             "figures_dir": str(tmp_path / "figures"),
         },
-        "labels": {"include_d_fires_as_feature": False},
+        "labels": {"include_d_fires_as_feature": False, "n_classes": 3},
     }
 
 
@@ -104,7 +104,7 @@ def test_generate_susceptibility_map_renders_only_selected_model(
 
     cfg = {
         "base": {"output_dir": str(layers_dir), "figures_dir": str(figures_dir)},
-        "labels": {"include_d_fires_as_feature": False},
+        "labels": {"include_d_fires_as_feature": False, "n_classes": 3},
     }
 
     generate_susceptibility_map(cfg, "summer")
@@ -126,7 +126,7 @@ def test_generate_susceptibility_map_falls_back_to_all_models_without_selection(
 
     cfg = {
         "base": {"output_dir": str(layers_dir), "figures_dir": str(figures_dir)},
-        "labels": {"include_d_fires_as_feature": False},
+        "labels": {"include_d_fires_as_feature": False, "n_classes": 3},
     }
 
     generate_susceptibility_map(cfg, "summer")
@@ -143,7 +143,7 @@ def test_generate_susceptibility_map_skips_when_no_predicted_rasters(tmp_path, s
 
     cfg = {
         "base": {"output_dir": str(layers_dir), "figures_dir": str(figures_dir)},
-        "labels": {"include_d_fires_as_feature": False},
+        "labels": {"include_d_fires_as_feature": False, "n_classes": 3},
     }
 
     generate_susceptibility_map(cfg, "summer")  # should not raise

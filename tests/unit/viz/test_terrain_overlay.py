@@ -58,6 +58,21 @@ def test_show_gridlines_false_falls_back_to_axis_off(synthetic_dem, synthetic_re
     plt.close(fig)
 
 
+def test_vmin_vmax_fix_the_imshow_color_range(synthetic_dem, synthetic_reference_raster):
+    """vmin/vmax let a caller (e.g. render_susceptibility_map) pin the color
+    scale to a fixed class range instead of matplotlib's default of scaling
+    to this raster's own data min/max -- needed so a raster missing a class
+    doesn't shift the color mapping relative to one where every class is
+    present."""
+    fig, ax = plt.subplots()
+    render_with_terrain_backdrop(
+        synthetic_reference_raster, synthetic_dem, "viridis", ax, vmin=0, vmax=4,
+    )
+    im = [c for c in ax.get_images()][-1]
+    assert im.get_clim() == (0, 4)
+    plt.close(fig)
+
+
 def test_save_terrain_map_writes_nonempty_png(tmp_path, synthetic_dem, synthetic_reference_raster):
     out_path = tmp_path / "map.png"
     result = save_terrain_map(synthetic_reference_raster, synthetic_dem, out_path)

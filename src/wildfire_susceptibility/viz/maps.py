@@ -5,8 +5,6 @@ from pathlib import Path
 from typing import Dict, Optional
 
 import geopandas as gpd
-import numpy as np
-import rasterio
 
 from .terrain_overlay import save_terrain_map
 from .manifest import append_to_manifest
@@ -67,6 +65,8 @@ def render_susceptibility_map(
     labels_path: Path,
     dem_path: Path,
     figures_dir: Path,
+    *,
+    n_classes: int,
     season: Optional[str] = None,
     model_name: Optional[str] = None,
     include_d_fires_as_feature: Optional[bool] = None,
@@ -82,9 +82,12 @@ def render_susceptibility_map(
     if model_name:
         title += f" ({model_name})"
 
-    with rasterio.open(labels_path) as src:
-        labels_data = src.read(1)
-    n_classes = int(np.nanmax(labels_data)) + 1
+    # n_classes is a property of the model's fixed output space
+    # (configs/labels.yaml's labels.n_classes), not of what happened to be
+    # predicted in this particular raster — a raster missing a class (e.g.
+    # zero "High" pixels this season) must still render with the full,
+    # correctly-labeled legend rather than collapsing to fewer classes or
+    # raising in class_names_for().
     class_names = class_names_for(n_classes)
     colorbar_label = f"Class (0={class_names[0]} .. {n_classes - 1}={class_names[-1]})"
 
@@ -93,6 +96,8 @@ def render_susceptibility_map(
         cmap=_SUSCEPTIBILITY_CMAP,
         title=title,
         colorbar_label=colorbar_label,
+        vmin=0,
+        vmax=n_classes - 1,
         points_gdf=fire_points_gdf,
         points_label="Test-period fires" if fire_points_gdf is not None else None,
     )
