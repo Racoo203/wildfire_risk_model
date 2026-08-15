@@ -69,7 +69,6 @@ def render_susceptibility_map(
     n_classes: int,
     season: Optional[str] = None,
     model_name: Optional[str] = None,
-    include_d_fires_as_feature: Optional[bool] = None,
     fire_points_gdf: Optional[gpd.GeoDataFrame] = None,
 ) -> Path:
     figures_dir = Path(figures_dir)
@@ -109,7 +108,6 @@ def render_susceptibility_map(
         season=season,
         params={
             "model": model_name,
-            "include_d_fires_as_feature": include_d_fires_as_feature,
             "fire_points_overlaid": fire_points_gdf is not None,
         },
     )

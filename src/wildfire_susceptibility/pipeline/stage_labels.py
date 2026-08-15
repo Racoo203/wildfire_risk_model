@@ -46,10 +46,8 @@ def _build_season(config: dict, season: str, months: Tuple[int, ...], ref_path: 
     fire_builder = FireBuilder(config)
     fire_train_gdf, fire_test_gdf = fire_builder.process(months=months, season=season)
 
-    d_fires_paths = {}
-    if config["labels"].get("include_d_fires_as_feature", True):
-        fire_prox_builder = FireProximityBuilder(config, ref_path)
-        d_fires_paths = fire_prox_builder.process(fire_train_gdf, season=season)
+    fire_prox_builder = FireProximityBuilder(config, ref_path)
+    d_fires_paths = fire_prox_builder.process(fire_train_gdf, season=season)
 
     splits = {
         "train": (config["processing"]["training_years"], fire_train_gdf),

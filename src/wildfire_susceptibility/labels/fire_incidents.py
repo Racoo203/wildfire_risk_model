@@ -4,8 +4,9 @@ IMPORTANT: this is built ONCE from fire_train and reused, unmodified, in both
 the train and test feature stacks. It is not rebuilt per split — rebuilding
 it from test-period fires would leak future fire locations directly into the
 model's input features, which is a strictly worse leak than a climate mean
-mismatch and is not an experiment axis the way `include_d_fires_as_feature`
-already is.
+mismatch. d_fires itself is always computed (see FireProximityBuilder);
+whether it's used as a training feature is controlled by
+`modeling.excluded_features`, not a labels-stage toggle.
 """
 
 import numpy as np

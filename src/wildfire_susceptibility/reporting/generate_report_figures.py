@@ -206,14 +206,12 @@ def generate_susceptibility_map(cfg: dict, season: str) -> None:
     if fire_points_path is None:
         logger.info(f"[{season}] No fire-test points found; rendering susceptibility map without overlay.")
 
-    include_d_fires = cfg["labels"].get("include_d_fires_as_feature", True)
     n_classes = cfg["labels"].get("n_classes", 4)
     for model_name, labels_path in to_render.items():
         viz.render_susceptibility_map(
             labels_path, dem_path, _figures_dir(cfg),
             n_classes=n_classes,
             season=season, model_name=model_name,
-            include_d_fires_as_feature=include_d_fires,
             fire_points_gdf=fire_points_gdf,
         )
     logger.info(f"[{season}] Rendered susceptibility map(s) for: {sorted(to_render)}.")

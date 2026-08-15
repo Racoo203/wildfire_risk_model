@@ -11,7 +11,6 @@ labels:
   compare_classify_methods: []
   clean_labels: false
   auto_find_k: false
-  include_d_fires_as_feature: false
 
 modeling:
   mlflow_experiment: "wf-baseline"
@@ -20,4 +19,4 @@ modeling:
   models: ["ordinal_lr", "random_forest"]
   imbalance_strategy: "cost_weighted"       # smoketest for cost-weighted vs SMOTE hypothesis; makes use_smote/smote_* below inert (SMOTEResampler.resample() no-ops per model when resolved to cost_weighted)
   optuna_n_trials: 5
-  excluded_features: ["tas", "tasmin", "sfcWind"]
+  excluded_features: ["tas", "tasmin", "sfcWind", "d_fires"]

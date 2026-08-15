@@ -83,7 +83,6 @@ class LabelsConfig(BaseModel):
     density_method: Literal["convolution", "kde"] = "convolution"
     classify_method: Literal["percentile", "jenks", "gmm"] = "gmm"
     compare_classify_methods: List[str] = Field(default_factory=lambda: ["percentile", "jenks", "gmm"])
-    include_d_fires_as_feature: bool = True
     kmeans_n_init: int = 10
     kmeans_max_iter: int = 300
     random_state: int = 42
@@ -127,7 +126,7 @@ class LabelsConfig(BaseModel):
     sensitivity_feature_noise_std: float = 0.05
 
     clustering_exclude_features: List[str] = Field(
-        default_factory=lambda: ["tas", "tasmin", "landuse_class"]
+        default_factory=lambda: ["tas", "tasmin", "landuse_class", "d_fires"]
     )
     clustering_variance_floor_pct: float = 0.01
 
