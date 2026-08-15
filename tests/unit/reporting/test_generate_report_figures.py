@@ -1,8 +1,16 @@
 """Unit tests for reporting/generate_report_figures.py's susceptibility-map
-raster discovery and model-selection logic — regression coverage for the
+raster discovery and model-selection logic -- regression coverage for the
 bug where the 'susceptibility map' category rendered stage_labels' ground-
 truth label raster instead of a model's predicted output, and never
-overlaid test-period fire points."""
+overlaid test-period fire points.
+
+Also covers discover_feature_rasters -- regression coverage for the
+fix-eda-feature-raster-generation branch, where this function was found to
+be stale against the current feature builders: it looked for a
+dist_activity.tif that ProximityBuilder no longer writes (replaced by
+d_buildings + landuse_class), never listed landuse_class/d_buildings at
+all, and assumed climate/NDVI rasters have no train/test split suffix when
+ClimateBuilder/VegetationBuilder actually write one file per split."""
 
 import json
 from pathlib import Path
@@ -15,6 +23,7 @@ from wildfire_susceptibility.reporting.generate_report_figures import (
     discover_predicted_susceptibility_rasters,
     discover_selected_model,
     discover_fire_test_points,
+    discover_feature_rasters,
     generate_susceptibility_map,
 )
 
@@ -41,6 +50,7 @@ def report_cfg(tmp_path):
             "figures_dir": str(tmp_path / "figures"),
         },
         "labels": {"n_classes": 3},
+        "data_sources": {"haduk": {"sources": ["tas", "tasmax", "tasmin", "rainfall", "sfcWind", "hurs"]}},
     }
 
 
@@ -149,3 +159,73 @@ def test_generate_susceptibility_map_skips_when_no_predicted_rasters(tmp_path, s
     generate_susceptibility_map(cfg, "summer")  # should not raise
 
     assert not (figures_dir / "summer").exists()
+
+
+class TestDiscoverFeatureRasters:
+    def _touch(self, layers_dir: Path, name: str):
+        layers_dir.mkdir(parents=True, exist_ok=True)
+        (layers_dir / name).write_bytes(b"")
+
+    def test_finds_static_features_including_landuse_class_and_d_buildings(self, report_cfg):
+        """Regression: landuse_class and d_buildings replaced the old
+        merged d_activity layer (see features/proximity.py's own
+        docstring) but were never added as candidates -- silently dropping
+        two real on-disk rasters from every factor-map run."""
+        layers_dir = Path(report_cfg["base"]["output_dir"])
+        for name in ("topo_elevation.tif", "topo_slope.tif", "topo_aspect.tif",
+                     "dist_roads.tif", "dist_rivers.tif", "dist_buildings.tif", "landuse_class.tif"):
+            self._touch(layers_dir, name)
+
+        found = discover_feature_rasters(report_cfg, "summer")
+
+        assert "landuse_class" in found
+        assert "d_buildings" in found
+        assert "d_activity" not in found  # dead layer, must not be a candidate at all
+
+    def test_does_not_find_dead_d_activity_layer_even_if_present(self, report_cfg):
+        layers_dir = Path(report_cfg["base"]["output_dir"])
+        self._touch(layers_dir, "dist_activity.tif")  # stale leftover, if any
+
+        found = discover_feature_rasters(report_cfg, "summer")
+
+        assert "d_activity" not in found
+
+    def test_climate_and_ndvi_use_the_split_suffixed_filename(self, report_cfg):
+        """ClimateBuilder/VegetationBuilder write meteo_<var>_<season>_<split>.tif
+        and ndvi_<season>_<split>.tif -- a candidate path without the split
+        suffix would never match any file these builders actually produce."""
+        layers_dir = Path(report_cfg["base"]["output_dir"])
+        self._touch(layers_dir, "meteo_tasmax_summer_test.tif")
+        self._touch(layers_dir, "meteo_tasmax_summer_train.tif")  # wrong split, must not be picked by default
+        self._touch(layers_dir, "ndvi_summer_test.tif")
+
+        found = discover_feature_rasters(report_cfg, "summer")
+
+        assert found["tasmax"].name == "meteo_tasmax_summer_test.tif"
+        assert found["ndvi"].name == "ndvi_summer_test.tif"
+
+    def test_split_argument_selects_the_other_split(self, report_cfg):
+        layers_dir = Path(report_cfg["base"]["output_dir"])
+        self._touch(layers_dir, "meteo_tasmax_summer_train.tif")
+
+        found = discover_feature_rasters(report_cfg, "summer", split="train")
+
+        assert found["tasmax"].name == "meteo_tasmax_summer_train.tif"
+
+    def test_d_fires_has_no_split_suffix(self, report_cfg):
+        """d_fires is built once from fire_train regardless of split (see
+        stage_labels.py) -- unlike climate/NDVI, it must not require a
+        split suffix to be found."""
+        layers_dir = Path(report_cfg["base"]["output_dir"])
+        self._touch(layers_dir, "dist_fires_summer.tif")
+
+        found = discover_feature_rasters(report_cfg, "summer")
+
+        assert found["d_fires"].name == "dist_fires_summer.tif"
+
+    def test_missing_files_are_skipped_not_raised(self, report_cfg):
+        Path(report_cfg["base"]["output_dir"]).mkdir(parents=True)
+
+        found = discover_feature_rasters(report_cfg, "summer")
+
+        assert found == {}

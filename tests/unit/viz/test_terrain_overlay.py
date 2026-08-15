@@ -136,3 +136,64 @@ def test_save_terrain_map_with_points_gdf(tmp_path, synthetic_dem, synthetic_ref
     assert result == out_path
     assert out_path.exists()
     assert out_path.stat().st_size > 0
+
+
+def test_discrete_legend_replaces_colorbar_with_labelled_patches(synthetic_dem, synthetic_reference_raster):
+    """A categorical raster (e.g. landuse_class) should get a discrete
+    patch legend, not a continuous colorbar -- a colorbar implies an
+    ordinal relationship between codes that categorical codes don't have."""
+    fig, ax = plt.subplots()
+    render_with_terrain_backdrop(
+        synthetic_reference_raster, synthetic_dem, "tab10", ax,
+        colorbar_label="Land use",
+        discrete_legend={0: "No human activity", 1: "Residential"},
+    )
+
+    assert ax.get_legend() is not None
+    legend_texts = [t.get_text() for t in ax.get_legend().get_texts()]
+    assert legend_texts == ["No human activity", "Residential"]
+    # no continuous colorbar axes should have been added alongside the figure
+    assert len(fig.axes) == 1
+    plt.close(fig)
+
+
+def test_discrete_legend_uses_flat_colour_bins_not_continuous_norm(synthetic_dem, synthetic_reference_raster):
+    """The image's color normalization must be a discrete BoundaryNorm, not
+    plain min/max scaling -- otherwise two far-apart integer codes would
+    imply a gradient between them that doesn't exist for categorical data."""
+    from matplotlib.colors import BoundaryNorm
+
+    fig, ax = plt.subplots()
+    render_with_terrain_backdrop(
+        synthetic_reference_raster, synthetic_dem, "tab10", ax,
+        discrete_legend={0: "No human activity", 1: "Residential", 2: "Farmland"},
+    )
+
+    im = ax.get_images()[-1]
+    assert isinstance(im.norm, BoundaryNorm)
+    plt.close(fig)
+
+
+def test_no_discrete_legend_keeps_continuous_colorbar(synthetic_dem, synthetic_reference_raster):
+    fig, ax = plt.subplots()
+    render_with_terrain_backdrop(
+        synthetic_reference_raster, synthetic_dem, "viridis", ax, colorbar_label="Elevation (m)",
+    )
+
+    assert ax.get_legend() is None
+    assert len(fig.axes) == 2  # main axes + colorbar axes
+    plt.close(fig)
+
+
+def test_save_terrain_map_with_discrete_legend_writes_nonempty_png(
+    tmp_path, synthetic_dem, synthetic_reference_raster,
+):
+    out_path = tmp_path / "map_discrete.png"
+    result = save_terrain_map(
+        synthetic_reference_raster, synthetic_dem, out_path,
+        cmap="tab10", discrete_legend={0: "No human activity", 1: "Residential"},
+    )
+
+    assert result == out_path
+    assert out_path.exists()
+    assert out_path.stat().st_size > 0

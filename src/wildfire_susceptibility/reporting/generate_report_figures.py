@@ -2,14 +2,14 @@
 scripts/generate_report_figures.py
 
 Canonical figure-generation entry point. This is the ONLY place figure
-generation logic should live — eda.ipynb, the dissertation build.sh, and
+generation logic should live -- eda.ipynb, the dissertation build.sh, and
 app/control_panel.py's "Figures" stage button should all call into this
 script (or its `generate_all` function directly) rather than each
 re-implementing calls to viz.maps / viz.charts. See blueprint Section 9
 and the architecture-decision note in project memory.
 
 Every figure written here goes through wildfire_susceptibility/viz/, so
-every one is automatically indexed in figures/manifest.json — nothing in
+every one is automatically indexed in figures/manifest.json -- nothing in
 this script writes a PNG directly.
 
 Usage:
@@ -19,11 +19,11 @@ Usage:
     python scripts/generate_report_figures.py --only factor_maps,eda
 
 Categories (--only accepts a comma-separated subset):
-    factor_maps         — one terrain-backdrop map per feature raster, per season
-    susceptibility_maps  — the 4-class output map, per season (+ per model if available)
-    eda                  — VIF/correlation (Pearson+Spearman), class balance, NaN coverage
-    models               — ROC curves, CV comparison, SHAP (requires mlflow + trained runs)
-    optuna_plots         — optimization history + param importance per model (requires
+    factor_maps         -- one terrain-backdrop map per feature raster, per season
+    susceptibility_maps  -- the 4-class output map, per season (+ per model if available)
+    eda                  -- VIF/correlation (Pearson+Spearman), class balance, NaN coverage
+    models               -- ROC curves, CV comparison, SHAP (requires mlflow + trained runs)
+    optuna_plots         -- optimization history + param importance per model (requires
                             a completed/in-progress Optuna search per (season, model))
 """
 
@@ -43,7 +43,7 @@ import rasterio
 
 from wildfire_susceptibility.config.loader import ConfigLoader, DEFAULT_CONFIG_DIR, DEFAULT_CONFIG_FILES
 from wildfire_susceptibility.core.registry import MODELS
-from wildfire_susceptibility.modeling import models as _models  # noqa: F401 — registers wrappers
+from wildfire_susceptibility.modeling import models as _models  # noqa: F401 -- registers wrappers
 from wildfire_susceptibility import viz
 
 logger = logging.getLogger("wildfire_susceptibility.scripts.generate_report_figures")
@@ -51,7 +51,7 @@ logger = logging.getLogger("wildfire_susceptibility.scripts.generate_report_figu
 ALL_CATEGORIES = ("factor_maps", "susceptibility_maps", "eda", "models", "optuna_plots")
 
 # --------------------------------------------------------------------------
-# Path discovery — mirrors the naming conventions used by the feature
+# Path discovery -- mirrors the naming conventions used by the feature
 # builders / preprocessor, so this script never has to be told paths
 # explicitly; it derives them from config the same way the pipeline does.
 # --------------------------------------------------------------------------
@@ -72,14 +72,20 @@ def _dem_path(cfg: dict) -> Path:
     return _layers_dir(cfg) / "topo_elevation.tif"
 
 
-def discover_feature_rasters(cfg: dict, season: str) -> Dict[str, Path]:
+def discover_feature_rasters(cfg: dict, season: str, split: str = "test") -> Dict[str, Path]:
     """
     Find every feature raster relevant to `season` by scanning output_dir
     for the naming patterns the builders actually write. Static features
-    (topography, proximity) have no season suffix; climate/NDVI/d_fires
-    do. Missing files are skipped with a warning rather than raising —
-    a partial figure set is more useful than a crashed run when a season
-    hasn't been fully processed yet.
+    (topography, proximity) have no season/split suffix; climate/NDVI have
+    both -- ClimateBuilder/VegetationBuilder write a separate raster per
+    split, and `split` defaults to "test" to match what
+    dataset_prep.prepare_full_domain / stage_evaluate's full-domain
+    susceptibility raster actually consumes, so factor maps stay spatially
+    comparable to it. d_fires has a season suffix only (built once from
+    fire_train regardless of split -- see stage_labels.py). Missing files
+    are skipped with a warning rather than raising -- a partial figure set
+    is more useful than a crashed run when a season hasn't been fully
+    processed yet.
     """
     layers_dir = _layers_dir(cfg)
     haduk_vars = cfg["data_sources"]["haduk"]["sources"]
@@ -90,12 +96,14 @@ def discover_feature_rasters(cfg: dict, season: str) -> Dict[str, Path]:
         "aspect": layers_dir / "topo_aspect.tif",
         "d_roads": layers_dir / "dist_roads.tif",
         "d_rivers": layers_dir / "dist_rivers.tif",
-        "d_activity": layers_dir / "dist_activity.tif",
+        "d_buildings": layers_dir / "dist_buildings.tif",
+        "landuse_class": layers_dir / "landuse_class.tif",
         "d_fires": layers_dir / f"dist_fires_{season}.tif",
-        "ndvi": layers_dir / f"ndvi_{season}.tif",
+        "ndvi": layers_dir / f"ndvi_{season}_{split}.tif",
+        "diurnal_range": layers_dir / f"meteo_diurnal_range_{season}_{split}.tif",
     }
     for var in haduk_vars:
-        candidates[var] = layers_dir / f"meteo_{var}_{season}.tif"
+        candidates[var] = layers_dir / f"meteo_{var}_{season}_{split}.tif"
 
     found = {name: path for name, path in candidates.items() if path.exists()}
     missing = set(candidates) - set(found)
@@ -106,7 +114,7 @@ def discover_feature_rasters(cfg: dict, season: str) -> Dict[str, Path]:
 
 def discover_susceptibility_raster(cfg: dict, season: str) -> Optional[Path]:
     """Ground-truth density/classification label raster (from
-    stage_labels), NOT a model's predicted output — used only for the EDA
+    stage_labels), NOT a model's predicted output -- used only for the EDA
     class-balance comparison. For the model-predicted risk map, see
     discover_predicted_susceptibility_rasters below."""
     path = _layers_dir(cfg) / f"risk_labels_clean_{season}.tif"
@@ -162,7 +170,17 @@ def generate_factor_maps(cfg: dict, season: str) -> None:
         logger.warning(f"[{season}] No feature rasters found; skipping factor maps.")
         return
 
-    viz.render_all_factor_maps(feature_paths, dem_path, _figures_dir(cfg), season=season)
+    class_labels_by_feature = {}
+    if "landuse_class" in feature_paths:
+        fclasses = cfg["data_sources"]["proximity"]["human_fclasses"]
+        labels = {0: "No human activity"}
+        labels.update({i + 1: name.replace("_", " ").title() for i, name in enumerate(fclasses)})
+        class_labels_by_feature["landuse_class"] = labels
+
+    viz.render_all_factor_maps(
+        feature_paths, dem_path, _figures_dir(cfg), season=season,
+        class_labels_by_feature=class_labels_by_feature,
+    )
     logger.info(f"[{season}] Rendered {len(feature_paths)} factor map(s).")
 
 
@@ -231,7 +249,7 @@ def generate_eda_figures(cfg: dict, season: str) -> None:
     # VIF + Pearson + Spearman correlation, using the paper's exact thresholds
     viz.plot_vif_correlation(df, feature_cols, figures_dir, season=season)
 
-    # NaN coverage — read directly from the raster feature stack so pre-
+    # NaN coverage -- read directly from the raster feature stack so pre-
     # imputation NaN rates are shown (the CSV may already be post-cleaning).
     feature_paths = discover_feature_rasters(cfg, season)
     if feature_paths:
@@ -241,7 +259,7 @@ def generate_eda_figures(cfg: dict, season: str) -> None:
                 arrays[name] = src.read(1)
         viz.plot_nan_coverage(arrays, figures_dir, season=season)
 
-    # Class balance before/after cleaning — needs both raw and cleaned label
+    # Class balance before/after cleaning -- needs both raw and cleaned label
     # rasters; raw classify output uses the configured classify_method name.
     layers_dir = _layers_dir(cfg)
     density_method = cfg["labels"].get("density_method", "convolution")
@@ -266,7 +284,7 @@ def generate_model_figures(cfg: dict, season: str) -> None:
     ROC comparison + CV comparison (standard vs spatial) pulled from mlflow
     run history, and a SHAP summary for the selection_rule-chosen best
     model. Skips gracefully (with a warning, not an error) if mlflow has no
-    matching runs yet — this category depends on modeling/train.py having
+    matching runs yet -- this category depends on modeling/train.py having
     actually been run for this season.
     """
     import mlflow
@@ -290,7 +308,7 @@ def generate_model_figures(cfg: dict, season: str) -> None:
         logger.warning(f"[{season}] No mlflow runs tagged for this season; skipping model figures.")
         return
 
-    # CV comparison (standard vs spatial) — only meaningful if both metrics exist.
+    # CV comparison (standard vs spatial) -- only meaningful if both metrics exist.
     if {"metrics.cv_auc_standard", "metrics.cv_auc_spatial"}.issubset(season_runs.columns):
         try:
             viz.plot_cv_comparison(figures_dir, season=season, mlflow_experiment=experiment_name)
@@ -301,13 +319,13 @@ def generate_model_figures(cfg: dict, season: str) -> None:
         logger.info(f"[{season}] Spatial CV metrics not present in mlflow runs; skipping CV comparison.")
 
     # ROC curves and SHAP need actual fitted model objects / prediction
-    # arrays, which live only in-process during modeling/train.py — mlflow
+    # arrays, which live only in-process during modeling/train.py -- mlflow
     # search_runs() gives metrics/params, not artifacts we can replot from
     # without re-running inference. This script therefore reports what it
     # can from logged metrics and flags the rest as needing a live run.
     logger.info(
         f"[{season}] ROC/SHAP regeneration requires re-running inference with fitted "
-        f"models (not reconstructable from mlflow metrics alone) — call "
+        f"models (not reconstructable from mlflow metrics alone) -- call "
         f"viz.plot_roc_curves / viz.plot_shap_summary directly from the training "
         f"session (e.g. at the end of modeling/train.py's train_all) if you want "
         f"those figures refreshed."
@@ -320,7 +338,7 @@ def generate_optuna_plots(cfg: dict, season: str) -> None:
     search this season. Study names are reconstructed with the exact same
     deterministic scheme HyperparamSearch.get_or_create_study() uses
     (season + model name + param-space signature + objective version), so
-    no separate index of study names needs to be persisted anywhere —
+    no separate index of study names needs to be persisted anywhere --
     the SQLite storage is already fully queryable as-is.
     """
     import optuna
@@ -375,7 +393,7 @@ def generate_all(
     skip_models: bool = False,
 ) -> None:
     """
-    Main entry point — importable directly (e.g. from a notebook or the
+    Main entry point -- importable directly (e.g. from a notebook or the
     control panel) as an alternative to shelling out to this script.
     """
     cfg_obj = ConfigLoader.load(config_dir=config_dir, files=config_files)
@@ -397,7 +415,7 @@ def generate_all(
             try:
                 CATEGORY_FUNCS[category](cfg, season)
             except Exception:
-                logger.exception(f"[{season}] Figure category '{category}' failed — continuing with remaining categories.")
+                logger.exception(f"[{season}] Figure category '{category}' failed -- continuing with remaining categories.")
 
     logger.info("Figure generation complete. See figures/manifest.json for the full index.")
 
@@ -405,46 +423,46 @@ def generate_all(
 def _parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument(
-        "--config-dir", 
-        type=Path, 
+        "--config-dir",
+        type=Path,
         default=DEFAULT_CONFIG_DIR,
         help="Directory containing config YAML files."
-    
+
     )
 
     parser.add_argument(
-        "--config-file", 
-        action="append", 
-        dest="config_files", 
+        "--config-file",
+        action="append",
+        dest="config_files",
         default=None,
         help=f"Config YAML filename within --config-dir (repeatable). Defaults to {DEFAULT_CONFIG_FILES}."
     )
 
     parser.add_argument(
-        "--season", 
-        action="append", 
-        dest="seasons", 
+        "--season",
+        action="append",
+        dest="seasons",
         default=None,
         help="Season to process (repeatable). Defaults to config.seasons.active."
     )
 
     parser.add_argument(
-        "--only", 
-        type=str, 
+        "--only",
+        type=str,
         default=None,
         help=f"Comma-separated subset of {ALL_CATEGORIES}. Defaults to all."
     )
 
     parser.add_argument(
-        "--skip-models", 
+        "--skip-models",
         action="store_true",
         help="Skip the 'models' category (useful when mlflow has no runs yet)."
     )
-    
+
     parser.add_argument(
-        "-v", 
-        "--verbose", 
-        action="store_true", 
+        "-v",
+        "--verbose",
+        action="store_true",
         help="Debug-level logging."
     )
 

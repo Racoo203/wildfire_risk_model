@@ -5,12 +5,13 @@ north arrow, coordinate gridlines) every map figure needs for
 publication use."""
 
 from pathlib import Path
-from typing import Optional
+from typing import Dict, Optional
 
 import geopandas as gpd
 import numpy as np
 import rasterio
-from matplotlib.colors import LightSource
+from matplotlib.colors import LightSource, ListedColormap, BoundaryNorm
+from matplotlib.patches import Patch
 from mpl_toolkits.axes_grid1.anchored_artists import AnchoredSizeBar
 import matplotlib.pyplot as plt
 
@@ -113,6 +114,7 @@ def render_with_terrain_backdrop(
     points_label: Optional[str] = None,
     vmin: Optional[float] = None,
     vmax: Optional[float] = None,
+    discrete_legend: Optional[Dict[int, str]] = None,
 ) -> plt.Axes:
     """
     Render `data_path` on top of a desaturated hillshade of `dem_path`.
@@ -126,6 +128,14 @@ def render_with_terrain_backdrop(
     raster's own data min/max — needed so a class entirely absent from one
     raster doesn't shift the color mapping relative to a raster where every
     class is present.
+
+    `discrete_legend` (e.g. {0: "No human activity", 1: "Residential", ...})
+    renders `data_path`'s integer codes as flat colour bins (one colour per
+    key, via BoundaryNorm) with a labelled patch legend instead of a
+    continuous colorbar — for genuinely categorical rasters (landuse_class)
+    where a continuous colorbar would misleadingly imply the codes are
+    ordinal. Mutually exclusive with `vmin`/`vmax` (matplotlib forbids
+    passing both `norm` and `vmin`/`vmax` to imshow).
     """
     with rasterio.open(dem_path) as dem_src:
         dem = dem_src.read(1)
@@ -139,7 +149,18 @@ def render_with_terrain_backdrop(
     ax.imshow(hillshade, cmap="gray", alpha=backdrop_alpha, zorder=0)
 
     masked = np.ma.masked_invalid(data)
-    im = ax.imshow(masked, cmap=cmap, alpha=1.0, zorder=1, vmin=vmin, vmax=vmax)
+
+    legend_cmap = None
+    sorted_keys = []
+    if discrete_legend:
+        sorted_keys = sorted(discrete_legend)
+        base_cmap = plt.get_cmap(cmap, len(sorted_keys))
+        legend_cmap = ListedColormap([base_cmap(i) for i in range(len(sorted_keys))])
+        bounds = [k - 0.5 for k in sorted_keys] + [sorted_keys[-1] + 0.5]
+        norm = BoundaryNorm(bounds, legend_cmap.N)
+        im = ax.imshow(masked, cmap=legend_cmap, norm=norm, alpha=1.0, zorder=1)
+    else:
+        im = ax.imshow(masked, cmap=cmap, alpha=1.0, zorder=1, vmin=vmin, vmax=vmax)
 
     if points_gdf is not None:
         _add_points(ax, transform, points_gdf, label=points_label)
@@ -158,7 +179,16 @@ def render_with_terrain_backdrop(
     if show_north_arrow:
         _add_north_arrow(ax)
 
-    if colorbar_label:
+    if discrete_legend:
+        handles = [
+            Patch(facecolor=legend_cmap(i), edgecolor="black", linewidth=0.3, label=discrete_legend[k])
+            for i, k in enumerate(sorted_keys)
+        ]
+        ax.legend(
+            handles=handles, loc="lower left", fontsize=6, framealpha=0.85,
+            title=colorbar_label, title_fontsize=7,
+        )
+    elif colorbar_label:
         cbar = plt.colorbar(im, ax=ax, fraction=0.04, pad=0.02)
         cbar.set_label(colorbar_label)
 
@@ -181,6 +211,7 @@ def save_terrain_map(
     points_label: Optional[str] = None,
     vmin: Optional[float] = None,
     vmax: Optional[float] = None,
+    discrete_legend: Optional[Dict[int, str]] = None,
 ) -> Path:
     """Convenience wrapper: render_with_terrain_backdrop + save to disk."""
     out_path = Path(out_path)
@@ -193,7 +224,7 @@ def save_terrain_map(
         show_scalebar=show_scalebar, show_north_arrow=show_north_arrow,
         show_gridlines=show_gridlines,
         points_gdf=points_gdf, points_label=points_label,
-        vmin=vmin, vmax=vmax,
+        vmin=vmin, vmax=vmax, discrete_legend=discrete_legend,
     )
     fig.tight_layout()
     fig.savefig(out_path, dpi=dpi)

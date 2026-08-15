@@ -91,7 +91,13 @@ def run_stage(stage: str, config: dict, state: dict) -> dict:
         })
 
     elif stage == "eda":
-        state["eda"] = stage_eda(config, {"raw": state["integration"], "clean": state["preprocessing"]})
+        state["eda"] = stage_eda(config, {
+            "raw": state["integration"],
+            "clean": state["preprocessing"],
+            "static": state["static"],
+            "seasonal": state["seasonal"],
+            "labels": state["labels"],
+        })
 
     elif stage == "temporal_eda":
         state["temporal_eda"] = stage_temporal_eda(config)
