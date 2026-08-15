@@ -19,19 +19,23 @@
       ]
     }
   },
-  "cv_auc_standard": 0.9983327283253975,
+  "scaling": {
+    "needs_scaling": false,
+    "columns": []
+  },
+  "cv_auc_standard": 0.9967514897023306,
   "cv_auc_spatial": null,
   "cv_auc_spatial_folds": null,
-  "cv_f1_macro_standard": 0.9684556559999485,
+  "cv_f1_macro_standard": 0.9514297847167666,
   "cv_f1_macro_spatial": null,
-  "cv_pr_auc_macro_standard": 0.9962035870953821,
+  "cv_pr_auc_macro_standard": 0.992542514362691,
   "cv_pr_auc_macro_spatial": null,
-  "cv_qwk_standard": 0.966687176903409,
+  "cv_qwk_standard": 0.9466552319337979,
   "cv_qwk_spatial": null,
   "cv_optimism_gap": null,
-  "val_auc": 0.5887740173229776,
-  "val_f1": 0.25102472520942853,
-  "val_qwk": 1.8212986368504325e-05,
+  "val_auc": 0.5308556188575563,
+  "val_f1": 0.3480349896004096,
+  "val_qwk": 0.11208024346120893,
   "config_snapshot": {
     "base": {
       "region": "Essex",

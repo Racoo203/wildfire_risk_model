@@ -83,11 +83,17 @@ def _write_artifact(config: dict, season: str, model_name: str, result: dict) ->
     joblib.dump(result["model"], out_dir / "model.joblib")
     (out_dir / "best_params.json").write_text(json.dumps(result["best_params"], indent=2))
 
+    scaling_meta = dict(result.get("scaling_meta", {"needs_scaling": False, "columns": []}))
+    if scaling_meta.get("needs_scaling") and result.get("scaler") is not None:
+        joblib.dump(result["scaler"], out_dir / "scaler.joblib")
+        scaling_meta["scaler_path"] = "scaler.joblib"
+
     manifest = {
         "season": season,
         "model_name": model_name,
         "cfg_sig": compute_cfg_sig(config),
         "categorical_encoding": result.get("categorical_encoding", {"kind": "none", "columns": [], "categories": {}}),
+        "scaling": scaling_meta,
         "cv_auc_standard": result.get("cv_auc_standard"),
         "cv_auc_spatial": result.get("cv_auc_spatial"),
         "cv_auc_spatial_folds": result.get("cv_auc_spatial_folds"),

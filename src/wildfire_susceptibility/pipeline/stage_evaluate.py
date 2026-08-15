@@ -71,13 +71,38 @@ def stage_evaluate(config: dict, input_paths: dict) -> Dict[str, Dict[str, dict]
             cat_positions = cat_features_of(model)
 
             X_test_encoded = prep.apply_categorical_encoding(X_test[feature_cols], encoding_meta)
-            X_test_arr = to_model_array(X_test_encoded, cat_positions)
-
-            proba_by_model[model_name] = model.predict_proba(X_test_arr)
-
             X_full_encoded = None
             if X_full is not None:
                 X_full_encoded = prep.apply_categorical_encoding(X_full, encoding_meta)
+
+            # Same discipline as categorical encoding: the scaler (when this
+            # model's family needs one — ordinal_lr, neural_net) was fit on
+            # train data only and persisted at training time. X_test/X_full
+            # are freshly reloaded from CSV, so they're still unscaled
+            # regardless of what dataset_prep did inside trainer.train_one().
+            # needs_scaling() is asked of the reloaded model itself (not the
+            # manifest) so an artifact trained before this fix — with no
+            # "scaling" block in its manifest at all — still fails loudly
+            # here instead of silently evaluating unscaled.
+            if model.needs_scaling():
+                scaling_meta = manifest.get("scaling")
+                scaler_rel_path = (scaling_meta or {}).get("scaler_path", "scaler.joblib")
+                scaler_path = artifact_path / scaler_rel_path
+                if scaling_meta is None or not scaler_path.exists():
+                    raise FileNotFoundError(
+                        f"[{season}][{model_name}] model requires feature scaling "
+                        f"(needs_scaling()=True) but no persisted scaler was found at "
+                        f"{scaler_path}. This artifact was likely trained before the "
+                        f"scaler-persistence fix and must be retrained so a scaler.joblib "
+                        f"is written alongside model.joblib."
+                    )
+                scaler = joblib.load(scaler_path)
+                X_test_encoded = prep.apply_scaling(X_test_encoded, scaler)
+                if X_full_encoded is not None:
+                    X_full_encoded = prep.apply_scaling(X_full_encoded, scaler)
+
+            X_test_arr = to_model_array(X_test_encoded, cat_positions)
+            proba_by_model[model_name] = model.predict_proba(X_test_arr)
 
             result = evaluator.evaluate(
                 model, X_test_encoded, y_test, season, model_name,
