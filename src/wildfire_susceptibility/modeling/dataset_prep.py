@@ -239,7 +239,20 @@ class DatasetPrep:
             scaler.transform(X_test), columns=X_test.columns, index=X_test.index
         )
         return X_train_scaled, X_test_scaled, scaler
-    
+
+    def apply_scaling(self, X: pd.DataFrame, scaler: StandardScaler) -> pd.DataFrame:
+        """
+        Transform-only application of a scaler fit at training time (see
+        scale_for_model_family) to eval-time data — test/full-domain,
+        reloaded fresh from CSV by stage_evaluate.py. Same train-fit /
+        eval-transform-only discipline already established for
+        apply_categorical_encoding and the density classifier (GMM/Jenks)
+        elsewhere in this pipeline: never re-fit here.
+        """
+        return pd.DataFrame(
+            scaler.transform(X), columns=X.columns, index=X.index
+        )
+
     def assign_spatial_blocks(
         self,
         df: pd.DataFrame,

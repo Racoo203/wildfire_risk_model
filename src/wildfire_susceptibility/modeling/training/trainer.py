@@ -127,7 +127,7 @@ class ModelTrainer:
         cat_feature_names = (
             categorical_encoding["columns"] if categorical_encoding["kind"] == "native" else []
         )
-        X_tr, X_va = self._scale_features(model_cls, X_train, X_val)
+        X_tr, X_va, scaler, scaling_meta = self._scale_features(model_cls, X_train, X_val)
 
         if cat_feature_names:
             # landuse_class (or any future native-categorical column) must
@@ -304,6 +304,8 @@ class ModelTrainer:
             "model": final_model,
             "best_params": best_params,
             "categorical_encoding": categorical_encoding,
+            "scaler": scaler,
+            "scaling_meta": scaling_meta,
             "cv_auc_standard": cv_auc_standard,
             "cv_auc_spatial": cv_auc_spatial,
             "cv_auc_spatial_folds": cv_auc_spatial_folds,
@@ -327,8 +329,16 @@ class ModelTrainer:
 
     def _scale_features(self, model_cls, X_train, X_val) -> Tuple:
         needs_scaling = model_cls().needs_scaling()
-        X_tr, X_va, _ = self.dataset_prep.scale_for_model_family(X_train, X_val, needs_scaling)
-        return X_tr, X_va
+        X_tr, X_va, scaler = self.dataset_prep.scale_for_model_family(X_train, X_val, needs_scaling)
+        # Columns captured post-categorical-encoding (X_train here is
+        # already fit_categorical_encoding's output), matching exactly
+        # what the scaler was fit on — apply_scaling at eval time needs
+        # the same column set/order reproduced by apply_categorical_encoding.
+        scaling_meta = {
+            "needs_scaling": needs_scaling,
+            "columns": list(X_train.columns) if needs_scaling else [],
+        }
+        return X_tr, X_va, scaler, scaling_meta
 
     def _log_run_setup(self, season, model_name, best_params, best_value, search_uses_groups, best_trial_metrics):
         mlflow.set_tags({

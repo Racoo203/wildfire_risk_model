@@ -20,3 +20,4 @@ modeling:
   models: ["ordinal_lr", "random_forest"]
   imbalance_strategy: "cost_weighted"       # smoketest for cost-weighted vs SMOTE hypothesis; makes use_smote/smote_* below inert (SMOTEResampler.resample() no-ops per model when resolved to cost_weighted)
   optuna_n_trials: 5
+  excluded_features: ["tas", "tasmin", "sfcWind"]
