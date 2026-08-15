@@ -2,19 +2,36 @@
   "season": "spring",
   "model_name": "random_forest",
   "cfg_sig": "c8185baf",
+  "categorical_encoding": {
+    "kind": "onehot",
+    "columns": [
+      "landuse_class"
+    ],
+    "categories": {
+      "landuse_class": [
+        0,
+        1,
+        2,
+        5,
+        6,
+        7,
+        9
+      ]
+    }
+  },
   "cv_auc_standard": null,
-  "cv_auc_spatial": 0.4845973480823339,
+  "cv_auc_spatial": 0.5095741489415195,
   "cv_auc_spatial_folds": null,
   "cv_f1_macro_standard": null,
-  "cv_f1_macro_spatial": 0.22064765767495484,
+  "cv_f1_macro_spatial": 0.23020626198185923,
   "cv_pr_auc_macro_standard": null,
-  "cv_pr_auc_macro_spatial": 0.3455220110998533,
+  "cv_pr_auc_macro_spatial": 0.3578896948202866,
   "cv_qwk_standard": null,
-  "cv_qwk_spatial": -0.05685630227916607,
+  "cv_qwk_spatial": -0.016016792449656748,
   "cv_optimism_gap": null,
-  "val_auc": 0.5299109241185315,
-  "val_f1": 0.34759153315185864,
-  "val_qwk": 0.11481854651488321,
+  "val_auc": 0.5219416473208441,
+  "val_f1": 0.34705714266822746,
+  "val_qwk": 0.11568317496543534,
   "config_snapshot": {
     "base": {
       "region": "Essex",

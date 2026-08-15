@@ -61,7 +61,65 @@
   },
   "train": {
     "spring": {
-      "random_forest": "models\\spring\\random_forest\\c8185baf"
+      "ordinal_lr": "models\\spring\\ordinal_lr\\a45a460e",
+      "random_forest": "models\\spring\\random_forest\\a45a460e"
     }
+  },
+  "evaluate": {
+    "spring": {
+      "ordinal_lr": {
+        "shap_path": "figures\\spring\\models\\shap_summary_ordinal_lr.png",
+        "shap_dependence_path": "figures\\spring\\models\\shap_dependence_ordinal_lr.png",
+        "time_forward_validation": {
+          "n_fires": 1189,
+          "counts": {
+            "Low": 1189,
+            "Medium": 0,
+            "High": 0
+          },
+          "pct_low": 100.0,
+          "pct_medium": 0.0,
+          "pct_high": 0.0,
+          "pct_medium_plus": 0.0
+        },
+        "susceptibility_map_path": "data\\silver\\layers\\susceptibility_ordinal_lr_spring.tif",
+        "full_metrics_path": "figures\\spring\\models\\metrics_ordinal_lr.json"
+      },
+      "random_forest": {
+        "shap_path": "figures\\spring\\models\\shap_summary_random_forest.png",
+        "shap_dependence_path": "figures\\spring\\models\\shap_dependence_random_forest.png",
+        "time_forward_validation": {
+          "n_fires": 1189,
+          "counts": {
+            "Low": 1189,
+            "Medium": 0,
+            "High": 0
+          },
+          "pct_low": 100.0,
+          "pct_medium": 0.0,
+          "pct_high": 0.0,
+          "pct_medium_plus": 0.0
+        },
+        "susceptibility_map_path": "data\\silver\\layers\\susceptibility_random_forest_spring.tif",
+        "full_metrics_path": "figures\\spring\\models\\metrics_random_forest.json"
+      }
+    }
+  },
+  "selection": {
+    "comparison_table": "figures\\model_comparison.csv",
+    "selection_summary": "figures\\selection_summary.json",
+    "kruskal_results": "figures\\kruskal_wallis.csv"
+  },
+  "eda": {
+    "spring": {
+      "nan_coverage": "figures\\spring\\eda\\nan_coverage.png",
+      "vif": "figures\\spring\\eda\\vif.png",
+      "spearman": "figures\\spring\\eda\\correlation_spearman.png",
+      "class_balance": "figures\\spring\\eda\\class_balance.png"
+    }
+  },
+  "temporal_eda": {
+    "stationarity_summary": "figures\\temporal_eda\\stationarity_summary.csv",
+    "spatial_correlogram": "figures\\eda\\spatial_correlogram.csv"
   }
 }

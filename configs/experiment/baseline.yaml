@@ -15,7 +15,8 @@ labels:
 
 modeling:
   mlflow_experiment: "wf-baseline"
-  cv_strategy: "spatial"                       # was stratified_spatial_block — needed for Kruskal-Wallis + standard-vs-stratified comparison
+  cv_strategy: "standard"                       # was stratified_spatial_block — needed for Kruskal-Wallis + standard-vs-stratified comparison
   log_full_cv_diagnostics: true             # this is the reported run — pays the extra CV pass for the full standard-vs-spatial gap + Kruskal-Wallis fold data
-  models: ["random_forest"]        # xgboost replaced by catboost in the finalized roster
+  models: ["ordinal_lr", "random_forest"]
   imbalance_strategy: "cost_weighted"       # smoketest for cost-weighted vs SMOTE hypothesis; makes use_smote/smote_* below inert (SMOTEResampler.resample() no-ops per model when resolved to cost_weighted)
+  optuna_n_trials: 5

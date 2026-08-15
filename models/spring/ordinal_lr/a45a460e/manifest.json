@@ -1,0 +1,228 @@
+{
+  "season": "spring",
+  "model_name": "ordinal_lr",
+  "cfg_sig": "a45a460e",
+  "categorical_encoding": {
+    "kind": "onehot",
+    "columns": [
+      "landuse_class"
+    ],
+    "categories": {
+      "landuse_class": [
+        0,
+        1,
+        2,
+        5,
+        6,
+        7,
+        9
+      ]
+    }
+  },
+  "cv_auc_standard": 0.7545931971868852,
+  "cv_auc_spatial": null,
+  "cv_auc_spatial_folds": null,
+  "cv_f1_macro_standard": 0.4826199261445951,
+  "cv_f1_macro_spatial": null,
+  "cv_pr_auc_macro_standard": 0.4813261245470658,
+  "cv_pr_auc_macro_spatial": null,
+  "cv_qwk_standard": 0.38745051243285367,
+  "cv_qwk_spatial": null,
+  "cv_optimism_gap": null,
+  "val_auc": 0.6423149617323282,
+  "val_f1": 0.2510239116178722,
+  "val_qwk": 0.0,
+  "config_snapshot": {
+    "base": {
+      "region": "Essex",
+      "boundary_shapefile": "data\\silver\\layers\\boundary.shp",
+      "output_dir": "data\\silver\\layers",
+      "gold_dir": "data\\gold",
+      "model_data_dir": "data\\silver\\model_datasets",
+      "figures_dir": "figures"
+    },
+    "processing": {
+      "cell_size_m": 30.0,
+      "crs": "EPSG:27700",
+      "training_years": [
+        2009,
+        2022
+      ],
+      "test_years": [
+        2022,
+        2026
+      ],
+      "force_recompute": false
+    },
+    "seasons": {
+      "active": [
+        "spring"
+      ],
+      "seasonal_ndvi": true,
+      "definitions": {
+        "spring": [
+          3,
+          4,
+          5
+        ],
+        "summer": [
+          6,
+          7,
+          8
+        ],
+        "fall": [
+          9,
+          10,
+          11
+        ],
+        "winter": [
+          12,
+          1,
+          2
+        ]
+      }
+    },
+    "data_sources": {
+      "cua": {
+        "data_dir": "data\\bronze\\boundary"
+      },
+      "srtm": {
+        "data_dir": "data\\bronze\\topography",
+        "tiles": [
+          "n51_e000_1arc_v3.tif",
+          "n51_e001_1arc_v3.tif",
+          "n51_w001_1arc_v3.tif",
+          "n52_e000_1arc_v3.tif",
+          "n52_e001_1arc_v3.tif"
+        ]
+      },
+      "haduk": {
+        "data_dir": "data\\bronze\\climate_haduk",
+        "sources": [
+          "tas",
+          "tasmax",
+          "tasmin",
+          "rainfall",
+          "sfcWind",
+          "hurs"
+        ]
+      },
+      "modis_nvdi": {
+        "data_dir": "data\\bronze\\vegetation"
+      },
+      "proximity": {
+        "data_dir": "data\\bronze\\proximity",
+        "sources": [
+          "oproad_gpkg_gb",
+          "oprvrs_gpkg_gb",
+          "essex-260607-free."
+        ],
+        "human_fclasses": [
+          "residential",
+          "farmland",
+          "farm",
+          "farm_auxiliary",
+          "industrial",
+          "commercial",
+          "retail",
+          "allotmets",
+          "orchard",
+          "greenhouse_horticulture"
+        ]
+      },
+      "incidents": {
+        "data_dir": "data\\bronze\\incidents",
+        "date_col": "CallDateID",
+        "geo_cols": [
+          "IncidentEasting",
+          "IncidentNorthing"
+        ],
+        "severity_cols": [
+          "NumberVehiclesDeployed"
+        ]
+      }
+    },
+    "labels": {
+      "density_method": "kde",
+      "classify_method": "jenks",
+      "compare_classify_methods": [],
+      "include_d_fires_as_feature": false,
+      "kmeans_n_init": 10,
+      "kmeans_max_iter": 300,
+      "random_state": 42,
+      "max_sample_per_class": 200000,
+      "percentiles": [
+        60,
+        75,
+        90
+      ],
+      "conv_sigma_cells": 3,
+      "kde_bandwidth_m": 500,
+      "kde_zero_percentile": 95.0,
+      "trim_bottom_pct": 0.1,
+      "n_classes": 3,
+      "auto_find_k": false,
+      "k_search_range": [
+        2,
+        6
+      ],
+      "jenks_n_classes": 4,
+      "jenks_max_sample": 200000,
+      "gmm_n_components": 4,
+      "gmm_max_sample": 200000,
+      "gmm_random_state": 42,
+      "kmeans_k": 2,
+      "clean_labels": false,
+      "run_sensitivity": true,
+      "sensitivity_n_inits": [
+        10,
+        20
+      ],
+      "sensitivity_seeds": [
+        7,
+        123
+      ],
+      "sensitivity_n_reweight_trials": 3,
+      "sensitivity_feature_noise_std": 0.05,
+      "clustering_exclude_features": [
+        "tas",
+        "tasmin",
+        "landuse_class"
+      ],
+      "clustering_variance_floor_pct": 0.01
+    },
+    "modeling": {
+      "models": [
+        "ordinal_lr",
+        "random_forest"
+      ],
+      "optuna_n_trials": 5,
+      "cv_folds": 5,
+      "mlflow_experiment": "wf-baseline",
+      "selection_rule": "best_auc",
+      "cv_strategy": "standard",
+      "spatial_block_size_m": 4000.0,
+      "spatial_buffer_m": 4000.0,
+      "log_full_cv_diagnostics": true,
+      "imbalance_strategy": "cost_weighted",
+      "imbalance_strategy_by_model": {},
+      "use_smote": false,
+      "smote_during_search": true,
+      "search_resample_target_size": null,
+      "smote_k_neighbors": 5,
+      "smote_sampling_strategy": null,
+      "optuna_search_subsample": 50000.0,
+      "optuna_search_subsample_by_model": {
+        "svm": 6000.0
+      },
+      "excluded_features": [
+        "tas",
+        "tasmin"
+      ]
+    },
+    "logging": {
+      "level": "INFO",
+      "log_path": "data\\logs\\pipeline.log"
+    }
+  }
+}
