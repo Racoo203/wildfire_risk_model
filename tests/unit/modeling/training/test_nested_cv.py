@@ -15,6 +15,8 @@ outer test fold. That gets its own explicit test below, using a
 rather than relying on positional indices staying comparable across the
 outer/inner boundary."""
 
+import logging
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -218,3 +220,106 @@ def test_inner_config_overrides_cv_folds_without_mutating_original(fast_modeling
 
     assert inner_cfg["modeling"]["cv_folds"] == 2
     assert config["modeling"]["cv_folds"] == 5, "original config's outer cv_folds must be untouched"
+
+
+# ----------------------------------------------------------------------
+# fix-spatial-cv-auc-missing-classes: mean_metrics aggregation must be
+# NaN-aware, since cv/base.py::score_multiclass_fold now returns NaN
+# (not 0.0) for a genuinely degenerate outer fold. Uses the same
+# monkeypatch-fit_and_score_full spy pattern as the leakage test above,
+# with a real "standard" outer_strategy (so make_folds/the inner search
+# machinery are exercised normally) but a stubbed-out scoring step so the
+# per-fold metric values are exactly controlled.
+# ----------------------------------------------------------------------
+
+def _stub_outer_scores(scores_by_fold):
+    calls = {"n": 0}
+
+    def _stub(model_cls, params, X, y_arg, train_idx, test_idx, **kwargs):
+        i = calls["n"]
+        calls["n"] += 1
+        return dict(scores_by_fold[i])
+
+    return _stub
+
+
+def test_run_nested_cv_mean_metrics_excludes_a_partial_nan_fold(
+    tiny_dataset, fast_modeling_config, monkeypatch,
+):
+    """One outer fold's AUC/PR-AUC are NaN (as if that fold alone were
+    genuinely degenerate); the other two are real numbers. mean_metrics
+    must be the mean of the real folds only (np.nanmean), not NaN itself —
+    a single unscorable fold shouldn't poison the whole reported estimate
+    when other folds are perfectly fine."""
+    from wildfire_susceptibility.modeling.cv.factory import get_cv_strategy
+    from wildfire_susceptibility.modeling.resampling import SMOTEResampler
+    from wildfire_susceptibility.modeling.training import nested_cv
+
+    X, y = tiny_dataset
+    config = fast_modeling_config
+    config["modeling"]["cv_folds"] = N_OUTER_FOLDS
+    config["modeling"]["cv_strategy"] = "standard"
+
+    resampler = SMOTEResampler(config)
+    outer_strategy = get_cv_strategy("standard", config, resampler)
+
+    scores_by_fold = [
+        {"auc": 0.8, "f1_macro": 0.6, "pr_auc_macro": 0.7, "qwk": 0.5},
+        {"auc": float("nan"), "f1_macro": 0.4, "pr_auc_macro": float("nan"), "qwk": 0.3},
+        {"auc": 0.6, "f1_macro": 0.5, "pr_auc_macro": 0.5, "qwk": 0.4},
+    ]
+    monkeypatch.setattr(outer_strategy, "fit_and_score_full", _stub_outer_scores(scores_by_fold))
+
+    model_cls = _model_cls()
+    mean_metrics, per_fold = nested_cv.run_nested_cv(
+        outer_strategy, resampler, model_cls, "random_forest", "test_season", config, X, y, None,
+    )
+
+    assert len(per_fold) == N_OUTER_FOLDS
+    assert mean_metrics["auc"] == pytest.approx((0.8 + 0.6) / 2), "NaN fold must be excluded, not averaged in"
+    assert mean_metrics["pr_auc_macro"] == pytest.approx((0.7 + 0.5) / 2)
+    # f1_macro/qwk had no NaN folds — plain mean, unaffected by the change.
+    assert mean_metrics["f1_macro"] == pytest.approx((0.6 + 0.4 + 0.5) / 3)
+    assert mean_metrics["qwk"] == pytest.approx((0.5 + 0.3 + 0.4) / 3)
+
+
+def test_run_nested_cv_mean_metrics_is_nan_and_warns_when_every_fold_is_nan(
+    tiny_dataset, fast_modeling_config, monkeypatch, caplog,
+):
+    """If every outer fold for a metric is NaN (all genuinely degenerate),
+    the mean must stay NaN — silently averaging to some other number would
+    misrepresent a config where the reported estimate is entirely
+    unscorable — and a clear warning must be logged rather than relying on
+    numpy's own silent 'Mean of empty slice' RuntimeWarning as the only
+    signal."""
+    from wildfire_susceptibility.modeling.cv.factory import get_cv_strategy
+    from wildfire_susceptibility.modeling.resampling import SMOTEResampler
+    from wildfire_susceptibility.modeling.training import nested_cv
+
+    X, y = tiny_dataset
+    config = fast_modeling_config
+    config["modeling"]["cv_folds"] = N_OUTER_FOLDS
+    config["modeling"]["cv_strategy"] = "standard"
+
+    resampler = SMOTEResampler(config)
+    outer_strategy = get_cv_strategy("standard", config, resampler)
+
+    scores_by_fold = [
+        {"auc": float("nan"), "f1_macro": 0.6, "pr_auc_macro": float("nan"), "qwk": 0.5},
+        {"auc": float("nan"), "f1_macro": 0.4, "pr_auc_macro": float("nan"), "qwk": 0.3},
+        {"auc": float("nan"), "f1_macro": 0.5, "pr_auc_macro": float("nan"), "qwk": 0.4},
+    ]
+    monkeypatch.setattr(outer_strategy, "fit_and_score_full", _stub_outer_scores(scores_by_fold))
+
+    model_cls = _model_cls()
+    with caplog.at_level(logging.WARNING):
+        mean_metrics, per_fold = nested_cv.run_nested_cv(
+            outer_strategy, resampler, model_cls, "random_forest", "test_season", config, X, y, None,
+        )
+
+    assert np.isnan(mean_metrics["auc"])
+    assert np.isnan(mean_metrics["pr_auc_macro"])
+    assert mean_metrics["f1_macro"] == pytest.approx((0.6 + 0.4 + 0.5) / 3)
+    assert any(
+        "every outer fold" in r.message and "auc" in r.message for r in caplog.records
+    ), f"expected an explicit all-NaN warning, got: {[r.message for r in caplog.records]}"

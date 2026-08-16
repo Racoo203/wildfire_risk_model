@@ -17,6 +17,114 @@ from ..imbalance import ImbalanceStrategy
 logger = logging.getLogger(__name__)
 
 
+def score_multiclass_fold(y_va: np.ndarray, proba: np.ndarray, y_tr: np.ndarray, context: str = "") -> dict:
+    """AUC, F1-macro, PR-AUC-macro, and QWK for one fold's validation
+    predictions, shared by every CVStrategy (base and
+    StratifiedSpatialBlockCV alike — this replaces two independent copies
+    of the same scoring logic that had independently drifted out of sync
+    with what `proba`'s columns actually mean).
+
+    `proba`'s columns don't always correspond to class labels positionally:
+    - RF/CatBoost/mord (ordinal_lr) only emit one column per class actually
+      present in `y_tr` (whatever `model.fit()` was called with), so a fold
+      whose training split is missing a class has fewer columns than the
+      full configured label space.
+    - The neural_net wrapper (ann.py's `n_classes = max(y) + 1`) always
+      builds a gapless `0..max(y_tr)` output layer regardless of gaps, so a
+      missing *middle* class does NOT shrink its column count — that column
+      still exists, just untrained/meaningless.
+
+    `trained_classes` below is inferred from shape alone — correct for
+    both conventions without knowing which model produced `proba`: if the
+    column count matches the number of distinct classes in `y_tr`, columns
+    are `sorted(unique(y_tr))` in order (first convention); otherwise
+    columns are `range(proba.shape[1])` (gapless convention). This is also
+    what fixes `pred = argmax(proba)`, previously a raw column *position*
+    treated as if it were the class label — silently wrong for F1-macro/QWK
+    whenever a fold's training split was missing a non-maximal class, even
+    though that path never raised (so it never showed up in the original
+    "scoring as 0.0" log lines the AUC/PR-AUC fix below was diagnosed from).
+
+    AUC/PR-AUC-macro are further restricted to `observed` — classes in
+    both `trained_classes` and this fold's `y_va` — since a class the model
+    never learned a column for has no meaningful probability to rank, and a
+    class the model can score but this fold's ground truth never contains
+    contributes nothing to either metric anyway. A fold with fewer than 2
+    observed classes has undefined AUC/PR-AUC and is scored NaN (logged),
+    not 0.0 — 0.0 reads as "the model failed," which misrepresents a fold
+    that was never scorable to begin with.
+    """
+    unique_y_tr = sorted(np.unique(y_tr).tolist())
+    if proba.shape[1] == len(unique_y_tr):
+        trained_classes = unique_y_tr
+    else:
+        trained_classes = list(range(proba.shape[1]))
+    trained_classes_arr = np.array(trained_classes)
+
+    pred = trained_classes_arr[np.argmax(proba, axis=1)]
+    f1_macro = float(f1_score(y_va, pred, average="macro"))
+    qwk = float(cohen_kappa_score(y_va, pred, weights="quadratic"))
+
+    y_va_classes = set(np.unique(y_va).tolist())
+    observed = [c for c in trained_classes if c in y_va_classes]
+
+    if len(observed) < 2:
+        logger.warning(
+            f"{context}: fold has fewer than 2 classes in common between validation "
+            f"labels and trained classes (trained={trained_classes}, "
+            f"validation={sorted(y_va_classes)}, observed={observed}); AUC/PR-AUC are "
+            f"undefined for this fold, scoring as NaN."
+        )
+        return {"auc": float("nan"), "f1_macro": f1_macro, "pr_auc_macro": float("nan"), "qwk": qwk}
+
+    row_mask = np.isin(y_va, observed)
+    col_idx = [trained_classes.index(c) for c in observed]
+    y_va_r = y_va[row_mask]
+    proba_r = proba[row_mask][:, col_idx]
+
+    try:
+        if len(observed) == 2:
+            # sklearn's roc_auc_score routes exactly-2-label y_true through
+            # its binary path regardless of multi_class="ovr", which expects
+            # a 1D positive-class score, not a 2-column matrix — observed is
+            # ascending, so column 1 (the higher-valued class) is the
+            # positive class under sklearn's own binary convention. The
+            # binary path is rank-based only, so proba_r's raw column
+            # doesn't need renormalizing the way the multiclass path below
+            # does.
+            auc_score = float(roc_auc_score(y_va_r, proba_r[:, 1]))
+        else:
+            # roc_auc_score's multiclass path requires each row to sum to
+            # 1.0 across the given `labels` ("Target scores need to be
+            # probabilities for multiclass roc_auc"). When `observed` is a
+            # strict subset of `trained_classes` (e.g. the model was
+            # trained on 5 classes but this fold's validation split only
+            # exercises 3 of them), dropping the unobserved columns leaves
+            # each row summing to less than 1 — renormalize the remaining
+            # probability mass across just the observed classes so the
+            # constraint still holds.
+            proba_r_norm = proba_r / proba_r.sum(axis=1, keepdims=True)
+            auc_score = float(roc_auc_score(y_va_r, proba_r_norm, multi_class="ovr", labels=observed))
+    except Exception as exc:
+        logger.warning(
+            f"{context}: AUC scoring failed even after restricting to observed classes "
+            f"{observed} ({exc}); scoring as NaN."
+        )
+        auc_score = float("nan")
+
+    try:
+        y_va_bin = (y_va_r[:, None] == np.array(observed)[None, :]).astype(int)
+        pr_auc_macro = float(average_precision_score(y_va_bin, proba_r, average="macro"))
+    except Exception as exc:
+        logger.warning(
+            f"{context}: PR-AUC scoring failed even after restricting to observed classes "
+            f"{observed} ({exc}); scoring as NaN."
+        )
+        pr_auc_macro = float("nan")
+
+    return {"auc": auc_score, "f1_macro": f1_macro, "pr_auc_macro": pr_auc_macro, "qwk": qwk}
+
+
 class CVStrategy(ABC):
     """One CV strategy = one way to build folds + one way to fit/score a fold.
 
@@ -125,27 +233,8 @@ class CVStrategy(ABC):
 
         y_va = y.iloc[test_idx].values
         proba = model.predict_proba(to_model_array(X.iloc[test_idx], cat_positions))
-        pred = np.argmax(proba, axis=1)
 
-        try:
-            all_classes = sorted(y.unique())
-            auc_score = float(roc_auc_score(y_va, proba, multi_class="ovr", labels=all_classes))
-        except Exception as exc:
-            logger.warning(f"{context}: AUC scoring failed on this fold ({exc}); scoring as 0.0")
-            auc_score = 0.0
-
-        f1_macro = float(f1_score(y_va, pred, average="macro"))
-
-        try:
-            y_va_bin = np.eye(proba.shape[1])[y_va.astype(int)]
-            pr_auc_macro = float(average_precision_score(y_va_bin, proba, average="macro"))
-        except Exception as exc:
-            logger.warning(f"{context}: PR-AUC scoring failed on this fold ({exc}); scoring as 0.0")
-            pr_auc_macro = 0.0
-
-        qwk = float(cohen_kappa_score(y_va, pred, weights="quadratic"))
-
-        return {"auc": auc_score, "f1_macro": f1_macro, "pr_auc_macro": pr_auc_macro, "qwk": qwk}
+        return score_multiclass_fold(y_va, proba, y_tr, context=context)
 
     def fit_and_score(
         self, model_cls, params: dict, X: pd.DataFrame, y: pd.Series,

@@ -23,6 +23,8 @@ PRIMARY side's full pass instead):
   populated (mandatory, unconditional), but the standard side and
   cv_optimism_gap stay None, since the diagnostic pass never runs."""
 
+import math
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -47,6 +49,37 @@ def spatial_dataset():
             rows.append([cls * 10.0 + rng.normal(0, 0.5), rng.normal(0, 0.5)])
             labels.append(cls)
             blocks.append(f"blk_{b}")
+    X = pd.DataFrame(rows, columns=["f1", "f2"])
+    y = pd.Series(labels)
+    groups = pd.Series(blocks)
+    return X, y, groups
+
+
+@pytest.fixture
+def spatial_dataset_with_rare_class_confined_to_one_block():
+    """Regression fixture for fix-spatial-cv-auc-missing-classes: unlike
+    spatial_dataset above (every class present in every block, by design —
+    see its docstring), class 3 here exists in exactly ONE spatial block.
+    With CV_FOLDS=3, stratified_spatial_block's fold assignment
+    (_seed_every_fold_with_rarest_class_coverage) puts that single block
+    into exactly one fold's VALIDATION split, so that fold's TRAINING
+    split has zero rows of class 3 (the only block carrying it is held
+    out) while its validation split still contains it — the exact shape
+    that broke AUC/PR-AUC scoring before the fix (predict_proba returning
+    fewer columns than the full label space). The other two outer folds
+    see zero rows of class 3 anywhere at all — degenerate for that one
+    class specifically, though not for the fold as a whole, since classes
+    0-2 are present in every block."""
+    rng = np.random.default_rng(1)
+    rows, labels, blocks = [], [], []
+    for b in range(N_BLOCKS):
+        block_id = f"blk_{b}"
+        classes_this_block = [3] if b == 0 else [0, 1, 2]
+        for _ in range(ROWS_PER_BLOCK):
+            cls = int(rng.choice(classes_this_block))
+            rows.append([cls * 10.0 + rng.normal(0, 0.5), rng.normal(0, 0.5)])
+            labels.append(cls)
+            blocks.append(block_id)
     X = pd.DataFrame(rows, columns=["f1", "f2"])
     y = pd.Series(labels)
     groups = pd.Series(blocks)
@@ -197,3 +230,50 @@ def test_log_full_cv_diagnostics_defaults_off_and_skips_the_diagnostic_side(
     for key in ("cv_auc_standard", "cv_f1_macro_standard", "cv_pr_auc_macro_standard", "cv_qwk_standard"):
         assert result[key] is None, f"{key} should stay None when the diagnostic side is skipped, got {result[key]!r}"
     assert result["cv_optimism_gap"] is None
+
+
+def test_train_one_survives_a_class_confined_to_a_single_spatial_block(
+    full_diagnostics_trainer, spatial_dataset_with_rare_class_confined_to_one_block,
+):
+    """Regression test for fix-spatial-cv-auc-missing-classes, run through
+    the full train_one -> nested CV -> mlflow pipeline (not just the pure
+    scorer unit tests in test_score_multiclass_fold.py). Before the fix,
+    the outer fold whose training split lost class 3 entirely made
+    AUC/PR-AUC scoring raise and get silently reported as 0.0 — this must
+    now complete without crashing or raising, produce real (not
+    all-identical-0.0) cv_auc_spatial_folds, and log real, non-NaN
+    aggregate metrics to mlflow (the aggregate must stay a real number as
+    long as at least one fold was scorable, per nested_cv.py's nanmean
+    aggregation — only a fold missing EVERY class would poison it)."""
+    import mlflow
+
+    X, y, groups = spatial_dataset_with_rare_class_confined_to_one_block
+
+    result = full_diagnostics_trainer.train_one(
+        season="test_season",
+        model_name="random_forest",
+        X_train=X, y_train=y, X_val=X, y_val=y,
+        groups_train=groups,
+        ref_path=None,
+        run_post_training_evaluation=False,
+    )
+
+    assert result["cv_auc_spatial_folds"] is not None
+    assert len(result["cv_auc_spatial_folds"]) == CV_FOLDS
+    folds = result["cv_auc_spatial_folds"]
+
+    # Classes 0-2 are present in every block, so no outer fold can be
+    # degenerate as a whole — every fold's AUC must be a real, finite
+    # score, not the old bug's constant 0.0 fallback.
+    assert all(not math.isnan(v) for v in folds), f"expected every fold scorable, got {folds}"
+    assert not all(v == 0.0 for v in folds), "fold AUCs collapsing to the old constant-0.0 bug"
+
+    for key in ("cv_auc_spatial", "cv_f1_macro_spatial", "cv_pr_auc_macro_spatial", "cv_qwk_spatial"):
+        assert isinstance(result[key], float)
+        assert not math.isnan(result[key])
+
+    runs = mlflow.search_runs(experiment_names=["test-optimism-gap-full"])
+    row = runs.iloc[-1]
+    for metric in ("metrics.cv_auc_spatial", "metrics.cv_pr_auc_macro_spatial"):
+        assert metric in row.index
+        assert not pd.isna(row[metric]), f"{metric} was logged as NaN"

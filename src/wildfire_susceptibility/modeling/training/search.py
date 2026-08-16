@@ -20,16 +20,23 @@ OPTUNA_STORAGE = "sqlite:///data/silver/dbs/optuna_studies.db"
 FINISHED_STATES = {optuna.trial.TrialState.COMPLETE, optuna.trial.TrialState.PRUNED}
 
 # Bump this whenever `_make_objective`'s scoring logic changes (which metric
-# is returned/pruned-on) — the study name's param-space hash only captures
-# param_space() shape, not the objective function body, so an
-# objective-only change would otherwise silently resume/append trials from
-# an incompatible old study (see get_or_create_study). v2: objective
-# switched from mean CV AUC to mean CV PR-AUC-macro (AUC/F1-macro/QWK
-# logged as trial user_attrs instead). v3: forces fresh studies after the
-# landuse_class categorical-encoding fix (fit/transform split in
-# dataset_prep.py) — old v2 trials were scored under the broken encoding
-# and are not comparable to post-fix trials.
-OBJECTIVE_VERSION = "objv3-catfix"
+# is returned/pruned-on, or how the underlying per-fold scorer computes it)
+# — the study name's param-space hash only captures param_space() shape,
+# not the objective function body, so an objective-only change would
+# otherwise silently resume/append trials from an incompatible old study
+# (see get_or_create_study). v2: objective switched from mean CV AUC to
+# mean CV PR-AUC-macro (AUC/F1-macro/QWK logged as trial user_attrs
+# instead). v3: forces fresh studies after the landuse_class
+# categorical-encoding fix (fit/transform split in dataset_prep.py) — old
+# v2 trials were scored under the broken encoding and are not comparable
+# to post-fix trials. v4: forces fresh studies after the
+# fix-spatial-cv-auc-missing-classes fix — fit_and_score_full's AUC/PR-AUC
+# no longer silently return 0.0 for folds missing a class (now a real
+# score restricted to observed classes, or NaN if genuinely degenerate),
+# so old v3 trials for spatial/stratified_spatial_block searches (which
+# hit this path whenever a fold's training split was missing a class) are
+# not comparable to post-fix trials.
+OBJECTIVE_VERSION = "objv4-classscorefix"
 
 
 class HyperparamSearch:
@@ -253,18 +260,36 @@ class HyperparamSearch:
         too (fit_and_score_full returns all four every fold, at no extra
         fit cost) and stashed as trial user_attrs for reporting/model
         comparison — they never influence pruning or the tuned value."""
+        def _nanmean_metric(fold_metrics: list, metric: str, context: str) -> float:
+            # fit_and_score_full's underlying scorer (score_multiclass_fold)
+            # returns NaN, not 0.0, for a fold whose validation split shares
+            # fewer than 2 classes with what the model can score — a real
+            # scoring failure, not a real (if terrible) score. np.mean would
+            # silently poison the whole trial's value to NaN the moment any
+            # one fold hits this; np.nanmean excludes those folds instead,
+            # matching nested_cv.py's run_nested_cv aggregation.
+            values = [f[metric] for f in fold_metrics]
+            if all(np.isnan(v) for v in values):
+                logger.warning(
+                    f"{context}: every fold's {metric} was NaN (genuinely degenerate — "
+                    f"see per-fold warnings above); this trial's {metric} is NaN, not a "
+                    f"silently-averaged real number."
+                )
+            return float(np.nanmean(values))
+
         def objective(trial):
             params = model_cls().param_space(trial)
             fold_metrics = []
+            trial_context = f"[{season}][{model_name}] trial {trial.number}"
 
             for fold_idx, (train_idx, test_idx) in enumerate(folds):
-                context = f"[{season}][{model_name}] trial {trial.number} fold {fold_idx + 1}"
+                context = f"{trial_context} fold {fold_idx + 1}"
                 scores = self.cv_strategy.fit_and_score_full(
                     model_cls, params, X_search, y_search, train_idx, test_idx, context=context,
                     model_name=model_name,
                 )
                 fold_metrics.append(scores)
-                mean_pr_auc = float(np.mean([f["pr_auc_macro"] for f in fold_metrics]))
+                mean_pr_auc = _nanmean_metric(fold_metrics, "pr_auc_macro", context)
                 logger.info(
                     f"{context} PR_AUC_macro={scores['pr_auc_macro']:.4f} AUC={scores['auc']:.4f} "
                     f"F1_macro={scores['f1_macro']:.4f} QWK={scores['qwk']:.4f} | params={params}"
@@ -274,10 +299,24 @@ class HyperparamSearch:
                 if trial.should_prune():
                     raise optuna.TrialPruned()
 
-            trial.set_user_attr("auc", float(np.mean([f["auc"] for f in fold_metrics])))
-            trial.set_user_attr("f1_macro", float(np.mean([f["f1_macro"] for f in fold_metrics])))
-            trial.set_user_attr("qwk", float(np.mean([f["qwk"] for f in fold_metrics])))
+            trial.set_user_attr("auc", _nanmean_metric(fold_metrics, "auc", trial_context))
+            trial.set_user_attr("f1_macro", _nanmean_metric(fold_metrics, "f1_macro", trial_context))
+            trial.set_user_attr("qwk", _nanmean_metric(fold_metrics, "qwk", trial_context))
 
-            return float(np.mean([f["pr_auc_macro"] for f in fold_metrics]))
+            final_pr_auc = _nanmean_metric(fold_metrics, "pr_auc_macro", trial_context)
+            if np.isnan(final_pr_auc):
+                # Optuna rejects NaN as a completed trial's return value
+                # outright ("The value nan is not acceptable") — every fold
+                # in this trial was genuinely degenerate (see the warning
+                # _nanmean_metric already logged above), so there is no
+                # real PR-AUC-macro to report. Pruning is Optuna's own
+                # idiom for "this trial can't be scored," and keeps one
+                # unscorable trial from crashing the whole study (which a
+                # raised ValueError from returning NaN would otherwise do
+                # once every trial in the study hit this and
+                # study.best_value had no completed trial left to return).
+                logger.warning(f"{trial_context}: PR-AUC-macro is NaN for every fold; pruning this trial.")
+                raise optuna.TrialPruned()
+            return final_pr_auc
 
         return objective

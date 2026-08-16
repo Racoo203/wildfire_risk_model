@@ -97,11 +97,23 @@ def test_fit_and_score_full_survives_a_fold_that_lost_a_class_in_training():
     can strip a class out of a fold's training split entirely while the
     fold's own validation split - built from the untouched held-out
     blocks - still contains it. predict_proba then returns fewer columns
-    than the full label space, and building the one-hot y_va_bin as
-    np.eye(proba.shape[1])[y_va] raised IndexError uncaught (unlike
-    cv/base.py's fit_and_score_full, which already guards this same
-    average_precision_score call with try/except). This must degrade to a
-    logged warning + pr_auc_macro=0.0, not crash the whole Optuna trial."""
+    than the full label space (2, for classes 0/1, vs. the 3 classes 0/1/2
+    present across the full dataset).
+
+    Per fix-spatial-cv-auc-missing-classes: this must no longer raise (the
+    old np.eye(proba.shape[1])[y_va] one-hot construction indexed past
+    proba's 2 columns whenever a validation row's true label was 2) NOR
+    silently degrade to pr_auc_macro=0.0 (the old fallback for any
+    exception in this path, indistinguishable from "the model scored
+    zero"). Class 2 is absent from what the model can score at all, so
+    score_multiclass_fold restricts AUC/PR-AUC to the classes actually
+    observed in both this fold's training data and its (untouched)
+    validation labels — {0, 1} here, which is still >= 2 classes, so this
+    fold is NOT degenerate: it gets a real, finite, non-zero score
+    computed over the 17 validation rows whose true label the model can
+    actually be evaluated against, with the 3 rows labeled 2 excluded from
+    just this metric (not from f1_macro/qwk, which handle any label set
+    without needing this restriction)."""
     rng = np.random.default_rng(7)
     n = 60
     X = pd.DataFrame({"f0": rng.normal(size=n), "f1": rng.normal(size=n)})
@@ -121,8 +133,11 @@ def test_fit_and_score_full_survives_a_fold_that_lost_a_class_in_training():
         MODELS["random_forest"], {}, X, y, train_idx, test_idx, context="test",
     )
 
-    assert result["pr_auc_macro"] == 0.0
     assert set(result.keys()) == {"auc", "f1_macro", "pr_auc_macro", "qwk"}
+    assert not np.isnan(result["pr_auc_macro"])
+    assert not np.isnan(result["auc"])
+    assert 0.0 < result["pr_auc_macro"] <= 1.0
+    assert 0.0 < result["auc"] <= 1.0
 
 
 def test_stratify_blocks_into_folds_gives_every_fold_the_rarest_class():

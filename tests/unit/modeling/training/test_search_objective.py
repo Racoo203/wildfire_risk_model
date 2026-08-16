@@ -19,6 +19,8 @@ alone doesn't capture objective-function changes, so a bare param_space
 hash bump would silently mix old AUC-scored trials with new PR-AUC-scored
 ones in the same Optuna study."""
 
+import logging
+
 import numpy as np
 import optuna
 import pytest
@@ -50,6 +52,31 @@ def _make_search_with_stub(scores: dict):
 
     search = HyperparamSearch.__new__(HyperparamSearch)  # skip __init__: no config/db needed
     stub_strategy = _StubCVStrategy(scores)
+    search.cv_strategy = stub_strategy
+    return search, stub_strategy
+
+
+class _StubCVStrategySequence:
+    """Like _StubCVStrategy, but returns a different fixed dict per call in
+    sequence (cycling if there are more calls than entries) — needed to
+    exercise per-fold NaN aggregation, which a single constant dict per
+    call can't represent."""
+
+    def __init__(self, scores_by_call: list):
+        self.scores_by_call = scores_by_call
+        self.calls = 0
+
+    def fit_and_score_full(self, model_cls, params, X, y, train_idx, test_idx, context="", model_name=None):
+        scores = self.scores_by_call[self.calls % len(self.scores_by_call)]
+        self.calls += 1
+        return dict(scores)
+
+
+def _make_search_with_sequence_stub(scores_by_call: list):
+    from wildfire_susceptibility.modeling.training.search import HyperparamSearch
+
+    search = HyperparamSearch.__new__(HyperparamSearch)
+    stub_strategy = _StubCVStrategySequence(scores_by_call)
     search.cv_strategy = stub_strategy
     return search, stub_strategy
 
@@ -119,6 +146,67 @@ def test_objective_prunes_on_pr_auc_running_mean():
     trial = study.trials[0]
     assert trial.intermediate_values, "trial.report was never called"
     assert all(v == pytest.approx(0.1) for v in trial.intermediate_values.values())
+
+
+def test_objective_excludes_a_partial_nan_fold_via_nanmean():
+    """fix-spatial-cv-auc-missing-classes: self.cv_strategy is the
+    PRODUCTION strategy (often spatial/stratified_spatial_block, not just
+    the nested-CV inner loop's always-standard strategy), so this
+    objective hits the same missing-class scoring path as
+    nested_cv.run_nested_cv — fit_and_score_full's underlying scorer now
+    returns NaN (not 0.0) for a genuinely degenerate fold. One NaN fold
+    out of several must not poison the whole trial's tuned value (or its
+    user_attrs) to NaN via a plain np.mean; the objective must exclude it
+    (np.nanmean), same aggregation-safety decision as nested_cv.py."""
+    scores_by_call = [
+        {"auc": 0.8, "f1_macro": 0.6, "pr_auc_macro": 0.7, "qwk": 0.5},
+        {"auc": float("nan"), "f1_macro": 0.4, "pr_auc_macro": float("nan"), "qwk": 0.3},
+    ]
+    search, stub_strategy = _make_search_with_sequence_stub(scores_by_call)
+
+    folds = [(np.array([0, 1]), np.array([2, 3])), (np.array([4, 5]), np.array([6, 7]))]
+    objective = search._make_objective(
+        _dummy_model_cls(), X_search=None, y_search=None, folds=folds, season="s", model_name="m",
+    )
+
+    study = optuna.create_study(direction="maximize")
+    study.optimize(objective, n_trials=1)
+
+    assert study.best_value == pytest.approx(0.7), "PR-AUC-macro must exclude the NaN fold, not average it in"
+    attrs = study.best_trial.user_attrs
+    assert attrs["auc"] == pytest.approx(0.8)
+    assert attrs["qwk"] == pytest.approx((0.5 + 0.3) / 2)
+    assert stub_strategy.calls == len(folds)
+
+
+def test_objective_prunes_the_trial_when_every_fold_is_nan(caplog):
+    """If every fold's pr_auc_macro is NaN (a genuinely degenerate search
+    subsample/fold split), the objective must NOT return NaN directly —
+    Optuna rejects a NaN objective return value outright ('The value nan
+    is not acceptable'), which would mark the trial FAILED, and if every
+    trial in a study hit this, study.best_value would raise ValueError
+    ('No trials are completed yet'), crashing run_search_and_report
+    entirely. Pruning (Optuna's own idiom for 'this trial can't be scored')
+    keeps the trial out of best_value consideration without crashing the
+    study, and a clear warning is logged either way."""
+    scores_by_call = [
+        {"auc": float("nan"), "f1_macro": 0.4, "pr_auc_macro": float("nan"), "qwk": 0.3},
+    ]
+    search, _ = _make_search_with_sequence_stub(scores_by_call)
+
+    folds = [(np.array([0, 1]), np.array([2, 3]))]
+    objective = search._make_objective(
+        _dummy_model_cls(), X_search=None, y_search=None, folds=folds, season="s", model_name="m",
+    )
+
+    study = optuna.create_study(direction="maximize")
+    with caplog.at_level(logging.WARNING):
+        study.optimize(objective, n_trials=1)  # must not raise
+
+    assert study.trials[0].state == optuna.trial.TrialState.PRUNED
+    assert any(
+        "every fold" in r.message and "pr_auc_macro" in r.message for r in caplog.records
+    ), f"expected an explicit all-NaN warning, got: {[r.message for r in caplog.records]}"
 
 
 def test_study_name_carries_the_objective_version_token(tmp_path, monkeypatch, fast_modeling_config):

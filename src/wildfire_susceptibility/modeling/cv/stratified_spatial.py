@@ -26,8 +26,9 @@ Steps, mapped to methods:
                                    SMOTE-off convention)
     6. Model Training/Eval      -> fit_and_score_full reports PR-AUC-macro
                                     (the Optuna HPO objective) + AUC/F1-macro/
-                                    QWK, scored by _score_fold_metrics, as
-                                    documented in the dissertation methodology
+                                    QWK, scored by cv/base.py's shared
+                                    score_multiclass_fold, as documented in
+                                    the dissertation methodology
 
 What "stratified" means here (and what it does not)
 -----------------------------------------------------
@@ -109,9 +110,8 @@ import logging
 
 import numpy as np
 import pandas as pd
-from sklearn.metrics import roc_auc_score, f1_score, average_precision_score, cohen_kappa_score
 
-from .base import CVStrategy
+from .base import CVStrategy, score_multiclass_fold
 from ..balance import log_class_balance, warn_if_class_missing
 from ..categorical import cat_features_of, to_model_array
 
@@ -365,9 +365,13 @@ class StratifiedSpatialBlockCV(CVStrategy):
         when the resolved strategy is 'cost_weighted'. model_name=None
         (e.g. ad-hoc/test callers) skips weighting.
 
-        Returns (fitted_model, cat_positions) — cat_positions is returned
-        alongside the model because the caller needs the same categorical-
-        feature encoding to build the validation array consistently.
+        Returns (fitted_model, cat_positions, y_tr) — cat_positions is
+        returned alongside the model because the caller needs the same
+        categorical-feature encoding to build the validation array
+        consistently; y_tr (the exact, post-resample labels model.fit() was
+        called with) is returned so the caller can pass it to
+        score_multiclass_fold, which needs it to know what predict_proba's
+        columns actually mean for this fold.
         """
         y_tr_raw = y.iloc[train_idx]
         log_class_balance(logger, context, y_tr_raw, note="train, pre-resample", level=logging.DEBUG)
@@ -384,40 +388,7 @@ class StratifiedSpatialBlockCV(CVStrategy):
         sample_weight = self._imbalance.sample_weight_for(model_name, y_tr) if model_name else None
         model = model_cls(**params)
         model.fit(X_tr, y_tr, sample_weight=sample_weight)
-        return model, cat_positions
-
-    @staticmethod
-    def _score_fold_metrics(y_va: np.ndarray, proba: np.ndarray, pred: np.ndarray, all_classes: list, context: str) -> dict:
-        """AUC, F1-macro, PR-AUC-macro, and QWK for one fold's validation
-        predictions. AUC and PR-AUC both need `proba` to have one column
-        per class in `all_classes`; when spatial buffering strips a class
-        out of a fold's *training* split entirely (its rows survive only
-        in the untouched validation split — see
-        test_fit_and_score_full_survives_a_fold_that_lost_a_class_in_training),
-        `predict_proba` returns fewer columns than `len(all_classes)` and
-        these calls raise. Rather than let one degenerate fold crash an
-        entire Optuna trial spanning many folds, each is caught and logged
-        as a warning, scoring that one metric as 0.0 for this fold only —
-        the other metrics for the same fold are unaffected.
-        """
-        try:
-            auc = float(roc_auc_score(y_va, proba, multi_class="ovr", labels=all_classes))
-        except Exception as exc:
-            logger.warning(f"{context}: AUC scoring failed ({exc}); scoring as 0.0")
-            auc = 0.0
-
-        f1_macro = float(f1_score(y_va, pred, average="macro"))
-
-        try:
-            y_va_bin = np.eye(proba.shape[1])[y_va.astype(int)]
-            pr_auc_macro = float(average_precision_score(y_va_bin, proba, average="macro"))
-        except Exception as exc:
-            logger.warning(f"{context}: PR-AUC scoring failed ({exc}); scoring as 0.0")
-            pr_auc_macro = 0.0
-
-        qwk = float(cohen_kappa_score(y_va, pred, weights="quadratic"))
-
-        return {"auc": auc, "f1_macro": f1_macro, "pr_auc_macro": pr_auc_macro, "qwk": qwk}
+        return model, cat_positions, y_tr
 
     def fit_and_score_full(
         self, model_cls, params, X, y, train_idx, test_idx, context: str = "",
@@ -428,7 +399,7 @@ class StratifiedSpatialBlockCV(CVStrategy):
         so a fold's model is only ever fit once even when both the scalar
         and the full metric set are needed (see trainer.py's optimism-gap
         logging)."""
-        model, cat_positions = self._fit_resampled_model(
+        model, cat_positions, y_tr = self._fit_resampled_model(
             model_cls, params, X, y, train_idx, context, model_name,
         )
 
@@ -443,10 +414,15 @@ class StratifiedSpatialBlockCV(CVStrategy):
         log_class_balance(logger, context, y_va_untouched, note="validation, untouched — isolation check")
 
         proba = model.predict_proba(X_va_untouched)
-        pred = np.argmax(proba, axis=1)
 
-        all_classes = sorted(y.unique())
-        metrics = self._score_fold_metrics(y_va_untouched, proba, pred, all_classes, context)
+        # AUC/PR-AUC/F1-macro/QWK, restricted to classes actually observed
+        # between this fold's training split and its validation ground
+        # truth — see score_multiclass_fold's docstring for why "proba
+        # column index" and "class label" aren't the same thing whenever
+        # spatial buffering strips a class out of a fold's training split
+        # entirely (its rows survive only in the untouched validation split
+        # — see test_fit_and_score_full_survives_a_fold_that_lost_a_class_in_training).
+        metrics = score_multiclass_fold(y_va_untouched, proba, y_tr, context=context)
 
         logger.info(
             f"{context} AUC={metrics['auc']:.4f} F1_macro={metrics['f1_macro']:.4f} "

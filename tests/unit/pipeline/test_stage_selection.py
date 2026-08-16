@@ -4,6 +4,8 @@ I/O beyond what the caller already provides as in-memory manifest
 dicts, so they're tested directly against fabricated manifests rather
 than requiring real trained artifacts on disk."""
 
+import math
+
 import pytest
 
 from wildfire_susceptibility.pipeline.stage_selection import (
@@ -145,6 +147,61 @@ def test_kruskal_results_to_csv_has_one_row_per_season_with_expected_columns():
     assert row["n_models_compared"] == 2
     assert set(row["models_compared"].split(";")) == {"rf", "svm"}
     assert row["skip_reason"] is None
+
+
+def test_kruskal_wallis_drops_nan_fold_scores_before_scoring():
+    """fix-spatial-cv-auc-missing-classes: cv_auc_spatial_folds can now
+    contain NaN entries (score_multiclass_fold's degenerate-fold marker).
+    scipy.stats.kruskal's default nan_policy='propagate' would otherwise
+    turn the statistic/p-value NaN for the WHOLE season the moment any one
+    model has any one NaN fold, even though the other folds/models are
+    perfectly real and comparable — those NaNs must be filtered out
+    per-model before scipy ever sees them, and the real scores still used."""
+    manifests = {
+        "summer": {
+            "rf": _manifest(0.9, 0.9, 0.9, folds=[0.90, float("nan"), 0.91, 0.89]),
+            "svm": _manifest(0.5, 0.5, 0.5, folds=[0.50, 0.51, 0.49]),
+        }
+    }
+    result = _kruskal_wallis_per_season(manifests)
+    assert "skipped" not in result["summer"]
+    assert not math.isnan(result["summer"]["statistic"])
+    assert not math.isnan(result["summer"]["p_value"])
+    assert result["summer"]["significant_at_0.05"] is True
+
+
+def test_kruskal_wallis_drops_a_model_whose_every_fold_is_nan():
+    """A model with fold-level scores present (not None, so it passes the
+    existing `if m.get("cv_auc_spatial_folds")` truthiness check) but every
+    one of them NaN (a fully degenerate spatial CV run for that model)
+    must be excluded from the comparison entirely — same treatment as
+    today's 'no fold-level scores at all' case — rather than contributing
+    an empty sample to scipy.stats.kruskal."""
+    manifests = {
+        "summer": {
+            "rf": _manifest(0.8, 0.8, 0.75, folds=[0.75, 0.76, 0.74]),
+            "svm": _manifest(0.8, 0.8, 0.75, folds=[float("nan"), float("nan")]),
+        }
+    }
+    result = _kruskal_wallis_per_season(manifests)
+    assert "skipped" in result["summer"]
+    assert result["summer"]["skipped"] == "fewer than 2 models with fold-level scores"
+
+
+def test_kruskal_wallis_keeps_a_model_with_some_real_folds_alongside_some_nan_ones():
+    """The model in the previous test is dropped only because it has ZERO
+    real folds — a model with a mix of real and NaN folds must still
+    contribute its real folds, not be dropped outright."""
+    manifests = {
+        "summer": {
+            "rf": _manifest(0.9, 0.9, 0.9, folds=[0.90, 0.91, 0.89, 0.92, 0.90]),
+            "svm": _manifest(0.5, 0.5, 0.5, folds=[float("nan"), 0.50, 0.51, float("nan"), 0.49]),
+        }
+    }
+    result = _kruskal_wallis_per_season(manifests)
+    assert "skipped" not in result["summer"]
+    assert set(result["summer"]["models_compared"]) == {"rf", "svm"}
+    assert result["summer"]["significant_at_0.05"] is True
 
 
 def test_kruskal_results_to_csv_represents_skipped_season_as_a_row_not_a_dropped_one():

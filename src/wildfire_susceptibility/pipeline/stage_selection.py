@@ -17,6 +17,7 @@ statistically significant — not just numerically different.
     "evaluate": {"<season>": {"<model_name>": dict}}        # eval results
 """
 import json
+import math
 from pathlib import Path
 from typing import Dict
 
@@ -122,14 +123,29 @@ def _kruskal_wallis_per_season(manifests: Dict[str, Dict[str, dict]]) -> Dict[st
     groups_train assignment (see stage_train.py), fold counts are in
     practice equal across models within a season, but Kruskal-Wallis
     doesn't require this — it tolerates unequal group sizes.
+
+    cv_auc_spatial_folds can contain NaN entries (see
+    cv/base.py::score_multiclass_fold) for folds whose validation split
+    shared fewer than 2 classes with what the model could score — those
+    are dropped here before scipy ever sees them, per fold, per model, so
+    a model with at least one genuinely scorable fold still contributes
+    its real (non-NaN) fold scores rather than being excluded outright or
+    letting a single NaN poison scipy.stats.kruskal's whole result (its
+    default nan_policy="propagate" would otherwise turn the statistic/
+    p-value NaN for every model being compared, not just the affected
+    one).
     """
     results = {}
     for season, models in manifests.items():
-        groups = {
-            name: m["cv_auc_spatial_folds"]
-            for name, m in models.items()
-            if m.get("cv_auc_spatial_folds")
-        }
+        groups = {}
+        for name, m in models.items():
+            folds = m.get("cv_auc_spatial_folds")
+            if not folds:
+                continue
+            scored = [f for f in folds if not math.isnan(f)]
+            if scored:
+                groups[name] = scored
+
         if len(groups) < 2:
             results[season] = {"skipped": "fewer than 2 models with fold-level scores"}
             continue

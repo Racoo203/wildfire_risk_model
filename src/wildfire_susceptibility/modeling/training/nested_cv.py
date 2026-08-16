@@ -148,8 +148,14 @@ def run_nested_cv(
         )
         per_outer_fold_metrics.append(fold_metrics)
 
-    mean_metrics = {
-        metric: float(np.mean([f[metric] for f in per_outer_fold_metrics]))
-        for metric in METRICS
-    }
+    mean_metrics = {}
+    for metric in METRICS:
+        values = [f[metric] for f in per_outer_fold_metrics]
+        if all(np.isnan(v) for v in values):
+            logger.warning(
+                f"[{season}][{model_name}] ({outer_strategy.name}): every outer fold's "
+                f"{metric} was NaN (genuinely degenerate — see per-fold warnings above); "
+                f"mean_metrics['{metric}'] is NaN, not a silently-averaged real number."
+            )
+        mean_metrics[metric] = float(np.nanmean(values))
     return mean_metrics, per_outer_fold_metrics
