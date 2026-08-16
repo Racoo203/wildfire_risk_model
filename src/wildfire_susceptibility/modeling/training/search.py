@@ -267,7 +267,7 @@ class HyperparamSearch:
             # scoring failure, not a real (if terrible) score. np.mean would
             # silently poison the whole trial's value to NaN the moment any
             # one fold hits this; np.nanmean excludes those folds instead,
-            # matching nested_cv.py's run_nested_cv aggregation.
+            # matching trainer.py's _run_full_metrics_pass aggregation.
             values = [f[metric] for f in fold_metrics]
             if all(np.isnan(v) for v in values):
                 logger.warning(

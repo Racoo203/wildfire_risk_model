@@ -9,8 +9,6 @@ class rather than implementing it inline:
                                   stratified_spatial_block)
     - HyperparamSearch         : search-time subsampling, fold building on
                                   the subsample, and the Optuna study itself
-    - nested_cv.run_nested_cv  : genuinely nested outer/inner CV — the
-                                  reported cv_* performance estimate
     - SMOTEResampler           : in-fold / final-refit class balancing
     - DatasetPrep              : scaling, spatial block assignment
     - PostTrainingEvaluator    : metrics, figures, susceptibility raster
@@ -37,7 +35,6 @@ from ..resampling import SMOTEResampler
 from ..imbalance import ImbalanceStrategy
 from ..cv import get_cv_strategy, requires_spatial_groups
 from .search import HyperparamSearch
-from .nested_cv import run_nested_cv
 from .evaluation import PostTrainingEvaluator
 from .optimism_gap import compute_optimism_gap
 
@@ -71,13 +68,6 @@ class ModelTrainer:
             search_resampler = SMOTEResampler(config, target_size=search_target_size)
         else:
             search_resampler = SMOTEResampler(no_smote_config)
-        # Also used by nested_cv.run_nested_cv to build each outer fold's
-        # inner StandardKFoldCV instance — the inner loop reuses this same
-        # search-time resampling policy (smote_during_search /
-        # search_resample_target_size), just never the
-        # stratified_spatial_block "always resample" special case, since
-        # the inner strategy is never stratified_spatial_block.
-        self.search_resampler = search_resampler
 
         # Final refit is untouched by target_size — it keeps using whatever
         # smote_sampling_strategy/auto behavior was configured for the
@@ -169,15 +159,13 @@ class ModelTrainer:
         )
 
         with mlflow.start_run(run_name=f"{season}_{model_name}"):
-            # best_value is the PRODUCTION search's own convergence number
-            # (see _log_run_setup) — used only to pick best_params for the
-            # deployed model below, never as the reported CV performance
-            # estimate. That estimate now comes exclusively from genuinely
-            # nested CV (run_nested_cv), since reusing the search's own
-            # best-trial score for reporting is exactly the Varma & Simon
-            # (2006) bias nested CV exists to remove — see branch
-            # refactor-nested-cv-optuna-schratz-method.
-            self._log_run_setup(season, model_name, best_params, best_value, search_uses_groups)
+            # Optuna's objective is PR-AUC-macro (best_value) — AUC/F1-macro/
+            # QWK for the searched side come "for free" from the best
+            # trial's per-fold mean user_attrs (search.py's _make_objective
+            # logs them every trial), the same role best_value alone used
+            # to play for AUC before the objective swapped metrics.
+            best_trial_metrics = study.best_trial.user_attrs
+            self._log_run_setup(season, model_name, best_params, best_value, search_uses_groups, best_trial_metrics)
 
             cv_auc_spatial, cv_auc_standard, cv_auc_spatial_folds = None, None, None
             cv_f1_macro_standard, cv_f1_macro_spatial = None, None
@@ -185,82 +173,117 @@ class ModelTrainer:
             cv_qwk_standard, cv_qwk_spatial = None, None
             cv_optimism_gap = None
 
-            # PRIMARY side: genuinely nested CV, mandatory regardless of
-            # cv_strategy or log_full_cv_diagnostics — there is no more
-            # non-nested fallback for this number.
-            primary_mean, primary_folds = self._run_nested_cv(
-                self.cv_strategy, model_cls, X_tr, y_train, groups_train,
-                season, model_name, progress_callback,
-            )
             if search_uses_groups:
-                cv_auc_spatial = primary_mean["auc"]
-                cv_f1_macro_spatial = primary_mean["f1_macro"]
-                cv_pr_auc_macro_spatial = primary_mean["pr_auc_macro"]
-                cv_qwk_spatial = primary_mean["qwk"]
-                cv_auc_spatial_folds = [f["auc"] for f in primary_folds]
-                self._log_fold_step_metrics("spatial", primary_folds)
+                cv_pr_auc_macro_spatial = best_value
+                cv_auc_spatial = best_trial_metrics.get("auc")
+                cv_f1_macro_spatial = best_trial_metrics.get("f1_macro")
+                cv_qwk_spatial = best_trial_metrics.get("qwk")
             else:
-                cv_auc_standard = primary_mean["auc"]
-                cv_f1_macro_standard = primary_mean["f1_macro"]
-                cv_pr_auc_macro_standard = primary_mean["pr_auc_macro"]
-                cv_qwk_standard = primary_mean["qwk"]
-                self._log_fold_step_metrics("standard", primary_folds)
+                cv_pr_auc_macro_standard = best_value
+                cv_auc_standard = best_trial_metrics.get("auc")
+                cv_f1_macro_standard = best_trial_metrics.get("f1_macro")
+                cv_qwk_standard = best_trial_metrics.get("qwk")
 
             if cv_strategy == "both":
-                # Under cv_strategy="both", __init__ always resolves the
-                # primary strategy to stratified_spatial_block, so
-                # search_uses_groups is always True here and the
-                # diagnostic side is always "standard" — the branch below
-                # is kept explicit (not hardcoded to "standard") so intent
-                # stays legible if that primary-strategy mapping ever
-                # changes.
                 diagnostic_strategy_name = "standard" if search_uses_groups else "spatial"
+                diagnostic_strategy = get_cv_strategy(
+                    diagnostic_strategy_name, self.config, self.cv_strategy.resampler
+                )
 
-                # DIAGNOSTIC (comparison-only) side: gated by
-                # log_full_cv_diagnostics. The primary side's nested pass
-                # above is unconditional and already answers "how good is
-                # the configured strategy," so this flag now only controls
-                # whether the *opposite* side also gets a genuinely nested
-                # pass for the standard-vs-spatial optimism-gap comparison
-                # — skipping it halves 'both' mode's nested-CV cost when
-                # only the primary side's number is needed.
+                # Diagnostic side always runs — same cost this code has
+                # always paid, predating the F1-macro/PR-AUC-macro/QWK gap
+                # feature. The cv/base.py Bug A fix (multiclass AUC
+                # ValueError silently scored as 0.0) makes this AUC correct
+                # regardless of the flag below; that fix is unconditional.
+                # It's a full metrics pass, so AUC/F1-macro/PR-AUC-macro/QWK
+                # are all available on the diagnostic side "for free" too —
+                # only the searched side's full-training-set recompute is
+                # gated behind log_full_cv_diagnostics below.
+                diagnostic_mean, diagnostic_folds = self._run_full_metrics_pass(
+                    diagnostic_strategy, model_cls, best_params, X_tr, y_train, groups_train,
+                    season, model_name, role="diagnostic",
+                )
+                if search_uses_groups:
+                    cv_auc_standard = diagnostic_mean["auc"]
+                    cv_f1_macro_standard = diagnostic_mean["f1_macro"]
+                    cv_pr_auc_macro_standard = diagnostic_mean["pr_auc_macro"]
+                    cv_qwk_standard = diagnostic_mean["qwk"]
+                else:
+                    cv_auc_spatial = diagnostic_mean["auc"]
+                    cv_f1_macro_spatial = diagnostic_mean["f1_macro"]
+                    cv_pr_auc_macro_spatial = diagnostic_mean["pr_auc_macro"]
+                    cv_qwk_spatial = diagnostic_mean["qwk"]
+
+                # Primary side's full-training-set re-scoring pass is the
+                # NEW cost this feature adds (~doubles this block's extra
+                # CV-fold fitting time) — gated behind
+                # modeling.log_full_cv_diagnostics (default False) so
+                # routine iteration runs don't pay it; the dissertation's
+                # baseline.yaml sets it True. Only with this on can
+                # AUC/F1-macro/QWK gaps and cv_auc_spatial_folds (needed by
+                # stage_selection's Kruskal-Wallis) be computed on the
+                # primary side's full training set rather than its search
+                # subsample.
                 if self.config["modeling"].get("log_full_cv_diagnostics", False):
-                    diagnostic_strategy = get_cv_strategy(
-                        diagnostic_strategy_name, self.config, self.search_resampler
+                    primary_mean, primary_folds = self._run_full_metrics_pass(
+                        self.cv_strategy, model_cls, best_params, X_tr, y_train, groups_train,
+                        season, model_name, role="primary",
                     )
-                    diagnostic_mean, diagnostic_folds = self._run_nested_cv(
-                        diagnostic_strategy, model_cls, X_tr, y_train, groups_train,
-                        season, model_name, progress_callback,
-                    )
-                    self._log_fold_step_metrics(diagnostic_strategy_name, diagnostic_folds)
 
                     if search_uses_groups:
-                        cv_auc_standard = diagnostic_mean["auc"]
-                        cv_f1_macro_standard = diagnostic_mean["f1_macro"]
-                        cv_pr_auc_macro_standard = diagnostic_mean["pr_auc_macro"]
-                        cv_qwk_standard = diagnostic_mean["qwk"]
-                        standard_metrics, spatial_metrics = diagnostic_mean, primary_mean
+                        # Searched (primary) side keeps its PR-AUC as the
+                        # cheap/subsample value Optuna actually selected on
+                        # (continuity with model selection), same override
+                        # convention AUC used under the old objective — but
+                        # AUC/F1-macro/QWK now use the full-pass recompute
+                        # since it's available and more accurate than the
+                        # subsample-based user_attrs fallback.
+                        cv_auc_spatial_folds = [f["auc"] for f in primary_folds]
+                        standard_metrics = dict(diagnostic_mean)
+                        spatial_metrics = {**primary_mean, "pr_auc_macro": cv_pr_auc_macro_spatial}
+                        standard_folds, spatial_folds = diagnostic_folds, primary_folds
                     else:
-                        cv_auc_spatial = diagnostic_mean["auc"]
-                        cv_f1_macro_spatial = diagnostic_mean["f1_macro"]
-                        cv_pr_auc_macro_spatial = diagnostic_mean["pr_auc_macro"]
-                        cv_qwk_spatial = diagnostic_mean["qwk"]
-                        standard_metrics, spatial_metrics = primary_mean, diagnostic_mean
+                        cv_auc_spatial_folds = [f["auc"] for f in diagnostic_folds]
+                        standard_metrics = {**primary_mean, "pr_auc_macro": cv_pr_auc_macro_standard}
+                        spatial_metrics = dict(diagnostic_mean)
+                        standard_folds, spatial_folds = primary_folds, diagnostic_folds
 
-                    cv_optimism_gap = self._log_optimism_gap(standard_metrics, spatial_metrics)
-                else:
-                    logger.info(
-                        f"[{season}][{model_name}] log_full_cv_diagnostics=False: skipping "
-                        f"{diagnostic_strategy_name} nested CV diagnostic side; "
-                        f"cv_optimism_gap will be None"
+                    cv_auc_standard, cv_auc_spatial = standard_metrics["auc"], spatial_metrics["auc"]
+                    cv_f1_macro_standard = standard_metrics["f1_macro"]
+                    cv_f1_macro_spatial = spatial_metrics["f1_macro"]
+                    cv_pr_auc_macro_standard = standard_metrics["pr_auc_macro"]
+                    cv_pr_auc_macro_spatial = spatial_metrics["pr_auc_macro"]
+                    cv_qwk_standard = standard_metrics["qwk"]
+                    cv_qwk_spatial = spatial_metrics["qwk"]
+                    cv_optimism_gap = self._log_optimism_gap(
+                        diagnostic_strategy_name, standard_metrics, spatial_metrics,
+                        standard_folds, spatial_folds,
                     )
-
-            self._log_cv_metrics(
-                cv_auc_standard, cv_auc_spatial,
-                cv_f1_macro_standard, cv_f1_macro_spatial,
-                cv_pr_auc_macro_standard, cv_pr_auc_macro_spatial,
-                cv_qwk_standard, cv_qwk_spatial,
-            )
+                else:
+                    # Cheap path (default): the diagnostic full-pass and the
+                    # searched side's Optuna best-trial (best_value +
+                    # user_attrs) already gave every metric on both sides
+                    # above, at no extra fit cost, so the gap covers all
+                    # four. Only cv_auc_spatial_folds (needs a full pass on
+                    # the *searched* side specifically, for
+                    # stage_selection's Kruskal-Wallis) still requires
+                    # log_full_cv_diagnostics — see that branch above.
+                    cheap_standard = {
+                        "auc": cv_auc_standard, "f1_macro": cv_f1_macro_standard,
+                        "pr_auc_macro": cv_pr_auc_macro_standard, "qwk": cv_qwk_standard,
+                    }
+                    cheap_spatial = {
+                        "auc": cv_auc_spatial, "f1_macro": cv_f1_macro_spatial,
+                        "pr_auc_macro": cv_pr_auc_macro_spatial, "qwk": cv_qwk_spatial,
+                    }
+                    gap = compute_optimism_gap(cheap_standard, cheap_spatial)
+                    mlflow.log_metric(f"cv_auc_{diagnostic_strategy_name}", diagnostic_mean["auc"])
+                    mlflow.log_metric(f"cv_pr_auc_macro_{diagnostic_strategy_name}", diagnostic_mean["pr_auc_macro"])
+                    mlflow.log_metric(f"cv_f1_macro_{diagnostic_strategy_name}", diagnostic_mean["f1_macro"])
+                    mlflow.log_metric(f"cv_qwk_{diagnostic_strategy_name}", diagnostic_mean["qwk"])
+                    for metric, value in gap.items():
+                        mlflow.log_metric(f"cv_{metric}_optimism_gap", value)
+                    cv_optimism_gap = gap
 
             final_model, val_auc, val_f1, val_qwk = self._fit_final_and_validate(
                 model_cls, best_params, X_tr, y_train, X_va, y_val, season, model_name,
@@ -317,7 +340,7 @@ class ModelTrainer:
         }
         return X_tr, X_va, scaler, scaling_meta
 
-    def _log_run_setup(self, season, model_name, best_params, best_value, search_uses_groups):
+    def _log_run_setup(self, season, model_name, best_params, best_value, search_uses_groups, best_trial_metrics):
         mlflow.set_tags({
             "season": season,
             "model": model_name,
@@ -331,72 +354,76 @@ class ModelTrainer:
         mlflow.log_params(best_params)
 
         side = "spatial" if search_uses_groups else "standard"
-        # best_value is the PRODUCTION search's own directly-optimized
-        # metric (PR-AUC-macro, see search.py's _make_objective) — purely
-        # informational context on what that search converged to. It is
-        # NOT the reported CV performance estimate: that number (logged
-        # separately via _log_cv_metrics, from genuinely nested CV) can
-        # legitimately differ, since best_value comes from folds that were
-        # also used to pick best_params. Kept under its existing
-        # cv_prauc_{side} key (not cv_auc_*/cv_pr_auc_macro_*) so it isn't
-        # mistaken for the nested estimate by anything reading mlflow.
+        # best_value is Optuna's directly-optimized metric (PR-AUC-macro,
+        # see search.py's _make_objective) — logged under cv_prauc_*, not
+        # cv_auc_*, so it isn't mistaken for the AUC metric downstream.
+        # AUC/F1-macro/QWK for the same (searched) side come from the best
+        # trial's user_attrs — cheap/subsample-based, same role best_value
+        # alone used to play for AUC before the objective swapped metrics.
+        # generate_report_figures.py's plot_cv_comparison needs cv_auc_* on
+        # both sides to render at all, so this must not be skipped.
         mlflow.log_metric(f"cv_prauc_{side}", best_value)
+        for metric_name in ("auc", "f1_macro", "qwk"):
+            value = best_trial_metrics.get(metric_name)
+            if value is not None:
+                mlflow.log_metric(f"cv_{metric_name}_{side}", value)
 
-    def _run_nested_cv(
-        self, strategy, model_cls, X_tr, y_train, groups_train,
-        season, model_name, progress_callback=None,
+    def _run_full_metrics_pass(
+        self, strategy, model_cls, best_params, X_tr, y_train, groups_train,
+        season, model_name, role: str,
     ) -> Tuple[dict, list]:
-        """Thin wrapper around nested_cv.run_nested_cv supplying this
-        trainer's search_resampler/config. See that module for the actual
-        outer/inner nesting mechanics. Returns (mean metrics dict,
-        per-outer-fold metrics dicts) — same shape the old
-        _run_full_metrics_pass returned."""
-        return run_nested_cv(
-            strategy, self.search_resampler, model_cls, model_name, season, self.config,
-            X_tr, y_train, groups_train, progress_callback,
+        """Post-hoc, non-selection pass: score the winning params under
+        `strategy`'s folds (built on the full training set) purely to
+        report metrics. Never influences which hyperparameters were chosen
+        — that already happened in HyperparamSearch. `role` ("primary" or
+        "diagnostic") is only for log context. Returns (mean metrics dict,
+        per-fold metrics dicts)."""
+        groups_for_pass = groups_train if requires_spatial_groups(strategy.name) else None
+        folds = strategy.make_folds(X_tr, y_train, groups_for_pass)
+        context = f"[{season}][{model_name}] {strategy.name} CV ({role})"
+
+        per_fold = [
+            strategy.fit_and_score_full(
+                model_cls, best_params, X_tr, y_train, train_idx, test_idx,
+                context=f"{context} fold {i + 1}/{len(folds)}",
+                model_name=model_name,
+            )
+            for i, (train_idx, test_idx) in enumerate(folds)
+        ]
+        # cv/base.py's score_multiclass_fold (fix-spatial-cv-auc-missing-classes)
+        # returns NaN, not 0.0, for a fold whose validation split shares fewer
+        # than 2 classes with what the model can score — a real scoring
+        # failure, not a real (if terrible) score. np.mean would silently
+        # poison the whole reported mean to NaN the moment any one fold hits
+        # this; np.nanmean excludes those folds instead.
+        mean = {}
+        for metric in ("auc", "f1_macro", "pr_auc_macro", "qwk"):
+            values = [f[metric] for f in per_fold]
+            if all(np.isnan(v) for v in values):
+                logger.warning(
+                    f"{context}: every fold's {metric} was NaN (genuinely degenerate — "
+                    f"see per-fold warnings above); mean['{metric}'] is NaN, not a "
+                    f"silently-averaged real number."
+                )
+            mean[metric] = float(np.nanmean(values))
+        logger.info(
+            f"{context}: AUC={mean['auc']:.4f} F1_macro={mean['f1_macro']:.4f} "
+            f"PR_AUC_macro={mean['pr_auc_macro']:.4f} QWK={mean['qwk']:.4f}"
         )
+        return mean, per_fold
 
     @staticmethod
-    def _log_cv_metrics(
-        cv_auc_standard, cv_auc_spatial,
-        cv_f1_macro_standard, cv_f1_macro_spatial,
-        cv_pr_auc_macro_standard, cv_pr_auc_macro_spatial,
-        cv_qwk_standard, cv_qwk_spatial,
-    ) -> None:
-        """Single source of truth for logging the reported (genuinely
-        nested) cv_auc_*/cv_f1_macro_*/cv_pr_auc_macro_*/cv_qwk_* mlflow
-        metrics, for whichever side(s) were actually computed this run —
-        a side whose auc is None (not run) is skipped entirely rather than
-        logging partial/None metrics."""
-        for side, (auc, f1, prauc, qwk) in (
-            ("standard", (cv_auc_standard, cv_f1_macro_standard, cv_pr_auc_macro_standard, cv_qwk_standard)),
-            ("spatial", (cv_auc_spatial, cv_f1_macro_spatial, cv_pr_auc_macro_spatial, cv_qwk_spatial)),
-        ):
-            if auc is None:
-                continue
-            mlflow.log_metric(f"cv_auc_{side}", auc)
-            mlflow.log_metric(f"cv_f1_macro_{side}", f1)
-            mlflow.log_metric(f"cv_pr_auc_macro_{side}", prauc)
-            mlflow.log_metric(f"cv_qwk_{side}", qwk)
-
-    @staticmethod
-    def _log_fold_step_metrics(role: str, fold_list: list) -> None:
-        """Per-outer-fold mlflow step metrics for one side's nested CV run
-        — lets the dissertation figures show fold-level spread, not just
-        the mean."""
-        for i, fold_metrics in enumerate(fold_list):
-            for metric in ("auc", "f1_macro", "pr_auc_macro", "qwk"):
-                mlflow.log_metric(f"cv_{metric}_{role}_fold", fold_metrics[metric], step=i)
-
-    @staticmethod
-    def _log_optimism_gap(standard_metrics: dict, spatial_metrics: dict) -> dict:
+    def _log_optimism_gap(
+        diagnostic_strategy_name: str, standard_metrics: dict, spatial_metrics: dict,
+        standard_folds: list, spatial_folds: list,
+    ) -> dict:
         """Logs the standard-vs-spatial optimism gap (standard - spatial)
-        for AUC, F1-macro, PR-AUC-macro, and QWK. Both `standard_metrics`
-        and `spatial_metrics` are genuinely nested per-side mean metrics
-        (nested_cv.run_nested_cv) — per-side aggregate values and
-        per-fold breakdowns are logged separately via _log_cv_metrics /
-        _log_fold_step_metrics, so this method only computes and logs the
-        gap itself.
+        for AUC, F1-macro, PR-AUC-macro, and QWK, plus the per-side
+        aggregate values and per-fold breakdowns (mlflow step metrics).
+        cv_prauc_{the PRIMARY side} is already logged by _log_run_setup
+        from Optuna's best_value, so only the diagnostic side's AUC is
+        (re-)logged here; F1-macro/PR-AUC-macro/QWK were never logged for
+        either side before this method, so both sides are logged for those.
 
         Per-fold standard[i] and spatial[i] are NOT paired into a per-fold
         gap: fold i means something different under each strategy
@@ -408,8 +435,24 @@ class ModelTrainer:
         """
         gap = compute_optimism_gap(standard_metrics, spatial_metrics)
 
+        diagnostic_auc = (
+            standard_metrics["auc"] if diagnostic_strategy_name == "standard" else spatial_metrics["auc"]
+        )
+        mlflow.log_metric(f"cv_auc_{diagnostic_strategy_name}", diagnostic_auc)
+        mlflow.log_metric("cv_f1_macro_standard", standard_metrics["f1_macro"])
+        mlflow.log_metric("cv_f1_macro_spatial", spatial_metrics["f1_macro"])
+        mlflow.log_metric("cv_pr_auc_macro_standard", standard_metrics["pr_auc_macro"])
+        mlflow.log_metric("cv_pr_auc_macro_spatial", spatial_metrics["pr_auc_macro"])
+        mlflow.log_metric("cv_qwk_standard", standard_metrics["qwk"])
+        mlflow.log_metric("cv_qwk_spatial", spatial_metrics["qwk"])
+
         for metric, value in gap.items():
             mlflow.log_metric(f"cv_{metric}_optimism_gap", value)
+
+        for fold_list, role in ((standard_folds, "standard"), (spatial_folds, "spatial")):
+            for i, fold_metrics in enumerate(fold_list):
+                for metric in ("auc", "f1_macro", "pr_auc_macro", "qwk"):
+                    mlflow.log_metric(f"cv_{metric}_{role}_fold", fold_metrics[metric], step=i)
 
         logger.info(
             f"[optimism gap] standard-spatial: AUC={gap['auc']:.4f} F1_macro={gap['f1_macro']:.4f} "

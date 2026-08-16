@@ -158,39 +158,22 @@ class ModelingConfig(BaseModel):
     )
     log_full_cv_diagnostics: bool = Field(
         default=False,
-        description="Only used when cv_strategy='both'. Since the "
-                     "refactor-nested-cv-optuna-schratz-method branch, the "
-                     "PRIMARY CV strategy's genuinely-nested CV pass "
-                     "(nested_cv.run_nested_cv) always runs regardless of "
-                     "this flag — there is no more non-nested/cheap "
-                     "fallback for the primary side, since that used to be "
-                     "biased (Varma & Simon 2006). This flag now gates only "
-                     "the DIAGNOSTIC (opposite) side's own nested CV pass: "
-                     "when True, the diagnostic side also runs genuinely "
-                     "nested CV and cv_optimism_gap / cv_auc_spatial_folds "
-                     "are populated; when False (default), the diagnostic "
-                     "side is skipped entirely (its cv_*_standard or "
-                     "cv_*_spatial fields and cv_optimism_gap stay None), "
-                     "saving roughly half of 'both' mode's nested-CV cost. "
-                     "Set True for the run whose numbers are actually being "
-                     "reported (see configs/experiment/baseline.yaml).",
-    )
-    optuna_inner_cv_folds: int = Field(
-        default=3,
-        description="Fold count for nested CV's INNER (tuning-only) loop — "
-                     "see nested_cv.py. Always used with plain, non-spatial "
-                     "StandardKFoldCV regardless of the outer cv_strategy, "
-                     "per Schratz et al. (2019, Ecological Modelling 406, "
-                     "Section 5.1.4): no major differences in model "
-                     "performance were found between spatial and "
-                     "non-spatial hyperparameter tuning once the "
-                     "outer/reporting loop is already spatially blocked. "
-                     "Deliberately smaller than the outer cv_folds default "
-                     "(3 vs. 5): the inner loop only needs to rank "
-                     "candidate hyperparameters relatively across "
-                     "optuna_n_trials trials, not produce a tight point "
-                     "estimate, and it directly multiplies per-outer-fold "
-                     "search cost.",
+        description="Only used when cv_strategy='both'. When True, the "
+                     "PRIMARY CV strategy also gets a full AUC/F1-macro/"
+                     "PR-AUC-macro re-scoring pass on the full training set "
+                     "(not HyperparamSearch's subsample) with the winning "
+                     "hyperparameters fixed — needed to compute the "
+                     "F1-macro/PR-AUC-macro standard-vs-spatial optimism "
+                     "gap and to populate cv_auc_spatial_folds (consumed by "
+                     "stage_selection's Kruskal-Wallis test), neither of "
+                     "which Optuna's search alone can produce. Roughly "
+                     "doubles this stage's extra CV-fold fitting cost, so "
+                     "it defaults False for routine iteration; set True for "
+                     "the run whose numbers are actually being reported "
+                     "(see configs/experiment/baseline.yaml). The "
+                     "diagnostic-side AUC gap (cv_auc_optimism_gap) is "
+                     "always logged regardless of this flag — that pass "
+                     "already existed before this flag was introduced.",
     )
     imbalance_strategy: Literal["none", "smote", "cost_weighted"] = Field(
         default="smote",

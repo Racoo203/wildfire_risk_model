@@ -1,28 +1,32 @@
 # tests/unit/modeling/training/test_optimism_gap_end_to_end.py
 """End-to-end coverage for optimism-gap logging through ModelTrainer.train_one
-with cv_strategy="both", post the refactor-nested-cv-optuna-schratz-method
-branch. Under cv_strategy="both", __init__ always resolves the primary
-strategy to stratified_spatial_block (spatial), so the PRIMARY side's
-genuinely nested CV pass (nested_cv.run_nested_cv) is now MANDATORY and
-unconditional — there is no more non-nested/cheap fallback for it, since
-that used to be exactly the Varma & Simon (2006) bias this branch removes.
+with cv_strategy="both". Optuna's objective is PR-AUC-macro (search.py); AUC/
+F1-macro/QWK for the searched side come from the best trial's user_attrs, and
+the diagnostic side always runs a full metrics pass, so all four metrics
+(AUC, F1-macro, PR-AUC-macro, QWK) are available on both sides regardless of
+log_full_cv_diagnostics:
 
-log_full_cv_diagnostics now gates only the DIAGNOSTIC (standard, comparison-
-only) side's own nested CV pass — this is the flip from the pre-nested-CV
-behavior (where the diagnostic side always ran and the flag gated the
-PRIMARY side's full pass instead):
+- With modeling.log_full_cv_diagnostics=True (the dissertation's
+  baseline.yaml setting): confirms the standard-vs-spatial full metrics
+  passes run without error, populate the returned dict's
+  cv_f1_macro_*/cv_pr_auc_macro_*/cv_qwk_*/cv_optimism_gap keys with
+  full-training-set values (rather than the search subsample) on the
+  searched side, fix the pre-existing bug where cv_auc_spatial_folds stayed
+  None under this config (breaking stage_selection.py's Kruskal-Wallis
+  test), and actually reach MLflow.
+- With the flag left at its default (False): confirms the expensive
+  primary-side full-training-set re-scoring pass is skipped entirely (not
+  just its results discarded), while every metric's optimism gap is still
+  logged correctly using the search subsample's cheap values on the
+  searched side — only cv_auc_spatial_folds (which needs a full pass on the
+  searched side specifically) stays unpopulated.
 
-- log_full_cv_diagnostics=True (the dissertation's baseline.yaml setting):
-  both sides run genuinely nested CV, cv_optimism_gap is populated from two
-  real nested estimates, and cv_auc_spatial_folds (consumed by
-  stage_selection's Kruskal-Wallis test) is populated from the primary
-  (spatial) side's outer-fold AUCs.
-- log_full_cv_diagnostics=False (schema default): only the primary
-  (spatial) side runs nested CV — cv_auc_spatial/cv_f1_macro_spatial/
-  cv_pr_auc_macro_spatial/cv_qwk_spatial and cv_auc_spatial_folds are still
-  populated (mandatory, unconditional), but the standard side and
-  cv_optimism_gap stay None, since the diagnostic pass never runs."""
+_run_full_metrics_pass's per-fold mean is np.nanmean, not np.mean (see
+trainer.py) — a fold that cv/base.py's score_multiclass_fold scores as NaN
+(fix-spatial-cv-auc-missing-classes: genuinely degenerate, fewer than 2
+observed classes) is excluded from the mean rather than poisoning it."""
 
+import logging
 import math
 
 import numpy as np
@@ -127,6 +131,8 @@ def test_train_one_populates_optimism_gap_metrics(full_diagnostics_trainer, spat
         run_post_training_evaluation=False,
     )
 
+    # standard-vs-spatial AUC gap already existed pre-this-change; F1-macro,
+    # PR-AUC-macro, and QWK are new.
     assert result["cv_optimism_gap"] is not None
     assert set(result["cv_optimism_gap"]) == {"auc", "f1_macro", "pr_auc_macro", "qwk"}
     for v in result["cv_optimism_gap"].values():
@@ -140,10 +146,11 @@ def test_train_one_populates_optimism_gap_metrics(full_diagnostics_trainer, spat
     ):
         assert isinstance(result[key], float), f"{key} was not populated: {result[key]!r}"
 
-    # cv_auc_spatial_folds feeds stage_selection.py's Kruskal-Wallis
-    # cross-model test — these are now genuinely nested outer-fold AUCs
-    # (refit-best-inner-params-on-outer-train, score-on-outer-test), one
-    # per outer fold of the primary (spatial) strategy.
+    # Regression coverage for the pre-existing bug where cv_auc_spatial_folds
+    # stayed None under cv_strategy="both" (primary always resolves to
+    # stratified_spatial_block, which requires groups) — this list feeds
+    # stage_selection.py's Kruskal-Wallis cross-model test, which silently
+    # no-op'd every season as a result.
     assert result["cv_auc_spatial_folds"] is not None
     assert len(result["cv_auc_spatial_folds"]) == CV_FOLDS
     assert all(isinstance(v, float) for v in result["cv_auc_spatial_folds"])
@@ -182,26 +189,24 @@ def test_train_one_logs_optimism_gap_metrics_to_mlflow(full_diagnostics_trainer,
         assert not pd.isna(row[metric]), f"{metric} was logged as NaN"
 
 
-def test_log_full_cv_diagnostics_defaults_off_and_skips_the_diagnostic_side(
+def test_log_full_cv_diagnostics_defaults_off_and_skips_the_expensive_pass(
     cheap_default_trainer, spatial_dataset, monkeypatch,
 ):
-    """With the flag left at its schema default (False), the DIAGNOSTIC
-    (standard) side's nested CV pass — ModelTrainer's own _run_nested_cv,
-    called a second time for the diagnostic strategy — must not run at
-    all (not just have its results discarded): that's the ~half of
-    'both' mode's nested-CV cost this flag exists to gate. The PRIMARY
-    (spatial) side's nested CV pass is unconditional and must still run
-    exactly once."""
+    """With the flag left at its schema default (False), the primary
+    strategy's full-training-set re-scoring pass — ModelTrainer's own
+    _run_full_metrics_pass, called with role="primary" — must not run at
+    all (not just have its results discarded), since that call is the ~2x
+    cost this flag exists to gate."""
     from wildfire_susceptibility.modeling.training.trainer import ModelTrainer
 
-    call_strategy_names = []
-    original = ModelTrainer._run_nested_cv
+    seen_roles = []
+    original = ModelTrainer._run_full_metrics_pass
 
-    def _spy(self, strategy, *args, **kwargs):
-        call_strategy_names.append(strategy.name)
-        return original(self, strategy, *args, **kwargs)
+    def _spy(self, strategy, model_cls, best_params, X_tr, y_train, groups_train, season, model_name, role):
+        seen_roles.append(role)
+        return original(self, strategy, model_cls, best_params, X_tr, y_train, groups_train, season, model_name, role)
 
-    monkeypatch.setattr(ModelTrainer, "_run_nested_cv", _spy)
+    monkeypatch.setattr(ModelTrainer, "_run_full_metrics_pass", _spy)
 
     X, y, groups = spatial_dataset
     result = cheap_default_trainer.train_one(
@@ -213,38 +218,50 @@ def test_log_full_cv_diagnostics_defaults_off_and_skips_the_diagnostic_side(
         run_post_training_evaluation=False,
     )
 
-    assert call_strategy_names == ["stratified_spatial_block"], (
-        f"expected only the primary (spatial) side's nested CV to run when "
-        f"log_full_cv_diagnostics=False (default), got {call_strategy_names}"
+    assert seen_roles == ["diagnostic"], (
+        f"expected only the diagnostic pass to run when log_full_cv_diagnostics=False (default), "
+        f"got roles={seen_roles}"
     )
 
-    # Primary (spatial) side is mandatory and unbiased regardless of the flag.
+    # Every metric's gap is still logged correctly (Bug A fix applies
+    # unconditionally, and AUC/F1-macro/PR-AUC-macro/QWK are all available
+    # cheaply on both sides even without the primary-side full pass: the
+    # diagnostic side from its own full pass, the searched side from
+    # Optuna's best_value/user_attrs).
+    assert set(result["cv_optimism_gap"]) == {"auc", "f1_macro", "pr_auc_macro", "qwk"}
+    assert result["cv_optimism_gap"]["auc"] == pytest.approx(
+        result["cv_auc_standard"] - result["cv_auc_spatial"]
+    )
+    assert result["cv_optimism_gap"]["pr_auc_macro"] == pytest.approx(
+        result["cv_pr_auc_macro_standard"] - result["cv_pr_auc_macro_spatial"]
+    )
     for key in (
-        "cv_auc_spatial", "cv_f1_macro_spatial", "cv_pr_auc_macro_spatial", "cv_qwk_spatial",
+        "cv_auc_standard", "cv_auc_spatial",
+        "cv_f1_macro_standard", "cv_f1_macro_spatial",
+        "cv_pr_auc_macro_standard", "cv_pr_auc_macro_spatial",
+        "cv_qwk_standard", "cv_qwk_spatial",
     ):
-        assert isinstance(result[key], float), f"{key} should be populated, got {result[key]!r}"
-    assert result["cv_auc_spatial_folds"] is not None
-    assert len(result["cv_auc_spatial_folds"]) == CV_FOLDS
+        assert isinstance(result[key], float), f"{key} should be populated cheaply, got {result[key]!r}"
 
-    # Diagnostic (standard) side never ran, so its fields and the gap stay None.
-    for key in ("cv_auc_standard", "cv_f1_macro_standard", "cv_pr_auc_macro_standard", "cv_qwk_standard"):
-        assert result[key] is None, f"{key} should stay None when the diagnostic side is skipped, got {result[key]!r}"
-    assert result["cv_optimism_gap"] is None
+    # ...but cv_auc_spatial_folds specifically needs a full pass on the
+    # *searched* side (for stage_selection's Kruskal-Wallis) and stays None.
+    assert result["cv_auc_spatial_folds"] is None
 
 
 def test_train_one_survives_a_class_confined_to_a_single_spatial_block(
     full_diagnostics_trainer, spatial_dataset_with_rare_class_confined_to_one_block,
 ):
     """Regression test for fix-spatial-cv-auc-missing-classes, run through
-    the full train_one -> nested CV -> mlflow pipeline (not just the pure
-    scorer unit tests in test_score_multiclass_fold.py). Before the fix,
-    the outer fold whose training split lost class 3 entirely made
-    AUC/PR-AUC scoring raise and get silently reported as 0.0 — this must
-    now complete without crashing or raising, produce real (not
+    the full train_one -> _run_full_metrics_pass -> mlflow pipeline (not
+    just the pure scorer unit tests in test_score_multiclass_fold.py).
+    Before the fix, the fold whose training split lost class 3 entirely
+    made AUC/PR-AUC scoring raise and get silently reported as 0.0 — this
+    must now complete without crashing or raising, produce real (not
     all-identical-0.0) cv_auc_spatial_folds, and log real, non-NaN
     aggregate metrics to mlflow (the aggregate must stay a real number as
-    long as at least one fold was scorable, per nested_cv.py's nanmean
-    aggregation — only a fold missing EVERY class would poison it)."""
+    long as at least one fold was scorable, per _run_full_metrics_pass's
+    np.nanmean aggregation — only a fold missing EVERY class would poison
+    it)."""
     import mlflow
 
     X, y, groups = spatial_dataset_with_rare_class_confined_to_one_block
@@ -277,3 +294,87 @@ def test_train_one_survives_a_class_confined_to_a_single_spatial_block(
     for metric in ("metrics.cv_auc_spatial", "metrics.cv_pr_auc_macro_spatial"):
         assert metric in row.index
         assert not pd.isna(row[metric]), f"{metric} was logged as NaN"
+
+
+# ----------------------------------------------------------------------
+# fix-spatial-cv-auc-missing-classes: _run_full_metrics_pass's mean
+# aggregation must be NaN-aware, since cv/base.py::score_multiclass_fold
+# now returns NaN (not 0.0) for a genuinely degenerate fold. Exercised
+# directly (not through train_one) via a stub CVStrategy so the per-fold
+# metric values are exactly controlled.
+# ----------------------------------------------------------------------
+
+class _StubFoldStrategy:
+    """Minimal CVStrategy stand-in for testing _run_full_metrics_pass's
+    mean-aggregation in isolation, independent of any real fold-building
+    or model-fitting machinery."""
+
+    name = "standard"
+
+    def __init__(self, scores_by_fold):
+        self._scores_by_fold = scores_by_fold
+        self._n = 0
+
+    def make_folds(self, X, y, groups):
+        return [(None, None)] * len(self._scores_by_fold)
+
+    def fit_and_score_full(self, model_cls, params, X, y, train_idx, test_idx, context="", model_name=None):
+        scores = dict(self._scores_by_fold[self._n])
+        self._n += 1
+        return scores
+
+
+def test_run_full_metrics_pass_mean_excludes_a_partial_nan_fold(full_diagnostics_trainer):
+    """One fold's AUC/PR-AUC are NaN (as if that fold alone were genuinely
+    degenerate); the other two are real numbers. The reported mean must be
+    the mean of the real folds only (np.nanmean), not NaN itself — a
+    single unscorable fold shouldn't poison the whole reported estimate
+    when other folds are perfectly fine."""
+    strategy = _StubFoldStrategy([
+        {"auc": 0.8, "f1_macro": 0.6, "pr_auc_macro": 0.7, "qwk": 0.5},
+        {"auc": float("nan"), "f1_macro": 0.4, "pr_auc_macro": float("nan"), "qwk": 0.3},
+        {"auc": 0.6, "f1_macro": 0.5, "pr_auc_macro": 0.5, "qwk": 0.4},
+    ])
+    X = pd.DataFrame({"f1": [0.0]})
+    y = pd.Series([0])
+
+    mean, per_fold = full_diagnostics_trainer._run_full_metrics_pass(
+        strategy, object, {}, X, y, None, "test_season", "random_forest", role="test",
+    )
+
+    assert len(per_fold) == 3
+    assert mean["auc"] == pytest.approx((0.8 + 0.6) / 2), "NaN fold must be excluded, not averaged in"
+    assert mean["pr_auc_macro"] == pytest.approx((0.7 + 0.5) / 2)
+    # f1_macro/qwk had no NaN folds — plain mean, unaffected by the change.
+    assert mean["f1_macro"] == pytest.approx((0.6 + 0.4 + 0.5) / 3)
+    assert mean["qwk"] == pytest.approx((0.5 + 0.3 + 0.4) / 3)
+
+
+def test_run_full_metrics_pass_mean_is_nan_and_warns_when_every_fold_is_nan(
+    full_diagnostics_trainer, caplog,
+):
+    """If every fold for a metric is NaN (all genuinely degenerate), the
+    mean must stay NaN — silently averaging to some other number would
+    misrepresent a config where the reported estimate is entirely
+    unscorable — and a clear warning must be logged rather than relying on
+    numpy's own silent 'Mean of empty slice' RuntimeWarning as the only
+    signal."""
+    strategy = _StubFoldStrategy([
+        {"auc": float("nan"), "f1_macro": 0.6, "pr_auc_macro": float("nan"), "qwk": 0.5},
+        {"auc": float("nan"), "f1_macro": 0.4, "pr_auc_macro": float("nan"), "qwk": 0.3},
+        {"auc": float("nan"), "f1_macro": 0.5, "pr_auc_macro": float("nan"), "qwk": 0.4},
+    ])
+    X = pd.DataFrame({"f1": [0.0]})
+    y = pd.Series([0])
+
+    with caplog.at_level(logging.WARNING):
+        mean, per_fold = full_diagnostics_trainer._run_full_metrics_pass(
+            strategy, object, {}, X, y, None, "test_season", "random_forest", role="test",
+        )
+
+    assert np.isnan(mean["auc"])
+    assert np.isnan(mean["pr_auc_macro"])
+    assert mean["f1_macro"] == pytest.approx((0.6 + 0.4 + 0.5) / 3)
+    assert any(
+        "every fold" in r.message and "auc" in r.message for r in caplog.records
+    ), f"expected an explicit all-NaN warning, got: {[r.message for r in caplog.records]}"
