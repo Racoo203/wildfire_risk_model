@@ -2,21 +2,23 @@ processing:
   force_recompute: false
 
 seasons:
-  active: ["spring"]
+  active: ["spring"]                       # one season only — speed, not coverage
 
 labels:
   density_method: "kde"
   classify_method: "jenks"
-  n_classes: 3
+  n_classes: 5                             # match production scheme (see flag below)
   compare_classify_methods: []
   clean_labels: false
   auto_find_k: false
 
 modeling:
-  mlflow_experiment: "wf-baseline"
-  cv_strategy: "standard"                       # was stratified_spatial_block — needed for Kruskal-Wallis + standard-vs-stratified comparison
-  log_full_cv_diagnostics: true             # this is the reported run — pays the extra CV pass for the full standard-vs-spatial gap + Kruskal-Wallis fold data
-  models: ["ordinal_lr", "random_forest"]
-  imbalance_strategy: "cost_weighted"       # smoketest for cost-weighted vs SMOTE hypothesis; makes use_smote/smote_* below inert (SMOTEResampler.resample() no-ops per model when resolved to cost_weighted)
-  optuna_n_trials: 5
+  mlflow_experiment: "wf-baseline"        # was "wf-baseline" — now distinct from dissertation's experiment name so runs never intermix in MLflow
+  cv_strategy: "both"                      # both sides, to exercise the full nested-CV + optimism-gap + Kruskal-Wallis code path
+  log_full_cv_diagnostics: true            # pays for both sides' nested pass — this run exists to prove that path doesn't crash, not to be fast
+  optuna_inner_cv_folds: 2                 # smallest sane inner loop — this run is about correctness, not tuning quality
+  cv_folds: 2                              # smallest sane outer loop, same reason
+  models: ["ordinal_lr", "random_forest"]  # fastest two — one parametric, one non-parametric, enough to exercise both code paths
+  imbalance_strategy: "cost_weighted"
+  optuna_n_trials: 3                       # just enough to confirm Optuna wiring, not to tune anything
   excluded_features: ["tas", "tasmin", "sfcWind", "d_fires"]

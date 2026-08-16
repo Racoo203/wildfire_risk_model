@@ -1,7 +1,0 @@
-{
-  "iterations": 355,
-  "depth": 9,
-  "learning_rate": 0.19589071723770327,
-  "l2_leaf_reg": 0.23449124411512315,
-  "bagging_temperature": 0.8768618688473744
-}

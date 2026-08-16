@@ -1,5 +1,7 @@
 data/*
 figures/*
+figures2/*
+models/*
 docs/*
 mlruns/*
 wildfire_susceptibility.egg-info/*

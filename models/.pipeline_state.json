@@ -37,10 +37,12 @@
   "labels": {
     "spring": {
       "train": {
-        "raw_labels": "data\\silver\\layers\\risk_labels_kde_jenks_spring_train.tif"
+        "raw_labels": "data\\silver\\layers\\risk_labels_kde_jenks_spring_train.tif",
+        "d_fires": "data\\silver\\layers\\dist_fires_spring.tif"
       },
       "test": {
-        "raw_labels": "data\\silver\\layers\\risk_labels_kde_jenks_spring_test.tif"
+        "raw_labels": "data\\silver\\layers\\risk_labels_kde_jenks_spring_test.tif",
+        "d_fires": "data\\silver\\layers\\dist_fires_spring.tif"
       },
       "fire_train": "data\\silver\\layers\\fire_points_train_spring.gpkg",
       "fire_test": "data\\silver\\layers\\fire_points_test_spring.gpkg"
@@ -61,8 +63,8 @@
   },
   "train": {
     "spring": {
-      "ordinal_lr": "models\\spring\\ordinal_lr\\670bfa23",
-      "random_forest": "models\\spring\\random_forest\\670bfa23"
+      "ordinal_lr": "models\\spring\\ordinal_lr\\c0b971a3",
+      "random_forest": "models\\spring\\random_forest\\c0b971a3"
     }
   },
   "evaluate": {
@@ -73,13 +75,17 @@
         "time_forward_validation": {
           "n_fires": 1189,
           "counts": {
-            "Low": 1189,
+            "Very Low": 1189,
+            "Low": 0,
             "Medium": 0,
-            "High": 0
+            "High": 0,
+            "Very High": 0
           },
-          "pct_low": 100.0,
+          "pct_very_low": 100.0,
+          "pct_low": 0.0,
           "pct_medium": 0.0,
           "pct_high": 0.0,
+          "pct_very_high": 0.0,
           "pct_medium_plus": 0.0
         },
         "susceptibility_map_path": "data\\silver\\layers\\susceptibility_ordinal_lr_spring.tif",
@@ -91,14 +97,18 @@
         "time_forward_validation": {
           "n_fires": 1189,
           "counts": {
-            "Low": 1189,
-            "Medium": 0,
-            "High": 0
+            "Very Low": 965,
+            "Low": 188,
+            "Medium": 32,
+            "High": 4,
+            "Very High": 0
           },
-          "pct_low": 100.0,
-          "pct_medium": 0.0,
-          "pct_high": 0.0,
-          "pct_medium_plus": 0.0
+          "pct_very_low": 81.16063919259882,
+          "pct_low": 15.811606391925988,
+          "pct_medium": 2.6913372582001682,
+          "pct_high": 0.33641715727502103,
+          "pct_very_high": 0.0,
+          "pct_medium_plus": 18.839360807401178
         },
         "susceptibility_map_path": "data\\silver\\layers\\susceptibility_random_forest_spring.tif",
         "full_metrics_path": "figures\\spring\\models\\metrics_random_forest.json"
@@ -115,7 +125,28 @@
       "nan_coverage": "figures\\spring\\eda\\nan_coverage.png",
       "vif": "figures\\spring\\eda\\vif.png",
       "spearman": "figures\\spring\\eda\\correlation_spearman.png",
-      "class_balance": "figures\\spring\\eda\\class_balance.png"
+      "class_balance": "figures\\spring\\eda\\class_balance.png",
+      "spearman_significance_full": "figures\\spring\\eda\\spearman_significance_full.csv",
+      "factor_maps": {
+        "tas": "figures\\spring\\factors\\tas.png",
+        "tasmax": "figures\\spring\\factors\\tasmax.png",
+        "tasmin": "figures\\spring\\factors\\tasmin.png",
+        "rainfall": "figures\\spring\\factors\\rainfall.png",
+        "sfcWind": "figures\\spring\\factors\\sfcWind.png",
+        "hurs": "figures\\spring\\factors\\hurs.png",
+        "diurnal_range": "figures\\spring\\factors\\diurnal_range.png",
+        "ndvi": "figures\\spring\\factors\\ndvi.png",
+        "d_fires": "figures\\spring\\factors\\d_fires.png"
+      },
+      "static_factor_maps": {
+        "elevation": "figures\\static\\factors\\elevation.png",
+        "slope": "figures\\static\\factors\\slope.png",
+        "aspect": "figures\\static\\factors\\aspect.png",
+        "d_roads": "figures\\static\\factors\\d_roads.png",
+        "d_rivers": "figures\\static\\factors\\d_rivers.png",
+        "d_buildings": "figures\\static\\factors\\d_buildings.png",
+        "landuse_class": "figures\\static\\factors\\landuse_class.png"
+      }
     }
   },
   "temporal_eda": {
