@@ -133,6 +133,7 @@ def fast_modeling_config(minimal_modeling_config):
     cfg["modeling"].update({
         "optuna_n_trials": 1,
         "cv_folds": 2,
+        "optuna_inner_cv_folds": 2,
         "use_smote": False,
     })
     return cfg

@@ -1,25 +1,27 @@
 # tests/unit/modeling/training/test_optimism_gap_end_to_end.py
 """End-to-end coverage for optimism-gap logging through ModelTrainer.train_one
-with cv_strategy="both". Optuna's objective is PR-AUC-macro (search.py); AUC/
-F1-macro/QWK for the searched side come from the best trial's user_attrs, and
-the diagnostic side always runs a full metrics pass, so all four metrics
-(AUC, F1-macro, PR-AUC-macro, QWK) are available on both sides regardless of
-log_full_cv_diagnostics:
+with cv_strategy="both", post the refactor-nested-cv-optuna-schratz-method
+branch. Under cv_strategy="both", __init__ always resolves the primary
+strategy to stratified_spatial_block (spatial), so the PRIMARY side's
+genuinely nested CV pass (nested_cv.run_nested_cv) is now MANDATORY and
+unconditional — there is no more non-nested/cheap fallback for it, since
+that used to be exactly the Varma & Simon (2006) bias this branch removes.
 
-- With modeling.log_full_cv_diagnostics=True (the dissertation's
-  baseline.yaml setting): confirms the standard-vs-spatial full metrics
-  passes run without error, populate the returned dict's
-  cv_f1_macro_*/cv_pr_auc_macro_*/cv_qwk_*/cv_optimism_gap keys with
-  full-training-set values (rather than the search subsample) on the
-  searched side, fix the pre-existing bug where cv_auc_spatial_folds stayed
-  None under this config (breaking stage_selection.py's Kruskal-Wallis
-  test), and actually reach MLflow.
-- With the flag left at its default (False): confirms the expensive
-  primary-side full-training-set re-scoring pass is skipped entirely (not
-  just its results discarded), while every metric's optimism gap is still
-  logged correctly using the search subsample's cheap values on the
-  searched side — only cv_auc_spatial_folds (which needs a full pass on the
-  searched side specifically) stays unpopulated."""
+log_full_cv_diagnostics now gates only the DIAGNOSTIC (standard, comparison-
+only) side's own nested CV pass — this is the flip from the pre-nested-CV
+behavior (where the diagnostic side always ran and the flag gated the
+PRIMARY side's full pass instead):
+
+- log_full_cv_diagnostics=True (the dissertation's baseline.yaml setting):
+  both sides run genuinely nested CV, cv_optimism_gap is populated from two
+  real nested estimates, and cv_auc_spatial_folds (consumed by
+  stage_selection's Kruskal-Wallis test) is populated from the primary
+  (spatial) side's outer-fold AUCs.
+- log_full_cv_diagnostics=False (schema default): only the primary
+  (spatial) side runs nested CV — cv_auc_spatial/cv_f1_macro_spatial/
+  cv_pr_auc_macro_spatial/cv_qwk_spatial and cv_auc_spatial_folds are still
+  populated (mandatory, unconditional), but the standard side and
+  cv_optimism_gap stay None, since the diagnostic pass never runs."""
 
 import numpy as np
 import pandas as pd
@@ -92,25 +94,23 @@ def test_train_one_populates_optimism_gap_metrics(full_diagnostics_trainer, spat
         run_post_training_evaluation=False,
     )
 
-    # standard-vs-spatial AUC gap already existed pre-this-change; F1-macro,
-    # PR-AUC-macro, and QWK are new.
     assert result["cv_optimism_gap"] is not None
     assert set(result["cv_optimism_gap"]) == {"auc", "f1_macro", "pr_auc_macro", "qwk"}
     for v in result["cv_optimism_gap"].values():
         assert isinstance(v, float)
 
     for key in (
+        "cv_auc_standard", "cv_auc_spatial",
         "cv_f1_macro_standard", "cv_f1_macro_spatial",
         "cv_pr_auc_macro_standard", "cv_pr_auc_macro_spatial",
         "cv_qwk_standard", "cv_qwk_spatial",
     ):
         assert isinstance(result[key], float), f"{key} was not populated: {result[key]!r}"
 
-    # Regression coverage for the pre-existing bug where cv_auc_spatial_folds
-    # stayed None under cv_strategy="both" (primary always resolves to
-    # stratified_spatial_block, which requires groups) — this list feeds
-    # stage_selection.py's Kruskal-Wallis cross-model test, which silently
-    # no-op'd every season as a result.
+    # cv_auc_spatial_folds feeds stage_selection.py's Kruskal-Wallis
+    # cross-model test — these are now genuinely nested outer-fold AUCs
+    # (refit-best-inner-params-on-outer-train, score-on-outer-test), one
+    # per outer fold of the primary (spatial) strategy.
     assert result["cv_auc_spatial_folds"] is not None
     assert len(result["cv_auc_spatial_folds"]) == CV_FOLDS
     assert all(isinstance(v, float) for v in result["cv_auc_spatial_folds"])
@@ -149,24 +149,26 @@ def test_train_one_logs_optimism_gap_metrics_to_mlflow(full_diagnostics_trainer,
         assert not pd.isna(row[metric]), f"{metric} was logged as NaN"
 
 
-def test_log_full_cv_diagnostics_defaults_off_and_skips_the_expensive_pass(
+def test_log_full_cv_diagnostics_defaults_off_and_skips_the_diagnostic_side(
     cheap_default_trainer, spatial_dataset, monkeypatch,
 ):
-    """With the flag left at its schema default (False), the primary
-    strategy's full-training-set re-scoring pass — ModelTrainer's own
-    _run_full_metrics_pass, called with role="primary" — must not run at
-    all (not just have its results discarded), since that call is the ~2x
-    cost this flag exists to gate."""
+    """With the flag left at its schema default (False), the DIAGNOSTIC
+    (standard) side's nested CV pass — ModelTrainer's own _run_nested_cv,
+    called a second time for the diagnostic strategy — must not run at
+    all (not just have its results discarded): that's the ~half of
+    'both' mode's nested-CV cost this flag exists to gate. The PRIMARY
+    (spatial) side's nested CV pass is unconditional and must still run
+    exactly once."""
     from wildfire_susceptibility.modeling.training.trainer import ModelTrainer
 
-    seen_roles = []
-    original = ModelTrainer._run_full_metrics_pass
+    call_strategy_names = []
+    original = ModelTrainer._run_nested_cv
 
-    def _spy(self, strategy, model_cls, best_params, X_tr, y_train, groups_train, season, model_name, role):
-        seen_roles.append(role)
-        return original(self, strategy, model_cls, best_params, X_tr, y_train, groups_train, season, model_name, role)
+    def _spy(self, strategy, *args, **kwargs):
+        call_strategy_names.append(strategy.name)
+        return original(self, strategy, *args, **kwargs)
 
-    monkeypatch.setattr(ModelTrainer, "_run_full_metrics_pass", _spy)
+    monkeypatch.setattr(ModelTrainer, "_run_nested_cv", _spy)
 
     X, y, groups = spatial_dataset
     result = cheap_default_trainer.train_one(
@@ -178,31 +180,20 @@ def test_log_full_cv_diagnostics_defaults_off_and_skips_the_expensive_pass(
         run_post_training_evaluation=False,
     )
 
-    assert seen_roles == ["diagnostic"], (
-        f"expected only the diagnostic pass to run when log_full_cv_diagnostics=False (default), "
-        f"got roles={seen_roles}"
+    assert call_strategy_names == ["stratified_spatial_block"], (
+        f"expected only the primary (spatial) side's nested CV to run when "
+        f"log_full_cv_diagnostics=False (default), got {call_strategy_names}"
     )
 
-    # Every metric's gap is still logged correctly (Bug A fix applies
-    # unconditionally, and AUC/F1-macro/PR-AUC-macro/QWK are all available
-    # cheaply on both sides even without the primary-side full pass: the
-    # diagnostic side from its own full pass, the searched side from
-    # Optuna's best_value/user_attrs).
-    assert set(result["cv_optimism_gap"]) == {"auc", "f1_macro", "pr_auc_macro", "qwk"}
-    assert result["cv_optimism_gap"]["auc"] == pytest.approx(
-        result["cv_auc_standard"] - result["cv_auc_spatial"]
-    )
-    assert result["cv_optimism_gap"]["pr_auc_macro"] == pytest.approx(
-        result["cv_pr_auc_macro_standard"] - result["cv_pr_auc_macro_spatial"]
-    )
+    # Primary (spatial) side is mandatory and unbiased regardless of the flag.
     for key in (
-        "cv_auc_standard", "cv_auc_spatial",
-        "cv_f1_macro_standard", "cv_f1_macro_spatial",
-        "cv_pr_auc_macro_standard", "cv_pr_auc_macro_spatial",
-        "cv_qwk_standard", "cv_qwk_spatial",
+        "cv_auc_spatial", "cv_f1_macro_spatial", "cv_pr_auc_macro_spatial", "cv_qwk_spatial",
     ):
-        assert isinstance(result[key], float), f"{key} should be populated cheaply, got {result[key]!r}"
+        assert isinstance(result[key], float), f"{key} should be populated, got {result[key]!r}"
+    assert result["cv_auc_spatial_folds"] is not None
+    assert len(result["cv_auc_spatial_folds"]) == CV_FOLDS
 
-    # ...but cv_auc_spatial_folds specifically needs a full pass on the
-    # *searched* side (for stage_selection's Kruskal-Wallis) and stays None.
-    assert result["cv_auc_spatial_folds"] is None
+    # Diagnostic (standard) side never ran, so its fields and the gap stay None.
+    for key in ("cv_auc_standard", "cv_f1_macro_standard", "cv_pr_auc_macro_standard", "cv_qwk_standard"):
+        assert result[key] is None, f"{key} should stay None when the diagnostic side is skipped, got {result[key]!r}"
+    assert result["cv_optimism_gap"] is None
