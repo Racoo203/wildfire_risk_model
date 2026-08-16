@@ -141,3 +141,88 @@ def test_stratify_blocks_into_folds_gives_every_fold_the_rarest_class():
     rare_blocks = [b for b, cls in zip(groups, y) if cls == 2]
     rare_folds = {fold_of_block[b] for b in rare_blocks}
     assert len(rare_folds) > 1, "the rare class's blocks were all dumped into a single fold"
+
+
+def _worked_example_blocks_and_labels():
+    """The exact six-block, one-rare-block example walked through in
+    stratified_spatial.py's module docstring (blocks A-F, class 2 confined
+    to block C) - kept here so that example is executed as a real
+    assertion, not just prose a reader has to trust."""
+    per_block_class_counts = {
+        "A": {0: 1, 1: 2, 2: 0},
+        "B": {0: 2, 1: 1, 2: 0},
+        "C": {0: 0, 1: 0, 2: 3},
+        "D": {0: 1, 1: 2, 2: 0},
+        "E": {0: 3, 1: 0, 2: 0},
+        "F": {0: 0, 1: 3, 2: 0},
+    }
+    blocks, labels = [], []
+    for block, counts in per_block_class_counts.items():
+        for cls, n in counts.items():
+            blocks.extend([block] * n)
+            labels.extend([cls] * n)
+    return pd.Series(blocks), pd.Series(labels)
+
+
+def test_count_rows_per_block_and_class_matches_worked_example():
+    groups, y = _worked_example_blocks_and_labels()
+    counts = StratifiedSpatialBlockCV._count_rows_per_block_and_class(groups, y)
+
+    assert counts["C"] == {0: 0, 1: 0, 2: 3}
+    assert counts["E"] == {0: 3, 1: 0, 2: 0}
+    assert set(counts.keys()) == {"A", "B", "C", "D", "E", "F"}
+
+
+def test_seed_every_fold_with_rarest_class_coverage_places_the_only_rare_block():
+    """Direct unit test of Pass 1 in isolation: block C is the sole carrier
+    of the rarest class (2), so it must be the very first block seeded,
+    landing in fold 0 (the first slot in round-robin order)."""
+    groups, y = _worked_example_blocks_and_labels()
+    block_class_counts = StratifiedSpatialBlockCV._count_rows_per_block_and_class(groups, y)
+    rarity_order = y.value_counts().sort_values().index.tolist()
+    assert rarity_order == [2, 0, 1]
+
+    fold_of_block, fold_class_counts = StratifiedSpatialBlockCV._seed_every_fold_with_rarest_class_coverage(
+        block_class_counts, rarity_order, n_folds=3,
+    )
+
+    assert fold_of_block["C"] == 0
+    assert fold_class_counts[0][2] == 3
+    # fold_class_counts only reflects what's actually been placed so far
+    assert sum(sum(f.values()) for f in fold_class_counts) == sum(
+        sum(block_class_counts[b].values()) for b in fold_of_block
+    )
+
+
+def test_greedily_fill_remaining_blocks_places_every_leftover_block():
+    """Direct unit test of Pass 2 in isolation, continuing from Pass 1's
+    output: every block Pass 1 left unassigned must end up placed exactly
+    once, without Pass 2 touching what Pass 1 already decided.
+
+    Uses the larger random block fixture (not the six-block worked
+    example) because the worked example is small enough that Pass 1 places
+    every block by itself, leaving Pass 2 nothing to do - a test built on
+    it would pass even if Pass 2's fill loop were completely broken."""
+    rng = np.random.default_rng(5)
+    groups, y = _synthetic_blocks_and_labels(rng, n_blocks=40, n_rare_blocks=4)
+    block_class_counts = StratifiedSpatialBlockCV._count_rows_per_block_and_class(groups, y)
+    rarity_order = y.value_counts().sort_values().index.tolist()
+
+    fold_of_block, fold_class_counts = StratifiedSpatialBlockCV._seed_every_fold_with_rarest_class_coverage(
+        block_class_counts, rarity_order, n_folds=4,
+    )
+    seeded_placements = dict(fold_of_block)  # snapshot before Pass 2 extends it
+    # precondition: Pass 1 must actually leave blocks unplaced, or this
+    # test isn't exercising Pass 2's fill loop at all.
+    assert len(seeded_placements) < len(block_class_counts)
+
+    StratifiedSpatialBlockCV._greedily_fill_remaining_blocks(
+        block_class_counts, rarity_order, n_folds=4,
+        fold_of_block=fold_of_block, fold_class_counts=fold_class_counts,
+    )
+
+    assert set(fold_of_block.keys()) == set(block_class_counts.keys())
+    for block, fold in seeded_placements.items():
+        assert fold_of_block[block] == fold, "Pass 2 reassigned a block Pass 1 already placed"
+    for c in rarity_order:
+        assert sum(f[c] for f in fold_class_counts) == int((y == c).sum())
