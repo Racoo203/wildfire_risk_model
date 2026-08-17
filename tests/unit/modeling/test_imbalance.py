@@ -57,3 +57,24 @@ def test_none_strategy_disables_both_mechanisms(minimal_modeling_config):
 
     assert strategy.smote_allowed("random_forest") is False
     assert strategy.sample_weight_for("random_forest", np.array([0, 1, 2, 3])) is None
+
+
+def test_native_balanced_produces_no_sample_weight_and_disables_smote(minimal_modeling_config):
+    """'native_balanced' (modeling/models/random_forest.py's
+    BalancedRandomForestClassifier, modeling/models/catboost_model.py's
+    auto_class_weights='Balanced') is mutually exclusive with both SMOTE
+    and the external cost_weighted sample_weight — each model handles
+    balancing internally, at model-construction time (via the
+    native_balanced kwarg trainer.py binds onto model_cls), not through
+    anything ImbalanceStrategy hands back here."""
+    config = minimal_modeling_config
+    config["modeling"]["use_smote"] = True  # would enable SMOTE under the legacy/default path
+    config["modeling"]["imbalance_strategy_by_model"] = {
+        "random_forest": "native_balanced", "catboost": "native_balanced",
+    }
+    strategy = ImbalanceStrategy(config)
+
+    for model_name in ("random_forest", "catboost"):
+        assert strategy.resolve(model_name) == "native_balanced"
+        assert strategy.smote_allowed(model_name) is False
+        assert strategy.sample_weight_for(model_name, np.array([0, 1, 2, 3])) is None

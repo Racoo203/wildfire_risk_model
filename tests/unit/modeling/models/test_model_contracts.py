@@ -127,6 +127,63 @@ def test_neural_net_fit_accepts_sample_weight_and_it_actually_changes_the_fit(sy
     )
 
 
+def test_random_forest_native_balanced_uses_balanced_random_forest_classifier(synthetic_classification_data):
+    """imbalance_strategy='native_balanced' must switch the underlying
+    estimator to imbalanced-learn's BalancedRandomForestClassifier (each
+    tree bootstraps a class-balanced sample), not plain
+    RandomForestClassifier with a differently-set knob — sklearn's RF
+    sample_weight only reweights the split criterion, not which rows get
+    bootstrapped, so it structurally cannot reproduce this behavior (see
+    scripts/experiment_imbalance_native_vs_costweighted.py: production RF
+    predicted "Very High" for 3 of 858,106 holdout pixels under
+    cost_weighted vs. ~35,500 of 3.85M full-domain pixels under this)."""
+    from imblearn.ensemble import BalancedRandomForestClassifier
+
+    X, y = synthetic_classification_data
+    model = MODELS["random_forest"](native_balanced=True, n_estimators=10, max_depth=3).fit(X, y)
+
+    assert isinstance(model.model, BalancedRandomForestClassifier)
+    proba = model.predict_proba(X)
+    assert proba.shape == (X.shape[0], 4)
+
+
+def test_random_forest_native_balanced_false_keeps_plain_random_forest(synthetic_classification_data):
+    """native_balanced is bound onto model_cls via functools.partial in
+    trainer.py (same mechanism as cat_features) — it is never a real
+    sklearn/imblearn constructor kwarg. Confirms the default/False path is
+    completely unaffected (still plain RandomForestClassifier) and that
+    popping the kwarg doesn't itself break anything."""
+    from sklearn.ensemble import RandomForestClassifier
+
+    X, y = synthetic_classification_data
+    model = MODELS["random_forest"](native_balanced=False, n_estimators=10, max_depth=3).fit(X, y)
+
+    assert isinstance(model.model, RandomForestClassifier)
+
+
+def test_catboost_native_balanced_sets_auto_class_weights(synthetic_classification_data):
+    """imbalance_strategy='native_balanced' must set CatBoost's own
+    auto_class_weights='Balanced' — the variant validated (scripts/
+    experiment_catboost_weighting_variants.py) to engage the rare classes
+    more than the external cost_weighted sample_weight (High recall
+    0.170->0.195, Very High recall 0.001->0.020) without the collapse
+    dampened (SqrtBalanced) or manually over-weighted variants showed."""
+    X, y = synthetic_classification_data
+    model = MODELS["catboost"](native_balanced=True, iterations=10, depth=3).fit(X, y)
+
+    assert model.model.get_params().get("auto_class_weights") == "Balanced"
+
+
+def test_catboost_native_balanced_false_leaves_auto_class_weights_unset(synthetic_classification_data):
+    """Same rationale as the random_forest version above — native_balanced
+    is a trainer.py-level binding, not a real CatBoostClassifier kwarg;
+    confirms the default/False path doesn't set auto_class_weights at all."""
+    X, y = synthetic_classification_data
+    model = MODELS["catboost"](native_balanced=False, iterations=10, depth=3).fit(X, y)
+
+    assert model.model.get_params().get("auto_class_weights") is None
+
+
 def test_random_forest_cost_weighted_pins_class_weight_to_none(synthetic_classification_data):
     """RF's class_weight is an Optuna-searched hyperparameter (None/'balanced').
     When an external sample_weight is supplied (cost_weighted strategy),
@@ -190,12 +247,32 @@ def test_param_space_returns_dict_optuna_can_consume(synthetic_classification_da
         assert isinstance(space, dict) and len(space) > 0
 
 
-def test_random_forest_search_space_bounds_tightened_against_overfitting():
-    """Deployed RF models were consistently landing at/near the old
-    max_depth=25 ceiling and min_samples_leaf=1 floor (depth=23, leaf=2 in
-    one case), with standard-CV AUC ~0.99 collapsing to ~0.5-0.55 on spatial
-    CV and true validation. Pins the tightened range so a future edit can't
-    silently widen it back toward that overfitting regime."""
+def test_random_forest_search_space_widened_for_deeper_learning():
+    """Supersedes the old test_random_forest_search_space_bounds_tightened_
+    against_overfitting pin (08/16/2026: max_depth capped at 12,
+    min_samples_leaf/min_samples_split floors raised to 5/10, after
+    deployed RF models were landing at/near the old max_depth=25 ceiling
+    and min_samples_leaf=1 floor with standard-CV AUC ~0.99 collapsing to
+    ~0.5-0.55 on spatial CV/true validation).
+
+    Re-widened 08/17/2026 (max_depth 12->20, min_samples_leaf floor 5->2,
+    min_samples_split floor 10->5): that tightening was diagnosed under
+    labels.classify_method="jenks"/n_classes=4, where the rarest class
+    was ~0.1-0.2% of the data. Under classify_method="gmm"/n_classes=3
+    (configs/experiment/baseline.yaml), the rarest class is ~9.8% of
+    training data, and the standard-vs-spatial optimism gap that
+    motivated the original tightening independently collapsed from
+    ~0.35 to ~0.02-0.03 PR-AUC-macro at the OLD tight bounds — evidence
+    the specific overfitting exploit (a deep tree carving one leaf around
+    a handful of memorized rare-class points) may no longer be reachable
+    under the new label balance. This widening is the deliberate,
+    user-requested empirical test of that hypothesis, not an assumption
+    it's true — a rerun's optimism gap staying low at the new bounds
+    would support it; the gap reopening would refute it.
+    max_features/max_samples deliberately left untouched, to isolate the
+    depth/leaf effect from other regularization knobs.
+    Pins the NEW range so a future edit can't silently drift it (in
+    either direction) without an equally deliberate decision."""
     optuna = pytest.importorskip("optuna")
     study = optuna.create_study()
     trial = study.ask()
@@ -203,9 +280,9 @@ def test_random_forest_search_space_bounds_tightened_against_overfitting():
     space = MODELS["random_forest"]().param_space(trial)
 
     assert "max_samples" in space, "row-subsampling knob must stay in the search space"
-    assert (trial.distributions["max_depth"].low, trial.distributions["max_depth"].high) == (3, 12)
-    assert (trial.distributions["min_samples_leaf"].low, trial.distributions["min_samples_leaf"].high) == (5, 30)
-    assert (trial.distributions["min_samples_split"].low, trial.distributions["min_samples_split"].high) == (10, 40)
+    assert (trial.distributions["max_depth"].low, trial.distributions["max_depth"].high) == (3, 20)
+    assert (trial.distributions["min_samples_leaf"].low, trial.distributions["min_samples_leaf"].high) == (2, 30)
+    assert (trial.distributions["min_samples_split"].low, trial.distributions["min_samples_split"].high) == (5, 40)
     assert (trial.distributions["max_samples"].low, trial.distributions["max_samples"].high) == (0.3, 0.8)
 
 

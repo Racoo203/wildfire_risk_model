@@ -362,6 +362,39 @@ def plot_spatial_correlogram(correlogram_df: pd.DataFrame, figures_dir, season: 
     out_path = out_dir / "spatial_correlogram.png"
     return _save_and_log(fig, out_path, figures_dir, "spatial_autocorrelation_correlogram",
                           "viz.charts.plot_spatial_correlogram", season)
+
+
+def plot_semivariogram(semivariogram_df: pd.DataFrame, range_summary_df: pd.DataFrame,
+                        figures_dir, season: Optional[str] = None) -> Path:
+    """Empirical semivariance vs. distance band, one line per (season,
+    layer) group, with the fitted spherical model's range_m marked as a
+    vertical line — the semivariogram's counterpart to
+    plot_spatial_correlogram's "I drops to ~0" cutoff. Saved under
+    {season}/eda/ when `season` is given, matching every other per-season
+    figure's layout."""
+    fig, ax = plt.subplots(figsize=(9, 6))
+    for (grp_season, layer), grp in semivariogram_df.groupby(["season", "layer"]):
+        label = layer if season else f"{grp_season} — {layer}"
+        line, = ax.plot(grp["lag_lo_m"], grp["gamma"], marker="o", label=label)
+
+        fit_rows = range_summary_df[
+            (range_summary_df["season"] == grp_season) & (range_summary_df["layer"] == layer)
+        ]
+        if len(fit_rows) and np.isfinite(fit_rows.iloc[0]["range_m"]):
+            ax.axvline(fit_rows.iloc[0]["range_m"], color=line.get_color(), linestyle=":", alpha=0.5)
+
+    ax.set_xlabel("Distance band lower edge (m)")
+    ax.set_ylabel("Semivariance $\\gamma(h)$")
+    ax.set_title("Empirical semivariogram" + (f" ({season})" if season else "") +
+                 " — dotted lines mark each layer's fitted spherical range")
+    ax.legend(fontsize=7, loc="lower right")
+
+    out_dir = Path(figures_dir) / season / "eda" if season else Path(figures_dir) / "eda"
+    out_path = out_dir / "semivariogram.png"
+    return _save_and_log(fig, out_path, figures_dir, "spatial_autocorrelation_semivariogram",
+                          "viz.charts.plot_semivariogram", season)
+
+
 def plot_optuna_optimization_history(study, figures_dir, season=None, model_name=None) -> Path:
     """Optuna's per-trial objective value + running best, for one
     (season, model) hyperparameter search."""

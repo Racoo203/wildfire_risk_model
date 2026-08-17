@@ -2,6 +2,7 @@ from .charts import (
     plot_vif_correlation, plot_class_balance, plot_nan_coverage,
     plot_roc_curves, plot_shap_summary, plot_cv_comparison,
     plot_temporal_decomposition, plot_acf_pacf, plot_spatial_correlogram,
+    plot_semivariogram,
     plot_confusion_matrix, plot_optuna_optimization_history,
     plot_optuna_param_importances, plot_shap_dependence
 )
@@ -21,6 +22,7 @@ __all__ = [
     "plot_temporal_decomposition",
     "plot_acf_pacf",
     "plot_spatial_correlogram",
+    "plot_semivariogram",
     "plot_optuna_optimization_history",
     "plot_optuna_param_importances",
     "plot_shap_dependence",

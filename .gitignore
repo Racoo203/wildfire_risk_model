@@ -8,4 +8,4 @@ wildfire_susceptibility.egg-info/*
 mlflow.db
 __pycache__/
 *.pyc
-.env
+.envcatboost_info/

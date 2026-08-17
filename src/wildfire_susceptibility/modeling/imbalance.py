@@ -1,10 +1,13 @@
 # wildfire_susceptibility/modeling/imbalance.py
 """Resolves modeling.imbalance_strategy (+ per-model override) to which
 imbalance-handling mechanism applies for a given model: SMOTE resampling
-("smote"), cost-weighted sample_weight ("cost_weighted"), or neither
-("none"). Mutually exclusive by construction — "cost_weighted" makes
-SMOTEResampler.resample() a no-op regardless of use_smote, so the two
-mechanisms never stack and double-correct the same imbalance."""
+("smote"), cost-weighted sample_weight ("cost_weighted"), each model's own
+native mechanism ("native_balanced" — see modeling/models/random_forest.py
+and modeling/models/catboost_model.py for what that means per model), or
+neither ("none"). Mutually exclusive by construction — both
+"cost_weighted" and "native_balanced" make SMOTEResampler.resample() a
+no-op regardless of use_smote, and neither ever produces a sample_weight
+for the other to double-correct against."""
 
 from typing import Optional
 
