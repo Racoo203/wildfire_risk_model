@@ -2,7 +2,7 @@ processing:
   force_recompute: false
 
 seasons:
-  active: ["summer"]     # your three seasonal models — the headline stratification
+  active: ["spring", "summer", "fall"]     # your three seasonal models — the headline stratification
 
 labels:
   density_method: "kde"
@@ -14,7 +14,7 @@ labels:
 
 modeling:
   mlflow_experiment: "wf-diss"
-  cv_strategy: "both"                      # mandatory for RQ1 — you need both sides to report the optimism gap
+  cv_strategy: "spatial"                      # mandatory for RQ1 — you need both sides to report the optimism gap
   log_full_cv_diagnostics: true            # this IS the reported run, per the flag's own docstring
   cv_folds: 5                              # trimmed from schema default 5 — deliberate cost control, see note below
   models: ["ordinal_lr", "random_forest", "catboost"]   # see flag below re: neural_net

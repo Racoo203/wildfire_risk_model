@@ -39,6 +39,26 @@ def synthetic_tabular_4class():
 
 
 @pytest.fixture
+def synthetic_tabular_4class_with_categorical():
+    """Same shape as synthetic_tabular_4class, plus a native-categorical
+    landuse_class column at the last position — object-dtype array with
+    real int codes there (mirrors modeling.categorical.to_model_array's
+    output), not a plain float column. This is what actually reproduces
+    the CatBoost/SHAP crash below: a model with zero categorical splits
+    (the old fixture) never exercises the tree-parsing code path that
+    crashes."""
+    rng = np.random.default_rng(0)
+    n = 60
+    numeric = rng.normal(size=(n, 3))
+    score = numeric[:, 0] + 0.5 * numeric[:, 1]
+    y = np.digitize(score, np.quantile(score, [0.25, 0.5, 0.75]))
+    X = np.empty((n, 4), dtype=object)
+    X[:, :3] = numeric
+    X[:, 3] = rng.integers(0, 4, size=n)
+    return X, y, ["elevation", "slope", "ndvi", "landuse_class"]
+
+
+@pytest.fixture
 def shap_config(tmp_path):
     return {"base": {"figures_dir": str(tmp_path / "figures")}}
 
@@ -79,14 +99,26 @@ def test_kernel_explainer_path_works_for_ordinal_lr(synthetic_tabular_4class, sh
 
 
 @pytest.mark.slow
-def test_tree_explainer_path_works_for_catboost(synthetic_tabular_4class, shap_config):
-    """catboost is the other model routed through the TreeExplainer branch
-    (`model_name in ("random_forest", "xgboost", "catboost")`), and is now
-    the finalized-roster tree model replacing xgboost — confirmed working
-    empirically during the reporting audit against a real trained model,
-    ported here as permanent coverage."""
-    X, y, feature_names = synthetic_tabular_4class
-    model = CatBoostModel(iterations=20).fit(X, y)
+def test_native_shap_path_works_for_catboost_with_categorical_feature(
+    synthetic_tabular_4class_with_categorical, shap_config
+):
+    """catboost is routed through its own native SHAP computation
+    (`model.get_feature_importance(type="ShapValues")` via a catboost.Pool),
+    not shap.TreeExplainer — shap.TreeExplainer(catboost_model) segfaults
+    (access violation inside shap's _cext extension, confirmed against
+    shap==0.52.0/catboost==1.2.10) as soon as it's constructed against a
+    CatBoost model carrying a native categorical feature, because its
+    tree-parsing internals don't correctly represent CatBoost's
+    oblivious/CTR-based categorical splits.
+
+    This must use a fixture with a real cat_features-bound categorical
+    column: the previous version of this test trained CatBoost on purely
+    numeric features with no cat_features at all, so it never exercised
+    the code path that actually crashes — it passed even against the
+    crashing shap.TreeExplainer code, which is why the bug shipped
+    unnoticed."""
+    X, y, feature_names = synthetic_tabular_4class_with_categorical
+    model = CatBoostModel(iterations=20, cat_features=[3]).fit(X, y)
 
     result = _try_shap_plots(model, X, feature_names, "summer", "catboost", shap_config)
 

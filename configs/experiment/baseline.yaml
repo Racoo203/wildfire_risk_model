@@ -17,7 +17,7 @@ modeling:
   cv_strategy: "both"                      # both sides, to exercise the full optimism-gap + Kruskal-Wallis code path
   log_full_cv_diagnostics: true            # pays for the primary side's full re-scoring pass — this run exists to prove that path doesn't crash, not to be fast
   cv_folds: 2                              # smallest sane fold count, same reason
-  models: ["ordinal_lr", "random_forest"]  # fastest two — one parametric, one non-parametric, enough to exercise both code paths
+  models: ["ordinal_lr", "random_forest", "catboost"]  # fastest two — one parametric, one non-parametric, enough to exercise both code paths
   imbalance_strategy: "cost_weighted"
   optuna_n_trials: 3                       # just enough to confirm Optuna wiring, not to tune anything
   excluded_features: ["tas", "tasmin", "sfcWind", "d_fires"]
