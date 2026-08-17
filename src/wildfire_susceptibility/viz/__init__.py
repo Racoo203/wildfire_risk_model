@@ -8,10 +8,12 @@ from .charts import (
 from .maps import render_factor_map, render_susceptibility_map, render_all_factor_maps
 from .terrain_overlay import save_terrain_map
 from .spearman_significance import compute_spearman_significance_export
+from .one_hot import one_hot_encode_categoricals
 
 __all__ = [
     "plot_vif_correlation",
     "compute_spearman_significance_export",
+    "one_hot_encode_categoricals",
     "plot_class_balance",
     "plot_nan_coverage",
     "plot_roc_curves",

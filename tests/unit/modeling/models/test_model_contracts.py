@@ -254,3 +254,57 @@ def test_catboost_fits_with_new_regularization_params(synthetic_classification_d
 
     proba = model.predict_proba(X)
     assert proba.shape[0] == X.shape[0]
+
+
+def test_neural_net_search_space_bounds_tightened_against_overfitting():
+    """neural_net was untouched by the RF/CatBoost overfitting-tightening
+    pass despite having the most capacity of the four models (up to 4
+    layers x 256 units) and a regularization floor that let trials disable
+    both dropout (0.0) and weight_decay (1e-6) at once. Pins the tightened
+    range so a future edit can't silently widen it back."""
+    optuna = pytest.importorskip("optuna")
+    study = optuna.create_study()
+    trial = study.ask()
+
+    space = MODELS["neural_net"]().param_space(trial)
+
+    assert set(trial.distributions["hidden_dim"].choices) == {32, 64, 128}
+    assert (trial.distributions["n_layers"].low, trial.distributions["n_layers"].high) == (1, 3)
+    assert (trial.distributions["dropout"].low, trial.distributions["dropout"].high) == (0.1, 0.5)
+    assert (trial.distributions["weight_decay"].low, trial.distributions["weight_decay"].high) == (1e-4, 1e-2)
+
+
+def test_neural_net_early_stopping_halts_before_epoch_ceiling(synthetic_classification_data):
+    """fit() previously had no validation split and no stopping mechanism —
+    it always trained for exactly `epochs` regardless of overfitting. With
+    lr=0 the model can't improve after its first epoch, so a non-trivial
+    early_stopping_patience should trigger well before the (deliberately
+    high) epoch ceiling is reached."""
+    torch = pytest.importorskip("torch")
+    X, y = synthetic_classification_data
+
+    model = MODELS["neural_net"](
+        epochs=50, lr=0.0, early_stopping_patience=2,
+    ).fit(X, y)
+
+    assert model.n_epochs_trained < 50, (
+        "neural_net trained for the full epoch ceiling — early stopping "
+        "did not trigger even with a stalled loss"
+    )
+
+
+def test_neural_net_early_stopping_restores_best_weights(synthetic_classification_data):
+    """Confirm fit() reloads the best-val-loss checkpoint rather than
+    whatever weights happen to be live when training stops — the whole
+    point of early stopping is to not keep the post-overfitting weights."""
+    torch = pytest.importorskip("torch")
+    X, y = synthetic_classification_data
+
+    model = MODELS["neural_net"](epochs=10, early_stopping_patience=3).fit(X, y)
+
+    restored = {k: v.clone() for k, v in model.model.state_dict().items()}
+    proba_a = model.predict_proba(X)
+    proba_b = model.predict_proba(X)
+    np.testing.assert_allclose(proba_a, proba_b)
+    for k, v in model.model.state_dict().items():
+        assert torch.equal(v, restored[k])

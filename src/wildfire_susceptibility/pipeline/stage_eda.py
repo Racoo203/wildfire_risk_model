@@ -132,12 +132,24 @@ def stage_eda(config: dict, input_paths: dict) -> Dict[str, dict]:
         df_raw = pd.read_csv(raw[season]["train"])
         df_clean = pd.read_csv(clean[season]["train"])
 
-        feature_cols = [c for c in df_clean.columns if c not in ("label", "_x", "_y", "tas", "tasmin")]
+        # Mirrors stage_train.py's own feature_cols derivation exactly, so
+        # the VIF chart reflects whatever the models actually train on
+        # (today: excludes tas, tasmin, d_fires per modeling.excluded_features
+        # -- not a hardcoded list here that can drift from that config).
+        excluded = set(config.get("modeling", {}).get("excluded_features", []))
+        feature_cols = [c for c in df_clean.columns if not c.startswith("_") and c != "label" and c not in excluded]
+
+        # Spearman heatmap is a broader diagnostic view -- every column,
+        # including label/_x/_y/excluded features, not just the trained
+        # feature set (plot_vif_correlation one-hot expands landuse_class).
+        spearman_cols = list(df_clean.columns)
 
         nan_arrays = {c: df_raw[c].to_numpy() for c in df_raw.columns if c != "label"}
         nan_path = viz.plot_nan_coverage(nan_arrays, figures_dir, season=season)
 
-        vif_paths = viz.plot_vif_correlation(df_clean, feature_cols, figures_dir, season=season)
+        vif_paths = viz.plot_vif_correlation(
+            df_clean, feature_cols, figures_dir, season=season, spearman_cols=spearman_cols
+        )
 
         spearman_sig = viz.compute_spearman_significance_export(df_clean, figures_dir, season=season)
         logger.info(

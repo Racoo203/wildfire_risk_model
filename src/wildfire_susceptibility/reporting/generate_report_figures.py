@@ -244,10 +244,18 @@ def generate_eda_figures(cfg: dict, season: str) -> None:
     df = pd.read_csv(csv_path)
     figures_dir = _figures_dir(cfg)
 
-    feature_cols = [c for c in df.columns if c not in ("label",) and not c.startswith("_")]
+    # Mirrors stage_train.py's own feature_cols derivation exactly, so the
+    # VIF chart reflects whatever the models actually train on.
+    excluded = set(cfg["modeling"].get("excluded_features", []))
+    feature_cols = [c for c in df.columns if not c.startswith("_") and c != "label" and c not in excluded]
+
+    # Spearman heatmap is a broader diagnostic view -- every column,
+    # including label/_x/_y/excluded features, not just the trained
+    # feature set (plot_vif_correlation one-hot expands landuse_class).
+    spearman_cols = list(df.columns)
 
     # VIF + Pearson + Spearman correlation, using the paper's exact thresholds
-    viz.plot_vif_correlation(df, feature_cols, figures_dir, season=season)
+    viz.plot_vif_correlation(df, feature_cols, figures_dir, season=season, spearman_cols=spearman_cols)
 
     # NaN coverage -- read directly from the raster feature stack so pre-
     # imputation NaN rates are shown (the CSV may already be post-cleaning).

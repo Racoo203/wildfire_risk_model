@@ -10,11 +10,13 @@ The correlogram was originally scoped narrowly to empirically justify
 spatial_block_size_m/spatial_buffer_m (configs/modeling.yaml) against just
 4 sample layers; here it runs across every discoverable feature raster per
 active season, since the underlying spatial_correlogram() function is
-generic over any point sample.
+generic over any point sample. Each season's result table/plot is saved
+under its own {season}/eda/ directory (not pooled into a single top-level
+eda/), matching every other per-season figure's layout.
 
     stage_temporal_eda(config) -> {
-        "stationarity_summary": Path,   # csv
-        "spatial_correlogram": Path,    # csv
+        "stationarity_summary": Path,           # csv
+        "spatial_correlogram": Dict[str, Path],  # csv per season
     }
 
 Reads raw HadUK NetCDF directly (climate time series) and sampled feature
@@ -46,7 +48,7 @@ _STATIC_FEATURE_FILES = {
     "aspect": "topo_aspect.tif",
     "d_roads": "dist_roads.tif",
     "d_rivers": "dist_rivers.tif",
-    "d_activity": "dist_activity.tif",
+    "d_buildings": "dist_buildings.tif",
 }
 
 
@@ -96,42 +98,55 @@ def _discover_feature_rasters(config: dict, season: str) -> Dict[str, Path]:
     """Every feature raster relevant to `season`, by the same naming
     convention reporting/generate_report_figures.py's
     discover_feature_rasters uses (kept independent rather than imported,
-    since pipeline stages shouldn't depend on the reporting script)."""
+    since pipeline stages shouldn't depend on the reporting script) —
+    except split is fixed to "train" here, not "test": this correlogram
+    exists to justify spatial_block_size_m/spatial_buffer_m, which only
+    ever partition the training set, so autocorrelation should be measured
+    on the same rasters spatial CV actually folds over.
+
+    Climate/NDVI/diurnal_range builders write a separate raster per split
+    (ClimateBuilder/VegetationBuilder), so these need the _train suffix
+    that's missing from the static (topography/proximity) filenames."""
     layers_dir = Path(config["base"]["output_dir"])
     haduk_vars = config["data_sources"]["haduk"]["sources"]
 
     candidates = {name: layers_dir / fname for name, fname in _STATIC_FEATURE_FILES.items()}
     candidates["d_fires"] = layers_dir / f"dist_fires_{season}.tif"
-    candidates["ndvi"] = layers_dir / f"ndvi_{season}.tif"
+    candidates["ndvi"] = layers_dir / f"ndvi_{season}_train.tif"
+    candidates["diurnal_range"] = layers_dir / f"meteo_diurnal_range_{season}_train.tif"
     for var in haduk_vars:
-        candidates[var] = layers_dir / f"meteo_{var}_{season}.tif"
+        candidates[var] = layers_dir / f"meteo_{var}_{season}_train.tif"
 
     return {name: path for name, path in candidates.items() if path.exists()}
 
 
-def _run_spatial_correlogram(config: dict, figures_dir) -> Path:
+def _run_spatial_correlogram(config: dict, figures_dir) -> Dict[str, Path]:
     """Distance-band Moran's I for every discoverable feature raster,
-    per active season."""
+    per active season. Each season's table/plot is written to its own
+    {season}/eda/ directory rather than pooled into one top-level eda/."""
     rng = np.random.default_rng(42)
 
-    frames = []
+    out_paths = {}
     for season in config["seasons"]["active"]:
+        frames = []
         for layer_name, path in _discover_feature_rasters(config, season).items():
             coords, values = sample_raster_points(path, CORRELOGRAM_N_SAMPLE, rng)
             df = spatial_correlogram(coords, values, CORRELOGRAM_BAND_EDGES)
             df["season"], df["layer"] = season, layer_name
             frames.append(df)
 
-    correlogram_df = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
+        correlogram_df = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
 
-    out_path = Path(figures_dir) / "eda" / "spatial_correlogram.csv"
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    correlogram_df.to_csv(out_path, index=False)
+        out_path = Path(figures_dir) / season / "eda" / "spatial_correlogram.csv"
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        correlogram_df.to_csv(out_path, index=False)
 
-    if not correlogram_df.empty:
-        viz.plot_spatial_correlogram(correlogram_df, figures_dir)
+        if not correlogram_df.empty:
+            viz.plot_spatial_correlogram(correlogram_df, figures_dir, season=season)
 
-    return out_path
+        out_paths[season] = out_path
+
+    return out_paths
 
 
 def stage_temporal_eda(config: dict) -> Dict[str, Path]:
@@ -155,7 +170,8 @@ def stage_temporal_eda(config: dict) -> Dict[str, Path]:
     pd.DataFrame(summary_rows).to_csv(stationarity_path, index=False)
     logger.info(f"[stage_temporal_eda] Stationarity summary -> {stationarity_path.name}")
 
-    correlogram_path = _run_spatial_correlogram(config, figures_dir)
-    logger.info(f"[stage_temporal_eda] Spatial correlogram -> {correlogram_path.name}")
+    correlogram_paths = _run_spatial_correlogram(config, figures_dir)
+    for season, path in correlogram_paths.items():
+        logger.info(f"[stage_temporal_eda] Spatial correlogram [{season}] -> {path}")
 
-    return {"stationarity_summary": stationarity_path, "spatial_correlogram": correlogram_path}
+    return {"stationarity_summary": stationarity_path, "spatial_correlogram": correlogram_paths}

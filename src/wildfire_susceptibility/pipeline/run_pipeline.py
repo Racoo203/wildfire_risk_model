@@ -134,7 +134,7 @@ def run_stage(stage: str, config: dict, state: dict) -> dict:
 
 def main(argv: Optional[List[str]] = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--stage", choices=[*STAGE_ORDER, "dataset", "train", "all"], default="all")
+    parser.add_argument("--stage", choices=[*STAGE_ORDER, "dataset", "train", "skip-temp-eda", "all"], default="all")
     parser.add_argument("--config-dir", type=Path, default=DEFAULT_CONFIG_DIR)
     parser.add_argument("--config-file", action="append", dest="config_files", default=None)
     parser.add_argument("--experiment", default=None)
@@ -164,6 +164,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         stages = TRAIN_ONLY
     elif args.stage == "eda":
         stages = EDA_ONLY
+    elif args.stage == "skip-temp-eda":
+        stages = STAGE_ORDER.pop()
     else: 
         stages = [args.stage]
 

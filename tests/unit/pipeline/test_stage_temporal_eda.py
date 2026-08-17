@@ -53,9 +53,14 @@ def test_discover_feature_rasters_finds_only_existing_layers(tmp_path):
     layers_dir = tmp_path / "layers"
     layers_dir.mkdir()
     (layers_dir / "topo_elevation.tif").write_bytes(b"")
-    (layers_dir / "ndvi_summer.tif").write_bytes(b"")
-    (layers_dir / "meteo_tasmax_summer.tif").write_bytes(b"")
+    (layers_dir / "dist_buildings.tif").write_bytes(b"")
+    (layers_dir / "ndvi_summer_train.tif").write_bytes(b"")
+    (layers_dir / "meteo_diurnal_range_summer_train.tif").write_bytes(b"")
+    (layers_dir / "meteo_tasmax_summer_train.tif").write_bytes(b"")
     # rainfall is configured but has no file on disk -> should be excluded
+    # a _test split file existing (but no _train) should also be excluded --
+    # the correlogram must read the same split spatial CV folds over
+    (layers_dir / "meteo_rainfall_summer_test.tif").write_bytes(b"")
 
     config = {
         "base": {"output_dir": str(layers_dir)},
@@ -64,7 +69,7 @@ def test_discover_feature_rasters_finds_only_existing_layers(tmp_path):
 
     found = _discover_feature_rasters(config, "summer")
 
-    assert set(found.keys()) == {"elevation", "ndvi", "tasmax"}
+    assert set(found.keys()) == {"elevation", "d_buildings", "ndvi", "diurnal_range", "tasmax"}
 
 
 def _write_dummy_raster(path, reference_transform, rng):
@@ -88,12 +93,15 @@ def test_run_spatial_correlogram_writes_csv_and_png(tmp_path, reference_transfor
         "seasons": {"active": ["summer"]},
     }
 
-    out_path = _run_spatial_correlogram(config, figures_dir)
+    out_paths = _run_spatial_correlogram(config, figures_dir)
 
+    assert set(out_paths.keys()) == {"summer"}
+    out_path = out_paths["summer"]
+    assert out_path == figures_dir / "summer" / "eda" / "spatial_correlogram.csv"
     assert out_path.exists()
     df = pd.read_csv(out_path)
     assert (df["layer"] == "elevation").any()
-    assert (figures_dir / "eda" / "spatial_correlogram.png").exists()
+    assert (figures_dir / "summer" / "eda" / "spatial_correlogram.png").exists()
 
 
 def test_stage_temporal_eda_end_to_end(tmp_path, monkeypatch, reference_transform):
@@ -118,7 +126,8 @@ def test_stage_temporal_eda_end_to_end(tmp_path, monkeypatch, reference_transfor
     out = stage_temporal_eda_module.stage_temporal_eda(config)
 
     assert out["stationarity_summary"].exists()
-    assert out["spatial_correlogram"].exists()
+    assert out["spatial_correlogram"]["summer"].exists()
+    assert out["spatial_correlogram"]["summer"] == figures_dir / "summer" / "eda" / "spatial_correlogram.csv"
 
     summary_df = pd.read_csv(out["stationarity_summary"])
     assert list(summary_df["feature"]) == ["tasmax"]

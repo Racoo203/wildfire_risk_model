@@ -2,7 +2,7 @@ processing:
   force_recompute: false
 
 seasons:
-  active: ["summer", "spring", "fall", "winter"]
+  active: ["summer"]
 labels:
   density_method: "convolution"
   classify_method: "jenks"

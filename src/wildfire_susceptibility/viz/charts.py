@@ -2,7 +2,7 @@
 class balance, NaN coverage — all logged to figures/manifest.json."""
 
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -14,6 +14,8 @@ import statsmodels.api as sm
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 
 from .manifest import append_to_manifest
+from .one_hot import one_hot_encode_categoricals
+from ..modeling.categorical import CATEGORICAL_FEATURES
 from ..modeling.class_labels import class_names_for
 
 import logging
@@ -152,10 +154,26 @@ def plot_vif_correlation(
     season: Optional[str] = None,
     vif_threshold: float = 10.0,
     corr_threshold: float = 0.8,
+    spearman_cols: Optional[List[str]] = None,
+    categorical_cols: Tuple[str, ...] = CATEGORICAL_FEATURES,
 ) -> Dict[str, Path]:
     """
     VIF bar chart + Spearman correlation heatmap, using the paper's exact
     thresholds (Section 1.3): VIF > 10 flags a feature.
+
+    VIF is computed on `feature_cols` only -- this should be the actual
+    final training feature set (whatever survives `excluded_features`
+    et al.), not a broader diagnostic column list, since VIF is a
+    multicollinearity check among the columns a model actually trains on.
+
+    The Spearman heatmap is a separate, broader diagnostic view and covers
+    `spearman_cols` instead (defaults to `feature_cols` if not given, so
+    other callers are unaffected) -- e.g. it's fine, even expected, for
+    this to also include the label and columns excluded from training.
+    Any column in `categorical_cols` present in `spearman_cols` is
+    one-hot expanded first so it participates as separate binary columns
+    rather than its raw, arbitrary integer code.
+
     Returns paths to VIF and Spearman figures.
     """
     X = df[feature_cols].dropna()
@@ -189,10 +207,20 @@ def plot_vif_correlation(
             f"[{season}] VIF: {(vifs > vif_threshold).sum()} feature(s) exceed VIF>{vif_threshold}"
         )
 
-    corr_spearman = X.corr(method="spearman")
-    fig2, ax2 = plt.subplots(figsize=(8, 7))
+    spearman_cols = feature_cols if spearman_cols is None else spearman_cols
+    spearman_df, _ = one_hot_encode_categoricals(df[spearman_cols], categorical_cols)
+    # Pairwise-complete (pandas' own default for .corr), not the row-wise
+    # dropna() VIF's X uses -- missingness in one column (e.g. the bottom-
+    # trimmed tail of a density-based label) shouldn't drop otherwise-
+    # complete rows from every other column pair's correlation.
+    corr_spearman = spearman_df.corr(method="spearman")
+    # Scales with column count (one-hot expansion can push this well past
+    # the old fixed 14-feature case) so annotated cells stay legible
+    # instead of shrinking/overlapping as more variables are added.
+    heatmap_side = max(8, 0.5 * len(corr_spearman.columns))
+    fig2, ax2 = plt.subplots(figsize=(heatmap_side, heatmap_side))
     sns.heatmap(corr_spearman, cmap="coolwarm", center=0, vmin=-1, vmax=1, ax=ax2, square=True,
-                annot=True, fmt=".2g", annot_kws={"size": 8})
+                annot=True, fmt=".3f", annot_kws={"size": 8})
     ax2.set_title("Spearman correlation" + (f" — {season}" if season else ""))
     spearman_path = _save_and_log(
         fig2, Path(figures_dir) / (season or "static") / "eda" / "correlation_spearman.png",
@@ -314,22 +342,26 @@ def plot_acf_pacf(series: pd.Series, name: str, figures_dir, lags: int = 36) -> 
                           params={"feature": name, "lags": lags})
 
 
-def plot_spatial_correlogram(correlogram_df: pd.DataFrame, figures_dir) -> Path:
+def plot_spatial_correlogram(correlogram_df: pd.DataFrame, figures_dir, season: Optional[str] = None) -> Path:
     """Moran's I vs. distance band, one line per (season, layer) group —
     the distance where I drops to ~0 / loses significance is the practical
-    range of spatial autocorrelation for that layer."""
+    range of spatial autocorrelation for that layer. Saved under
+    {season}/eda/ when `season` is given, matching every other per-season
+    figure's layout, rather than pooled into a single top-level eda/."""
     fig, ax = plt.subplots(figsize=(9, 6))
-    for (season, layer), grp in correlogram_df.groupby(["season", "layer"]):
-        ax.plot(grp["lag_lo_m"], grp["I"], marker="o", label=f"{season} — {layer}")
+    for (grp_season, layer), grp in correlogram_df.groupby(["season", "layer"]):
+        label = layer if season else f"{grp_season} — {layer}"
+        ax.plot(grp["lag_lo_m"], grp["I"], marker="o", label=label)
     ax.axhline(0, color="black", linestyle="--", alpha=0.4)
     ax.set_xlabel("Distance band lower edge (m)")
     ax.set_ylabel("Moran's I")
-    ax.set_title("Spatial autocorrelation correlogram")
+    ax.set_title("Spatial autocorrelation correlogram" + (f" ({season})" if season else ""))
     ax.legend(fontsize=7, loc="upper right")
 
-    out_path = Path(figures_dir) / "eda" / "spatial_correlogram.png"
+    out_dir = Path(figures_dir) / season / "eda" if season else Path(figures_dir) / "eda"
+    out_path = out_dir / "spatial_correlogram.png"
     return _save_and_log(fig, out_path, figures_dir, "spatial_autocorrelation_correlogram",
-                          "viz.charts.plot_spatial_correlogram")
+                          "viz.charts.plot_spatial_correlogram", season)
 def plot_optuna_optimization_history(study, figures_dir, season=None, model_name=None) -> Path:
     """Optuna's per-trial objective value + running best, for one
     (season, model) hyperparameter search."""
