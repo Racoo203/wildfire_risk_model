@@ -150,14 +150,14 @@ def test_objective_prunes_on_pr_auc_running_mean():
 
 def test_objective_excludes_a_partial_nan_fold_via_nanmean():
     """fix-spatial-cv-auc-missing-classes: self.cv_strategy is the
-    PRODUCTION strategy (often spatial/stratified_spatial_block, not just
-    the nested-CV inner loop's always-standard strategy), so this
-    objective hits the same missing-class scoring path as
-    nested_cv.run_nested_cv — fit_and_score_full's underlying scorer now
-    returns NaN (not 0.0) for a genuinely degenerate fold. One NaN fold
-    out of several must not poison the whole trial's tuned value (or its
-    user_attrs) to NaN via a plain np.mean; the objective must exclude it
-    (np.nanmean), same aggregation-safety decision as nested_cv.py."""
+    PRODUCTION strategy (often spatial/stratified_spatial_block), so this
+    objective can hit the same missing-class scoring path as
+    trainer.py's _run_full_metrics_pass — fit_and_score_full's underlying
+    scorer now returns NaN (not 0.0) for a genuinely degenerate fold. One
+    NaN fold out of several must not poison the whole trial's tuned value
+    (or its user_attrs) to NaN via a plain np.mean; the objective must
+    exclude it (np.nanmean), same aggregation-safety decision as
+    trainer.py's _run_full_metrics_pass."""
     scores_by_call = [
         {"auc": 0.8, "f1_macro": 0.6, "pr_auc_macro": 0.7, "qwk": 0.5},
         {"auc": float("nan"), "f1_macro": 0.4, "pr_auc_macro": float("nan"), "qwk": 0.3},
