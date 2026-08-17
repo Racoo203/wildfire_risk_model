@@ -63,8 +63,9 @@
   },
   "train": {
     "summer": {
-      "ordinal_lr": "models\\summer\\ordinal_lr\\31b6d8f9",
-      "random_forest": "models\\summer\\random_forest\\31b6d8f9"
+      "ordinal_lr": "models\\summer\\ordinal_lr\\3bd21225",
+      "random_forest": "models\\summer\\random_forest\\3bd21225",
+      "catboost": "models\\summer\\catboost\\3bd21225"
     }
   },
   "evaluate": {
