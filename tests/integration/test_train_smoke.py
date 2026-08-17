@@ -64,6 +64,7 @@ def test_train_one_runs_end_to_end(tiny_training_config, tiny_dataset, tmp_path,
     assert result["model"] is not None
     assert 0.0 <= result["cv_auc_standard"] <= 1.0
     assert result["val_auc"] is not None
+    assert result["val_pr_auc_macro"] is not None
 
 @pytest.mark.slow
 def test_train_one_raises_clear_error_for_unregistered_model(tiny_training_config, tiny_dataset, tmp_path, monkeypatch, fast_modeling_config):

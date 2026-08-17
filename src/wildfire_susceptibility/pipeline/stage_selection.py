@@ -32,7 +32,7 @@ def stage_selection(config: dict, input_paths: dict) -> Dict[str, Path]:
     logger = setup_logger()
     train_artifacts = input_paths["train"]
     eval_results = input_paths["evaluate"]
-    selection_rule = config["modeling"].get("selection_rule", "best_auc")
+    selection_rule = config["modeling"].get("selection_rule", "best_pr_auc")
 
     rows = []
     manifests: Dict[str, Dict[str, dict]] = {}
@@ -60,11 +60,12 @@ def stage_selection(config: dict, input_paths: dict) -> Dict[str, Path]:
                 "cv_qwk_optimism_gap": gap.get("qwk"),
                 "val_auc": manifest["val_auc"],
                 "val_f1": manifest["val_f1"],
+                "val_pr_auc_macro": manifest.get("val_pr_auc_macro"),
                 "val_qwk": manifest.get("val_qwk"),
                 "tf_pct_medium_plus": (eval_result.get("time_forward_validation") or {}).get("pct_medium_plus"),
             })
 
-    comparison_df = pd.DataFrame(rows).sort_values(["season", "cv_auc_standard"], ascending=[True, False])
+    comparison_df = pd.DataFrame(rows).sort_values(["season", "cv_pr_auc_macro_standard"], ascending=[True, False])
     figures_dir = Path(config["base"]["figures_dir"])
     figures_dir.mkdir(parents=True, exist_ok=True)
     comparison_path = figures_dir / "model_comparison.csv"
@@ -90,15 +91,32 @@ def _select_best_per_season(manifests: Dict[str, Dict[str, dict]], selection_rul
     for season, models in manifests.items():
         if selection_rule == "best_auc":
             best_model = max(models, key=lambda m: models[m]["val_auc"])
+        elif selection_rule == "best_pr_auc":
+            # PR-AUC-macro is Optuna's actual HPO objective (search.py) —
+            # picked over plain AUC there specifically because AUC "stays
+            # high under majority-class collapse" in a way PR-AUC doesn't.
+            # This rule closes the gap where the searched-for metric and
+            # the cross-model-selected-on metric used to disagree: winner
+            # selection now uses the same held-out-validation PR-AUC-macro
+            # (score_multiclass_fold via trainer.py::_fit_final_and_validate),
+            # not a CV mean.
+            best_model = max(models, key=lambda m: models[m]["val_pr_auc_macro"])
         elif selection_rule == "most_conservative":
-            # smallest optimism gap (standard - spatial CV AUC) among models
-            # within 1% of the best standard AUC — favors generalizable models
-            best_standard = max(m["cv_auc_standard"] for m in models.values())
+            # smallest optimism gap (standard - spatial CV PR-AUC-macro)
+            # among models within 1% of the best standard PR-AUC-macro —
+            # favors generalizable models. Uses PR-AUC-macro rather than
+            # AUC for the same majority-class-collapse-insensitivity reason
+            # as best_pr_auc above, so this rule and best_pr_auc agree on
+            # what "good" means.
+            best_standard = max(m["cv_pr_auc_macro_standard"] for m in models.values())
             candidates = {
                 name: m for name, m in models.items()
-                if m["cv_auc_standard"] >= best_standard - 0.01
+                if m["cv_pr_auc_macro_standard"] >= best_standard - 0.01
             }
-            best_model = min(candidates, key=lambda m: candidates[m]["cv_auc_standard"] - candidates[m]["cv_auc_spatial"])
+            best_model = min(
+                candidates,
+                key=lambda m: candidates[m]["cv_pr_auc_macro_standard"] - candidates[m]["cv_pr_auc_macro_spatial"],
+            )
         else:
             raise ValueError(f"Unknown selection_rule '{selection_rule}'")
 
@@ -108,15 +126,18 @@ def _select_best_per_season(manifests: Dict[str, Dict[str, dict]], selection_rul
 
 def _kruskal_wallis_per_season(manifests: Dict[str, Dict[str, dict]]) -> Dict[str, dict]:
     """
-    Kruskal-Wallis H-test across models' spatial-CV fold AUCs, per season.
+    Kruskal-Wallis H-test across models' spatial-CV fold PR-AUC-macro
+    values, per season. Uses PR-AUC-macro (not AUC) so the significance
+    test operates on the same metric that best_pr_auc/most_conservative
+    actually select on — see _select_best_per_season.
 
     ASSUMPTION: kruskal() treats each model's fold-score list as an
     independent sample — it does NOT require fold i in model A to
     correspond to fold i in model B (unlike a paired test). This holds
     regardless of fold alignment, so no assumption about matching fold
     splits across models is actually required here. What IS assumed is
-    that within a single (season, model) pair, cv_auc_spatial_folds was
-    produced by ModelTrainer._spatial_cv_check's FoldStrategy.make_folds
+    that within a single (season, model) pair, cv_pr_auc_macro_spatial_folds
+    was produced by ModelTrainer._spatial_cv_check's FoldStrategy.make_folds
     call — i.e. every fold score in the list came from the same spatial
     block partition for that model's search space. Since all models for
     a given season currently share one FoldStrategy instance and one
@@ -124,7 +145,7 @@ def _kruskal_wallis_per_season(manifests: Dict[str, Dict[str, dict]]) -> Dict[st
     practice equal across models within a season, but Kruskal-Wallis
     doesn't require this — it tolerates unequal group sizes.
 
-    cv_auc_spatial_folds can contain NaN entries (see
+    cv_pr_auc_macro_spatial_folds can contain NaN entries (see
     cv/base.py::score_multiclass_fold) for folds whose validation split
     shared fewer than 2 classes with what the model could score — those
     are dropped here before scipy ever sees them, per fold, per model, so
@@ -139,7 +160,7 @@ def _kruskal_wallis_per_season(manifests: Dict[str, Dict[str, dict]]) -> Dict[st
     for season, models in manifests.items():
         groups = {}
         for name, m in models.items():
-            folds = m.get("cv_auc_spatial_folds")
+            folds = m.get("cv_pr_auc_macro_spatial_folds")
             if not folds:
                 continue
             scored = [f for f in folds if not math.isnan(f)]

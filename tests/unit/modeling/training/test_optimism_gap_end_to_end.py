@@ -44,7 +44,13 @@ CV_FOLDS = 3
 def spatial_dataset():
     """Feature values cleanly separate by class (so fitted models score
     meaningfully above chance) with every class present in every block, so
-    stratified_spatial_block's fold assignment doesn't degenerate."""
+    the primary "spatial" strategy's group-based fold assignment (under
+    cv_strategy="both") doesn't degenerate. Groups are (block_x, block_y)
+    integer-grid tuples, one per block laid out along the x axis — the
+    same shape DatasetPrep.assign_spatial_blocks produces and
+    SpatialGroupKFoldCV requires (it expands each tuple back into a
+    coordinate for verde.BlockKFold, unlike StratifiedSpatialBlockCV,
+    which treats groups as opaque labels)."""
     rng = np.random.default_rng(0)
     rows, labels, blocks = [], [], []
     for b in range(N_BLOCKS):
@@ -52,7 +58,7 @@ def spatial_dataset():
             cls = int(rng.integers(0, N_CLASSES))
             rows.append([cls * 10.0 + rng.normal(0, 0.5), rng.normal(0, 0.5)])
             labels.append(cls)
-            blocks.append(f"blk_{b}")
+            blocks.append((b, 0))
     X = pd.DataFrame(rows, columns=["f1", "f2"])
     y = pd.Series(labels)
     groups = pd.Series(blocks)
@@ -64,20 +70,23 @@ def spatial_dataset_with_rare_class_confined_to_one_block():
     """Regression fixture for fix-spatial-cv-auc-missing-classes: unlike
     spatial_dataset above (every class present in every block, by design —
     see its docstring), class 3 here exists in exactly ONE spatial block.
-    With CV_FOLDS=3, stratified_spatial_block's fold assignment
-    (_seed_every_fold_with_rarest_class_coverage) puts that single block
-    into exactly one fold's VALIDATION split, so that fold's TRAINING
-    split has zero rows of class 3 (the only block carrying it is held
-    out) while its validation split still contains it — the exact shape
-    that broke AUC/PR-AUC scoring before the fix (predict_proba returning
-    fewer columns than the full label space). The other two outer folds
-    see zero rows of class 3 anywhere at all — degenerate for that one
-    class specifically, though not for the fold as a whole, since classes
-    0-2 are present in every block."""
+    With CV_FOLDS=3, the primary "spatial" strategy's group-based fold
+    assignment (any group-based K-fold puts each group/block wholly into
+    exactly one fold) puts that single block into exactly one fold's
+    VALIDATION split, so that fold's TRAINING split has zero rows of class
+    3 (the only block carrying it is held out) while its validation split
+    still contains it — the exact shape that broke AUC/PR-AUC scoring
+    before the fix (predict_proba returning fewer columns than the full
+    label space). The other two outer folds see zero rows of class 3
+    anywhere at all — degenerate for that one class specifically, though
+    not for the fold as a whole, since classes 0-2 are present in every
+    block. Groups are (block_x, block_y) integer-grid tuples — see
+    spatial_dataset's docstring above for why that shape is required now
+    that "both" resolves its primary side to SpatialGroupKFoldCV."""
     rng = np.random.default_rng(1)
     rows, labels, blocks = [], [], []
     for b in range(N_BLOCKS):
-        block_id = f"blk_{b}"
+        block_id = (b, 0)
         classes_this_block = [3] if b == 0 else [0, 1, 2]
         for _ in range(ROWS_PER_BLOCK):
             cls = int(rng.choice(classes_this_block))
@@ -148,12 +157,21 @@ def test_train_one_populates_optimism_gap_metrics(full_diagnostics_trainer, spat
 
     # Regression coverage for the pre-existing bug where cv_auc_spatial_folds
     # stayed None under cv_strategy="both" (primary always resolves to
-    # stratified_spatial_block, which requires groups) — this list feeds
+    # "spatial", which requires groups) — this list feeds
     # stage_selection.py's Kruskal-Wallis cross-model test, which silently
     # no-op'd every season as a result.
     assert result["cv_auc_spatial_folds"] is not None
     assert len(result["cv_auc_spatial_folds"]) == CV_FOLDS
     assert all(isinstance(v, float) for v in result["cv_auc_spatial_folds"])
+
+    # cv_pr_auc_macro_spatial_folds is the PR-AUC-macro sibling of the
+    # AUC-folds list above, added so stage_selection's Kruskal-Wallis test
+    # can run on PR-AUC-macro (the actual selection metric, see
+    # stage_selection.py::_select_best_per_season's best_pr_auc rule)
+    # instead of AUC.
+    assert result["cv_pr_auc_macro_spatial_folds"] is not None
+    assert len(result["cv_pr_auc_macro_spatial_folds"]) == CV_FOLDS
+    assert all(isinstance(v, float) for v in result["cv_pr_auc_macro_spatial_folds"])
 
 
 def test_train_one_logs_optimism_gap_metrics_to_mlflow(full_diagnostics_trainer, spatial_dataset):
@@ -243,9 +261,11 @@ def test_log_full_cv_diagnostics_defaults_off_and_skips_the_expensive_pass(
     ):
         assert isinstance(result[key], float), f"{key} should be populated cheaply, got {result[key]!r}"
 
-    # ...but cv_auc_spatial_folds specifically needs a full pass on the
-    # *searched* side (for stage_selection's Kruskal-Wallis) and stays None.
+    # ...but cv_auc_spatial_folds (and its PR-AUC-macro sibling) specifically
+    # need a full pass on the *searched* side (for stage_selection's
+    # Kruskal-Wallis) and stay None.
     assert result["cv_auc_spatial_folds"] is None
+    assert result["cv_pr_auc_macro_spatial_folds"] is None
 
 
 def test_train_one_survives_a_class_confined_to_a_single_spatial_block(
@@ -284,6 +304,11 @@ def test_train_one_survives_a_class_confined_to_a_single_spatial_block(
     # score, not the old bug's constant 0.0 fallback.
     assert all(not math.isnan(v) for v in folds), f"expected every fold scorable, got {folds}"
     assert not all(v == 0.0 for v in folds), "fold AUCs collapsing to the old constant-0.0 bug"
+
+    pr_auc_folds = result["cv_pr_auc_macro_spatial_folds"]
+    assert pr_auc_folds is not None
+    assert len(pr_auc_folds) == CV_FOLDS
+    assert all(not math.isnan(v) for v in pr_auc_folds), f"expected every fold scorable, got {pr_auc_folds}"
 
     for key in ("cv_auc_spatial", "cv_f1_macro_spatial", "cv_pr_auc_macro_spatial", "cv_qwk_spatial"):
         assert isinstance(result[key], float)

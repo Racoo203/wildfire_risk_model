@@ -25,7 +25,6 @@ import numpy as np
 import pandas as pd
 import geopandas as gpd
 import mlflow
-from sklearn.metrics import roc_auc_score, f1_score, cohen_kappa_score
 
 from ...core.registry import MODELS
 from .. import models  # noqa: F401 — registers model wrappers (two dots: training/ -> modeling/)
@@ -34,6 +33,7 @@ from ..dataset_prep import DatasetPrep
 from ..resampling import SMOTEResampler
 from ..imbalance import ImbalanceStrategy
 from ..cv import get_cv_strategy, requires_spatial_groups
+from ..cv.base import score_multiclass_fold
 from .search import HyperparamSearch
 from .evaluation import PostTrainingEvaluator
 from .optimism_gap import compute_optimism_gap
@@ -50,8 +50,8 @@ class ModelTrainer:
         self._ensure_mlflow_backend()
         mlflow.set_experiment(config["modeling"]["mlflow_experiment"])
 
-        cv_strategy_name = self.config["modeling"].get("cv_strategy", "stratified_spatial_block")
-        primary_strategy_name = "stratified_spatial_block" if cv_strategy_name == "both" else cv_strategy_name
+        cv_strategy_name = self.config["modeling"].get("cv_strategy", "spatial")
+        primary_strategy_name = "spatial" if cv_strategy_name == "both" else cv_strategy_name
 
         smote_during_search = config["modeling"].get("smote_during_search", False)
         search_target_size = config["modeling"].get("search_resample_target_size")
@@ -168,6 +168,7 @@ class ModelTrainer:
             self._log_run_setup(season, model_name, best_params, best_value, search_uses_groups, best_trial_metrics)
 
             cv_auc_spatial, cv_auc_standard, cv_auc_spatial_folds = None, None, None
+            cv_pr_auc_macro_spatial_folds = None
             cv_f1_macro_standard, cv_f1_macro_spatial = None, None
             cv_pr_auc_macro_standard, cv_pr_auc_macro_spatial = None, None
             cv_qwk_standard, cv_qwk_spatial = None, None
@@ -239,11 +240,13 @@ class ModelTrainer:
                         # since it's available and more accurate than the
                         # subsample-based user_attrs fallback.
                         cv_auc_spatial_folds = [f["auc"] for f in primary_folds]
+                        cv_pr_auc_macro_spatial_folds = [f["pr_auc_macro"] for f in primary_folds]
                         standard_metrics = dict(diagnostic_mean)
                         spatial_metrics = {**primary_mean, "pr_auc_macro": cv_pr_auc_macro_spatial}
                         standard_folds, spatial_folds = diagnostic_folds, primary_folds
                     else:
                         cv_auc_spatial_folds = [f["auc"] for f in diagnostic_folds]
+                        cv_pr_auc_macro_spatial_folds = [f["pr_auc_macro"] for f in diagnostic_folds]
                         standard_metrics = {**primary_mean, "pr_auc_macro": cv_pr_auc_macro_standard}
                         spatial_metrics = dict(diagnostic_mean)
                         standard_folds, spatial_folds = primary_folds, diagnostic_folds
@@ -285,11 +288,12 @@ class ModelTrainer:
                         mlflow.log_metric(f"cv_{metric}_optimism_gap", value)
                     cv_optimism_gap = gap
 
-            final_model, val_auc, val_f1, val_qwk = self._fit_final_and_validate(
+            final_model, val_auc, val_f1, val_pr_auc_macro, val_qwk = self._fit_final_and_validate(
                 model_cls, best_params, X_tr, y_train, X_va, y_val, season, model_name,
             )
             mlflow.log_metric("val_auc", val_auc)
             mlflow.log_metric("val_f1", val_f1)
+            mlflow.log_metric("val_pr_auc_macro", val_pr_auc_macro)
             mlflow.log_metric("val_qwk", val_qwk)
             self._log_model_artifact(model_name, final_model)
 
@@ -313,11 +317,13 @@ class ModelTrainer:
             "cv_f1_macro_spatial": cv_f1_macro_spatial,
             "cv_pr_auc_macro_standard": cv_pr_auc_macro_standard,
             "cv_pr_auc_macro_spatial": cv_pr_auc_macro_spatial,
+            "cv_pr_auc_macro_spatial_folds": cv_pr_auc_macro_spatial_folds,
             "cv_qwk_standard": cv_qwk_standard,
             "cv_qwk_spatial": cv_qwk_spatial,
             "cv_optimism_gap": cv_optimism_gap,
             "val_auc": val_auc,
             "val_f1": val_f1,
+            "val_pr_auc_macro": val_pr_auc_macro,
             "val_qwk": val_qwk,
             "study": study,
             **eval_results,
@@ -472,11 +478,17 @@ class ModelTrainer:
         final_model.fit(X_fit, y_fit, sample_weight=sample_weight)
 
         val_proba = final_model.predict_proba(to_model_array(X_va, cat_positions))
-        val_pred = np.argmax(val_proba, axis=1)
-        val_auc = roc_auc_score(y_val, val_proba, multi_class="ovr")
-        val_f1 = f1_score(y_val, val_pred, average="macro")
-        val_qwk = cohen_kappa_score(y_val, val_pred, weights="quadratic")
-        return final_model, val_auc, val_f1, val_qwk
+        # Reuses cv/base.py's score_multiclass_fold rather than re-deriving
+        # AUC/F1-macro/QWK by hand here: besides adding PR-AUC-macro for
+        # free, it also fixes a bug this method had independently of the CV
+        # path's own version of the same bug (see that function's
+        # docstring) — val_pred used to be argmax(val_proba)'s raw column
+        # *position*, silently wrong as a class label whenever y_fit didn't
+        # cover a gapless 0..n_classes-1 range.
+        scores = score_multiclass_fold(
+            y_val.values, val_proba, y_fit, context=f"[{season}][{model_name}] final validation",
+        )
+        return final_model, scores["auc"], scores["f1_macro"], scores["pr_auc_macro"], scores["qwk"]
 
     @staticmethod
     def _log_model_artifact(model_name: str, fitted_model) -> None:

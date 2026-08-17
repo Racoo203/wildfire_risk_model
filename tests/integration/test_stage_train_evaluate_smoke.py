@@ -102,6 +102,7 @@ def test_stage_train_then_stage_evaluate_round_trip(
     assert "cfg_sig" in manifest
     assert "config_snapshot" in manifest
     assert 0.0 <= manifest["val_auc"] <= 1.0
+    assert 0.0 <= manifest["val_pr_auc_macro"] <= 1.0
 
     eval_input = {
         "ref_path": tmp_path / "ref.tif",

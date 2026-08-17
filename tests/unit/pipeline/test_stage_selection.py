@@ -15,13 +15,19 @@ from wildfire_susceptibility.pipeline.stage_selection import (
 )
 
 
-def _manifest(val_auc, cv_auc_standard, cv_auc_spatial, folds=None):
+def _manifest(
+    val_auc, cv_auc_standard, cv_auc_spatial, folds=None,
+    val_pr_auc_macro=None, cv_pr_auc_macro_standard=None, cv_pr_auc_macro_spatial=None,
+):
     return {
         "val_auc": val_auc,
         "val_f1": 0.5,
+        "val_pr_auc_macro": val_pr_auc_macro,
         "cv_auc_standard": cv_auc_standard,
         "cv_auc_spatial": cv_auc_spatial,
-        "cv_auc_spatial_folds": folds,
+        "cv_pr_auc_macro_standard": cv_pr_auc_macro_standard,
+        "cv_pr_auc_macro_spatial": cv_pr_auc_macro_spatial,
+        "cv_pr_auc_macro_spatial_folds": folds,
     }
 
 
@@ -37,15 +43,45 @@ def test_select_best_auc_picks_highest_val_auc():
     assert result["summer"]["val_auc"] == 0.90
 
 
+def test_select_best_pr_auc_picks_highest_val_pr_auc_macro():
+    """Demonstrates why best_pr_auc and best_auc can disagree: random_forest
+    wins on plain AUC (0.90 > 0.85) but svm wins on PR-AUC-macro (0.70 >
+    0.60) — the majority-class-collapse-insensitivity gap that motivated
+    switching Optuna's HPO objective to PR-AUC-macro (search.py) applies
+    just as much to final model selection."""
+    manifests = {
+        "summer": {
+            "random_forest": _manifest(
+                val_auc=0.90, cv_auc_standard=0.80, cv_auc_spatial=0.75, val_pr_auc_macro=0.60,
+            ),
+            "svm": _manifest(
+                val_auc=0.85, cv_auc_standard=0.82, cv_auc_spatial=0.78, val_pr_auc_macro=0.70,
+            ),
+        }
+    }
+    result = _select_best_per_season(manifests, "best_pr_auc")
+    assert result["summer"]["selected_model"] == "svm"
+    assert result["summer"]["val_pr_auc_macro"] == 0.70
+
+
 def test_select_most_conservative_picks_smallest_optimism_gap_within_threshold():
     manifests = {
         "summer": {
-            # standard-auc leader, but big overfit gap (0.90 - 0.60 = 0.30)
-            "xgboost": _manifest(val_auc=0.88, cv_auc_standard=0.90, cv_auc_spatial=0.60),
+            # standard-PR-AUC-macro leader, but big overfit gap (0.90 - 0.60 = 0.30)
+            "xgboost": _manifest(
+                val_auc=0.88, cv_auc_standard=0.90, cv_auc_spatial=0.60,
+                cv_pr_auc_macro_standard=0.90, cv_pr_auc_macro_spatial=0.60,
+            ),
             # within 1% of leader (0.895 >= 0.90 - 0.01), much smaller gap (0.895-0.85=0.045)
-            "random_forest": _manifest(val_auc=0.86, cv_auc_standard=0.895, cv_auc_spatial=0.85),
+            "random_forest": _manifest(
+                val_auc=0.86, cv_auc_standard=0.895, cv_auc_spatial=0.85,
+                cv_pr_auc_macro_standard=0.895, cv_pr_auc_macro_spatial=0.85,
+            ),
             # not within 1% of leader (0.85 < 0.89), excluded from candidates
-            "svm": _manifest(val_auc=0.80, cv_auc_standard=0.85, cv_auc_spatial=0.84),
+            "svm": _manifest(
+                val_auc=0.80, cv_auc_standard=0.85, cv_auc_spatial=0.84,
+                cv_pr_auc_macro_standard=0.85, cv_pr_auc_macro_spatial=0.84,
+            ),
         }
     }
     result = _select_best_per_season(manifests, "most_conservative")
@@ -150,8 +186,8 @@ def test_kruskal_results_to_csv_has_one_row_per_season_with_expected_columns():
 
 
 def test_kruskal_wallis_drops_nan_fold_scores_before_scoring():
-    """fix-spatial-cv-auc-missing-classes: cv_auc_spatial_folds can now
-    contain NaN entries (score_multiclass_fold's degenerate-fold marker).
+    """fix-spatial-cv-auc-missing-classes: cv_pr_auc_macro_spatial_folds can
+    now contain NaN entries (score_multiclass_fold's degenerate-fold marker).
     scipy.stats.kruskal's default nan_policy='propagate' would otherwise
     turn the statistic/p-value NaN for the WHOLE season the moment any one
     model has any one NaN fold, even though the other folds/models are
@@ -172,7 +208,7 @@ def test_kruskal_wallis_drops_nan_fold_scores_before_scoring():
 
 def test_kruskal_wallis_drops_a_model_whose_every_fold_is_nan():
     """A model with fold-level scores present (not None, so it passes the
-    existing `if m.get("cv_auc_spatial_folds")` truthiness check) but every
+    existing `if m.get("cv_pr_auc_macro_spatial_folds")` truthiness check) but every
     one of them NaN (a fully degenerate spatial CV run for that model)
     must be excluded from the comparison entirely — same treatment as
     today's 'no fold-level scores at all' case — rather than contributing

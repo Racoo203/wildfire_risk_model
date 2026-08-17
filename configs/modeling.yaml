@@ -3,7 +3,7 @@ modeling:
   optuna_n_trials: 30
   cv_folds: 5
   mlflow_experiment: "wf-default"
-  selection_rule: "best_auc"      # options: "best_auc" | "most_conservative"
+  selection_rule: "best_pr_auc"   # options: "best_auc" | "best_pr_auc" | "most_conservative"
   cv_strategy: "both"             # options: "standard" | "spatial" | "stratified_spatial_block" | "both"
   spatial_block_size_m: 4000.0
   spatial_buffer_m: 4000.0        # exclusion-zone width (m) around test blocks for spatial/stratified_spatial_block CV

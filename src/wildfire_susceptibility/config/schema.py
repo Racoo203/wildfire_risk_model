@@ -141,7 +141,7 @@ class ModelingConfig(BaseModel):
     optuna_n_trials: int = 30
     cv_folds: int = 5
     mlflow_experiment: str = "wildfire-susceptibility-essex"
-    selection_rule: Literal["best_auc", "most_conservative"] = "best_auc"
+    selection_rule: Literal["best_auc", "best_pr_auc", "most_conservative"] = "best_pr_auc"
     cv_strategy: Literal[
         "standard", "spatial", "stratified_spatial_block", "both"
     ] = "both"
