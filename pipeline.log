@@ -13602,3 +13602,448 @@
 2026-08-16 17:52:50 - wildfire_susceptibility.modeling.evaluate - INFO - [summer][random_forest] Susceptibility raster written -> susceptibility_random_forest_summer.tif
 2026-08-16 17:52:54 - wildfire_susceptibility - INFO - [stage_evaluate] [summer][random_forest] Susceptibility map figure written.
 2026-08-16 17:52:54 - wildfire_susceptibility - INFO - [stage_evaluate] [summer][catboost] Reloading + evaluating...
+2026-08-16 19:45:01 - wildfire_susceptibility - INFO - Logger initialized: wildfire_susceptibility
+2026-08-16 19:45:01 - wildfire_susceptibility - INFO - === Running stage: static ===
+2026-08-16 19:45:01 - wildfire_susceptibility - INFO - [stage_static] Building static features...
+2026-08-16 19:45:01 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] BoundaryBuilder: outputs already exist, skipping computation
+2026-08-16 19:45:01 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] TopographyBuilder: outputs already exist, skipping computation
+2026-08-16 19:45:01 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] ProximityBuilder: outputs already exist, skipping computation
+2026-08-16 19:45:01 - wildfire_susceptibility - INFO - [stage_static] Complete — 9 output path(s).
+2026-08-16 19:45:01 - wildfire_susceptibility - INFO - === Stage complete: static ===
+2026-08-16 19:45:01 - wildfire_susceptibility - INFO - === Running stage: seasonal ===
+2026-08-16 19:45:01 - wildfire_susceptibility - INFO - [stage_seasonal] [summer] Building seasonal features...
+2026-08-16 19:45:01 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] ClimateBuilder[summer][train]: outputs already exist, skipping computation
+2026-08-16 19:45:01 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] VegetationBuilder[summer][train]: outputs already exist, skipping computation
+2026-08-16 19:45:01 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] ClimateBuilder[summer][test]: outputs already exist, skipping computation
+2026-08-16 19:45:01 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] VegetationBuilder[summer][test]: outputs already exist, skipping computation
+2026-08-16 19:45:01 - wildfire_susceptibility - INFO - === Stage complete: seasonal ===
+2026-08-16 19:45:01 - wildfire_susceptibility - INFO - === Running stage: labels ===
+2026-08-16 19:45:01 - wildfire_susceptibility - INFO - [stage_labels] [summer] Building fire labels...
+2026-08-16 19:45:01 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] FireBuilder[summer]: outputs already exist, skipping computation
+2026-08-16 19:45:02 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] FireProximityBuilder[summer]: outputs already exist, skipping computation
+2026-08-16 19:45:02 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[kde][summer_train]: outputs already exist, skipping computation
+2026-08-16 19:48:59 - wildfire_susceptibility - INFO - Logger initialized: wildfire_susceptibility
+2026-08-16 19:48:59 - wildfire_susceptibility - INFO - === Running stage: static ===
+2026-08-16 19:48:59 - wildfire_susceptibility - INFO - [stage_static] Building static features...
+2026-08-16 19:48:59 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] BoundaryBuilder: outputs already exist, skipping computation
+2026-08-16 19:48:59 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] TopographyBuilder: outputs already exist, skipping computation
+2026-08-16 19:48:59 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] ProximityBuilder: outputs already exist, skipping computation
+2026-08-16 19:48:59 - wildfire_susceptibility - INFO - [stage_static] Complete — 9 output path(s).
+2026-08-16 19:48:59 - wildfire_susceptibility - INFO - === Stage complete: static ===
+2026-08-16 19:48:59 - wildfire_susceptibility - INFO - === Running stage: seasonal ===
+2026-08-16 19:48:59 - wildfire_susceptibility - INFO - [stage_seasonal] [summer] Building seasonal features...
+2026-08-16 19:48:59 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] ClimateBuilder[summer][train]: outputs already exist, skipping computation
+2026-08-16 19:48:59 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] VegetationBuilder[summer][train]: outputs already exist, skipping computation
+2026-08-16 19:48:59 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] ClimateBuilder[summer][test]: outputs already exist, skipping computation
+2026-08-16 19:48:59 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] VegetationBuilder[summer][test]: outputs already exist, skipping computation
+2026-08-16 19:48:59 - wildfire_susceptibility - INFO - === Stage complete: seasonal ===
+2026-08-16 19:48:59 - wildfire_susceptibility - INFO - === Running stage: labels ===
+2026-08-16 19:48:59 - wildfire_susceptibility - INFO - [stage_labels] [summer] Building fire labels...
+2026-08-16 19:48:59 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] FireBuilder[summer]: outputs already exist, skipping computation
+2026-08-16 19:48:59 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] FireProximityBuilder[summer]: outputs already exist, skipping computation
+2026-08-16 19:48:59 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[kde][summer_train]: outputs already exist, skipping computation
+2026-08-16 19:51:23 - wildfire_susceptibility - INFO - [summer_train][kde][jenks] class counts: {0: 101564, 1: 53820, 2: 22232, 3: 10774, 4: 3973} | unlabelled/trimmed cells: 3658752 | out-of-domain NaN cells: 2606943 | thresholds: ['2.105e-09', '3.166e-09', '4.527e-09', '6.548e-09']
+2026-08-16 19:51:23 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[kde][summer_test]: outputs already exist, skipping computation
+2026-08-16 19:51:23 - wildfire_susceptibility - INFO - [summer_test][kde][jenks] applied FROZEN fit from paired split (no refit).
+2026-08-16 19:51:23 - wildfire_susceptibility - INFO - [summer_test][kde][jenks] class counts: {0: 101776, 1: 50359, 2: 25670, 3: 12262, 4: 2296} | unlabelled/trimmed cells: 3658752 | out-of-domain NaN cells: 2606943 | thresholds: ['2.105e-09', '3.166e-09', '4.527e-09', '6.548e-09']
+2026-08-16 19:51:23 - wildfire_susceptibility - INFO - === Stage complete: labels ===
+2026-08-16 19:51:23 - wildfire_susceptibility - INFO - === Running stage: integration ===
+2026-08-16 19:53:02 - wildfire_susceptibility.core.raster - INFO - Dataset saved to data\silver\model_datasets\dataset_train_summer.csv (3,851,115 rows, 19 columns)
+2026-08-16 19:53:02 - wildfire_susceptibility - INFO - [stage_integration] [summer][train] Assembled -> dataset_train_summer.csv
+2026-08-16 19:54:35 - wildfire_susceptibility.core.raster - INFO - Dataset saved to data\silver\model_datasets\dataset_test_summer.csv (3,851,115 rows, 19 columns)
+2026-08-16 19:54:35 - wildfire_susceptibility - INFO - [stage_integration] [summer][test] Assembled -> dataset_test_summer.csv
+2026-08-16 19:54:35 - wildfire_susceptibility - INFO - === Stage complete: integration ===
+2026-08-16 19:54:35 - wildfire_susceptibility - INFO - === Running stage: preprocessing ===
+2026-08-16 19:54:35 - wildfire_susceptibility - INFO - [stage_preprocessing] [summer] Imputing + cleaning labels...
+2026-08-16 19:54:58 - wildfire_susceptibility.modeling.dataset_prep - INFO - Nearest-neighbor filled 1,734 in-domain NaNs in 'ndvi'
+2026-08-16 19:54:58 - wildfire_susceptibility.modeling.dataset_prep - INFO - Nearest-neighbor filled 38,862 in-domain NaNs in 'tas'
+2026-08-16 19:54:59 - wildfire_susceptibility.modeling.dataset_prep - INFO - Nearest-neighbor filled 38,862 in-domain NaNs in 'tasmax'
+2026-08-16 19:54:59 - wildfire_susceptibility.modeling.dataset_prep - INFO - Nearest-neighbor filled 38,862 in-domain NaNs in 'tasmin'
+2026-08-16 19:55:00 - wildfire_susceptibility.modeling.dataset_prep - INFO - Nearest-neighbor filled 38,862 in-domain NaNs in 'rainfall'
+2026-08-16 19:55:00 - wildfire_susceptibility.modeling.dataset_prep - INFO - Nearest-neighbor filled 38,862 in-domain NaNs in 'sfcWind'
+2026-08-16 19:55:01 - wildfire_susceptibility.modeling.dataset_prep - INFO - Nearest-neighbor filled 38,862 in-domain NaNs in 'hurs'
+2026-08-16 19:55:01 - wildfire_susceptibility.modeling.dataset_prep - INFO - Nearest-neighbor filled 38,862 in-domain NaNs in 'diurnal_range'
+2026-08-16 19:55:01 - wildfire_susceptibility.modeling.dataset_prep - INFO - Dropped 3,658,752 in-domain rows...
+2026-08-16 19:55:01 - wildfire_susceptibility.modeling.dataset_prep - INFO - No unresolved in-domain NaNs after imputation.
+2026-08-16 19:55:02 - wildfire_susceptibility.modeling.dataset_prep - INFO - Nearest-neighbor filled 2,773 in-domain NaNs in 'ndvi'
+2026-08-16 19:55:02 - wildfire_susceptibility.modeling.dataset_prep - INFO - Nearest-neighbor filled 38,862 in-domain NaNs in 'tas'
+2026-08-16 19:55:03 - wildfire_susceptibility.modeling.dataset_prep - INFO - Nearest-neighbor filled 38,862 in-domain NaNs in 'tasmax'
+2026-08-16 19:55:03 - wildfire_susceptibility.modeling.dataset_prep - INFO - Nearest-neighbor filled 38,862 in-domain NaNs in 'tasmin'
+2026-08-16 19:55:03 - wildfire_susceptibility.modeling.dataset_prep - INFO - Nearest-neighbor filled 38,862 in-domain NaNs in 'rainfall'
+2026-08-16 19:55:04 - wildfire_susceptibility.modeling.dataset_prep - INFO - Nearest-neighbor filled 38,862 in-domain NaNs in 'sfcWind'
+2026-08-16 19:55:04 - wildfire_susceptibility.modeling.dataset_prep - INFO - Nearest-neighbor filled 38,862 in-domain NaNs in 'hurs'
+2026-08-16 19:55:04 - wildfire_susceptibility.modeling.dataset_prep - INFO - Nearest-neighbor filled 38,862 in-domain NaNs in 'diurnal_range'
+2026-08-16 19:55:04 - wildfire_susceptibility.modeling.dataset_prep - INFO - Dropped 3,658,752 in-domain rows...
+2026-08-16 19:55:04 - wildfire_susceptibility.modeling.dataset_prep - INFO - No unresolved in-domain NaNs after imputation.
+2026-08-16 19:55:05 - wildfire_susceptibility.modeling.dataset_prep - INFO - Nearest-neighbor filled 2,773 in-domain NaNs in 'ndvi'
+2026-08-16 19:55:05 - wildfire_susceptibility.modeling.dataset_prep - INFO - Nearest-neighbor filled 38,862 in-domain NaNs in 'tas'
+2026-08-16 19:55:06 - wildfire_susceptibility.modeling.dataset_prep - INFO - Nearest-neighbor filled 38,862 in-domain NaNs in 'tasmax'
+2026-08-16 19:55:06 - wildfire_susceptibility.modeling.dataset_prep - INFO - Nearest-neighbor filled 38,862 in-domain NaNs in 'tasmin'
+2026-08-16 19:55:07 - wildfire_susceptibility.modeling.dataset_prep - INFO - Nearest-neighbor filled 38,862 in-domain NaNs in 'rainfall'
+2026-08-16 19:55:07 - wildfire_susceptibility.modeling.dataset_prep - INFO - Nearest-neighbor filled 38,862 in-domain NaNs in 'sfcWind'
+2026-08-16 19:55:07 - wildfire_susceptibility.modeling.dataset_prep - INFO - Nearest-neighbor filled 38,862 in-domain NaNs in 'hurs'
+2026-08-16 19:55:08 - wildfire_susceptibility.modeling.dataset_prep - INFO - Nearest-neighbor filled 38,862 in-domain NaNs in 'diurnal_range'
+2026-08-16 19:55:08 - wildfire_susceptibility.modeling.dataset_prep - WARNING - Unresolved NaNs WITHIN the study-area domain: {'label': 3658752}
+2026-08-16 19:56:33 - wildfire_susceptibility - INFO - === Stage complete: preprocessing ===
+2026-08-16 19:56:33 - wildfire_susceptibility - INFO - === Running stage: train ===
+2026-08-16 19:56:37 - wildfire_susceptibility - INFO - [stage_train] [summer] Loading cleaned datasets...
+2026-08-16 19:56:39 - wildfire_susceptibility - INFO - Training with the following features: ['elevation', 'slope', 'aspect', 'd_roads', 'd_rivers', 'd_buildings', 'landuse_class', 'tasmax', 'rainfall', 'hurs', 'diurnal_range', 'ndvi']
+2026-08-16 19:56:39 - wildfire_susceptibility.modeling.dataset_prep - INFO - Assigned 192,363 rows to 70 spatial blocks (4 km grid)
+2026-08-16 19:56:39 - wildfire_susceptibility - INFO - [stage_train] [summer][ordinal_lr] Search + refit...
+2026-08-16 19:56:39 - wildfire_susceptibility.modeling.training.search - INFO - [ordinal_lr] resolved subsample fraction 1.0 of 192,363 rows -> 192,363
+2026-08-16 19:56:40 - wildfire_susceptibility.modeling.cv.base - INFO - [spatial] spatial buffer (4000m, radius=1 block(s)): dropped 105,382/162,924 train rows within the buffer ring of this fold's test blocks
+2026-08-16 19:56:40 - wildfire_susceptibility.modeling.cv.base - INFO - [spatial] spatial buffer (4000m, radius=1 block(s)): dropped 111,339/144,927 train rows within the buffer ring of this fold's test blocks
+2026-08-16 19:56:40 - wildfire_susceptibility.modeling.cv.base - INFO - [spatial] spatial buffer (4000m, radius=1 block(s)): dropped 73,690/157,110 train rows within the buffer ring of this fold's test blocks
+2026-08-16 19:56:41 - wildfire_susceptibility.modeling.cv.base - INFO - [spatial] spatial buffer (4000m, radius=1 block(s)): dropped 124,448/154,254 train rows within the buffer ring of this fold's test blocks
+2026-08-16 19:56:41 - wildfire_susceptibility.modeling.cv.base - INFO - [spatial] spatial buffer (4000m, radius=1 block(s)): dropped 76,837/150,237 train rows within the buffer ring of this fold's test blocks
+2026-08-16 19:56:41 - wildfire_susceptibility.modeling.training.search - INFO - [summer][ordinal_lr] finished=0 target=3 remaining=3
+2026-08-16 19:56:41 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][ordinal_lr] trial 0 fold 1: fitting on 57,542 rows...
+2026-08-16 19:56:44 - wildfire_susceptibility.modeling.training.search - INFO - [summer][ordinal_lr] trial 0 fold 1 PR_AUC_macro=0.2974 AUC=0.7136 F1_macro=0.2026 QWK=0.1363 | params={'alpha': 2.928107359940094}
+2026-08-16 19:56:44 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][ordinal_lr] trial 0 fold 2: fitting on 33,588 rows...
+2026-08-16 19:56:44 - wildfire_susceptibility.modeling.training.search - INFO - [summer][ordinal_lr] trial 0 fold 2 PR_AUC_macro=0.3480 AUC=0.6462 F1_macro=0.2199 QWK=0.1725 | params={'alpha': 2.928107359940094}
+2026-08-16 19:56:44 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][ordinal_lr] trial 0 fold 3: fitting on 83,420 rows...
+2026-08-16 19:56:47 - wildfire_susceptibility.modeling.training.search - INFO - [summer][ordinal_lr] trial 0 fold 3 PR_AUC_macro=0.3703 AUC=0.6856 F1_macro=0.3270 QWK=0.2736 | params={'alpha': 2.928107359940094}
+2026-08-16 19:56:47 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][ordinal_lr] trial 0 fold 4: fitting on 29,806 rows...
+2026-08-16 19:56:48 - wildfire_susceptibility.modeling.training.search - INFO - [summer][ordinal_lr] trial 0 fold 4 PR_AUC_macro=0.4588 AUC=0.6575 F1_macro=0.3136 QWK=0.3925 | params={'alpha': 2.928107359940094}
+2026-08-16 19:56:48 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][ordinal_lr] trial 0 fold 5: fitting on 73,400 rows...
+2026-08-16 19:56:52 - wildfire_susceptibility.modeling.training.search - INFO - [summer][ordinal_lr] trial 0 fold 5 PR_AUC_macro=0.2943 AUC=0.5805 F1_macro=0.1939 QWK=0.0839 | params={'alpha': 2.928107359940094}
+2026-08-16 19:56:52 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][ordinal_lr] trial 1 fold 1: fitting on 57,542 rows...
+2026-08-16 19:56:56 - wildfire_susceptibility.modeling.training.search - INFO - [summer][ordinal_lr] trial 1 fold 1 PR_AUC_macro=0.2973 AUC=0.7135 F1_macro=0.2023 QWK=0.1362 | params={'alpha': 7.21899444662975}
+2026-08-16 19:56:56 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][ordinal_lr] trial 1 fold 2: fitting on 33,588 rows...
+2026-08-16 19:56:57 - wildfire_susceptibility.modeling.training.search - INFO - [summer][ordinal_lr] trial 1 fold 2 PR_AUC_macro=0.3472 AUC=0.6462 F1_macro=0.2196 QWK=0.1722 | params={'alpha': 7.21899444662975}
+2026-08-16 19:56:57 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][ordinal_lr] trial 1 fold 3: fitting on 83,420 rows...
+2026-08-16 19:56:59 - wildfire_susceptibility.modeling.training.search - INFO - [summer][ordinal_lr] trial 1 fold 3 PR_AUC_macro=0.3704 AUC=0.6856 F1_macro=0.3270 QWK=0.2735 | params={'alpha': 7.21899444662975}
+2026-08-16 19:56:59 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][ordinal_lr] trial 1 fold 4: fitting on 29,806 rows...
+2026-08-16 19:57:00 - wildfire_susceptibility.modeling.training.search - INFO - [summer][ordinal_lr] trial 1 fold 4 PR_AUC_macro=0.4613 AUC=0.6596 F1_macro=0.3139 QWK=0.3731 | params={'alpha': 7.21899444662975}
+2026-08-16 19:57:00 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][ordinal_lr] trial 1 fold 5: fitting on 73,400 rows...
+2026-08-16 19:57:04 - wildfire_susceptibility.modeling.training.search - INFO - [summer][ordinal_lr] trial 1 fold 5 PR_AUC_macro=0.2943 AUC=0.5801 F1_macro=0.1938 QWK=0.0835 | params={'alpha': 7.21899444662975}
+2026-08-16 19:57:04 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][ordinal_lr] trial 2 fold 1: fitting on 57,542 rows...
+2026-08-16 19:57:07 - wildfire_susceptibility.modeling.training.search - INFO - [summer][ordinal_lr] trial 2 fold 1 PR_AUC_macro=0.2975 AUC=0.7137 F1_macro=0.2026 QWK=0.1364 | params={'alpha': 0.10879114123891807}
+2026-08-16 19:57:07 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][ordinal_lr] trial 2 fold 2: fitting on 33,588 rows...
+2026-08-16 19:57:08 - wildfire_susceptibility.modeling.training.search - INFO - [summer][ordinal_lr] trial 2 fold 2 PR_AUC_macro=0.3482 AUC=0.6463 F1_macro=0.2208 QWK=0.1732 | params={'alpha': 0.10879114123891807}
+2026-08-16 19:57:08 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][ordinal_lr] trial 2 fold 3: fitting on 83,420 rows...
+2026-08-16 19:57:11 - wildfire_susceptibility.modeling.training.search - INFO - [summer][ordinal_lr] trial 2 fold 3 PR_AUC_macro=0.3703 AUC=0.6856 F1_macro=0.3270 QWK=0.2737 | params={'alpha': 0.10879114123891807}
+2026-08-16 19:57:11 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][ordinal_lr] trial 2 fold 4: fitting on 29,806 rows...
+2026-08-16 19:57:12 - wildfire_susceptibility.modeling.training.search - INFO - [summer][ordinal_lr] trial 2 fold 4 PR_AUC_macro=0.4592 AUC=0.6580 F1_macro=0.3106 QWK=0.3907 | params={'alpha': 0.10879114123891807}
+2026-08-16 19:57:12 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][ordinal_lr] trial 2 fold 5: fitting on 73,400 rows...
+2026-08-16 19:57:16 - wildfire_susceptibility.modeling.training.search - INFO - [summer][ordinal_lr] trial 2 fold 5 PR_AUC_macro=0.2942 AUC=0.5807 F1_macro=0.1939 QWK=0.0841 | params={'alpha': 0.10879114123891807}
+2026-08-16 19:57:16 - wildfire_susceptibility.modeling.training.trainer - INFO - [summer][ordinal_lr] train shape=(192363, 18) | search shape=(192363, 18) (spatial CV) | class counts={0.0: 101564, 1.0: 53820, 2.0: 22232, 3.0: 10774, 4.0: 3973}
+2026-08-16 19:57:25 - wildfire_susceptibility.modeling.training.evaluation - INFO - [summer][ordinal_lr] No ref_path supplied; skipping remaining post-training evaluation.
+2026-08-16 19:57:25 - wildfire_susceptibility - INFO - [stage_train] [summer][random_forest] Search + refit...
+2026-08-16 19:57:25 - wildfire_susceptibility.modeling.training.search - INFO - [random_forest] resolved subsample fraction 1.0 of 192,363 rows -> 192,363
+2026-08-16 19:57:26 - wildfire_susceptibility.modeling.cv.base - INFO - [spatial] spatial buffer (4000m, radius=1 block(s)): dropped 105,382/162,924 train rows within the buffer ring of this fold's test blocks
+2026-08-16 19:57:26 - wildfire_susceptibility.modeling.cv.base - INFO - [spatial] spatial buffer (4000m, radius=1 block(s)): dropped 111,339/144,927 train rows within the buffer ring of this fold's test blocks
+2026-08-16 19:57:26 - wildfire_susceptibility.modeling.cv.base - INFO - [spatial] spatial buffer (4000m, radius=1 block(s)): dropped 73,690/157,110 train rows within the buffer ring of this fold's test blocks
+2026-08-16 19:57:26 - wildfire_susceptibility.modeling.cv.base - INFO - [spatial] spatial buffer (4000m, radius=1 block(s)): dropped 124,448/154,254 train rows within the buffer ring of this fold's test blocks
+2026-08-16 19:57:27 - wildfire_susceptibility.modeling.cv.base - INFO - [spatial] spatial buffer (4000m, radius=1 block(s)): dropped 76,837/150,237 train rows within the buffer ring of this fold's test blocks
+2026-08-16 19:57:27 - wildfire_susceptibility.modeling.training.search - INFO - [summer][random_forest] finished=0 target=3 remaining=3
+2026-08-16 19:57:27 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][random_forest] trial 0 fold 1: fitting on 57,542 rows...
+2026-08-16 19:57:38 - wildfire_susceptibility.modeling.training.search - INFO - [summer][random_forest] trial 0 fold 1 PR_AUC_macro=0.3015 AUC=0.6196 F1_macro=0.2031 QWK=0.0090 | params={'n_estimators': 331, 'max_depth': 17, 'min_samples_leaf': 13, 'min_samples_split': 11, 'max_features': 'log2'}
+2026-08-16 19:57:38 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][random_forest] trial 0 fold 2: fitting on 33,588 rows...
+2026-08-16 19:57:44 - wildfire_susceptibility.modeling.training.search - INFO - [summer][random_forest] trial 0 fold 2 PR_AUC_macro=0.2508 AUC=0.4677 F1_macro=0.1557 QWK=-0.0038 | params={'n_estimators': 331, 'max_depth': 17, 'min_samples_leaf': 13, 'min_samples_split': 11, 'max_features': 'log2'}
+2026-08-16 19:57:44 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][random_forest] trial 0 fold 3: fitting on 83,420 rows...
+2026-08-16 19:58:01 - wildfire_susceptibility.modeling.training.search - INFO - [summer][random_forest] trial 0 fold 3 PR_AUC_macro=0.3659 AUC=0.7343 F1_macro=0.1879 QWK=-0.0092 | params={'n_estimators': 331, 'max_depth': 17, 'min_samples_leaf': 13, 'min_samples_split': 11, 'max_features': 'log2'}
+2026-08-16 19:58:01 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][random_forest] trial 0 fold 4: fitting on 29,806 rows...
+2026-08-16 19:58:06 - wildfire_susceptibility.modeling.training.search - INFO - [summer][random_forest] trial 0 fold 4 PR_AUC_macro=0.4304 AUC=0.5893 F1_macro=0.2200 QWK=0.1302 | params={'n_estimators': 331, 'max_depth': 17, 'min_samples_leaf': 13, 'min_samples_split': 11, 'max_features': 'log2'}
+2026-08-16 19:58:06 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][random_forest] trial 0 fold 5: fitting on 73,400 rows...
+2026-08-16 19:58:22 - wildfire_susceptibility.modeling.training.search - INFO - [summer][random_forest] trial 0 fold 5 PR_AUC_macro=0.2659 AUC=0.4771 F1_macro=0.1672 QWK=-0.0143 | params={'n_estimators': 331, 'max_depth': 17, 'min_samples_leaf': 13, 'min_samples_split': 11, 'max_features': 'log2'}
+2026-08-16 19:58:22 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][random_forest] trial 1 fold 1: fitting on 57,542 rows...
+2026-08-16 19:58:32 - wildfire_susceptibility.modeling.training.search - INFO - [summer][random_forest] trial 1 fold 1 PR_AUC_macro=0.3037 AUC=0.6235 F1_macro=0.2066 QWK=0.0170 | params={'n_estimators': 375, 'max_depth': 9, 'min_samples_leaf': 8, 'min_samples_split': 13, 'max_features': 'log2'}
+2026-08-16 19:58:32 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][random_forest] trial 1 fold 2: fitting on 33,588 rows...
+2026-08-16 19:58:38 - wildfire_susceptibility.modeling.training.search - INFO - [summer][random_forest] trial 1 fold 2 PR_AUC_macro=0.2649 AUC=0.4981 F1_macro=0.1625 QWK=0.0004 | params={'n_estimators': 375, 'max_depth': 9, 'min_samples_leaf': 8, 'min_samples_split': 13, 'max_features': 'log2'}
+2026-08-16 19:58:38 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][random_forest] trial 1 fold 3: fitting on 83,420 rows...
+2026-08-16 19:59:03 - wildfire_susceptibility.modeling.training.search - INFO - [summer][random_forest] trial 1 fold 3 PR_AUC_macro=0.3616 AUC=0.7269 F1_macro=0.1896 QWK=-0.0235 | params={'n_estimators': 375, 'max_depth': 9, 'min_samples_leaf': 8, 'min_samples_split': 13, 'max_features': 'log2'}
+2026-08-16 19:59:03 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][random_forest] trial 1 fold 4: fitting on 29,806 rows...
+2026-08-16 19:59:18 - wildfire_susceptibility.modeling.training.search - INFO - [summer][random_forest] trial 1 fold 4 PR_AUC_macro=0.4488 AUC=0.6126 F1_macro=0.2264 QWK=0.1359 | params={'n_estimators': 375, 'max_depth': 9, 'min_samples_leaf': 8, 'min_samples_split': 13, 'max_features': 'log2'}
+2026-08-16 19:59:18 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][random_forest] trial 1 fold 5: fitting on 73,400 rows...
+2026-08-16 19:59:40 - wildfire_susceptibility.modeling.training.search - INFO - [summer][random_forest] trial 1 fold 5 PR_AUC_macro=0.2627 AUC=0.4661 F1_macro=0.1671 QWK=-0.0208 | params={'n_estimators': 375, 'max_depth': 9, 'min_samples_leaf': 8, 'min_samples_split': 13, 'max_features': 'log2'}
+2026-08-16 19:59:40 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][random_forest] trial 2 fold 1: fitting on 57,542 rows...
+2026-08-16 19:59:55 - wildfire_susceptibility.modeling.training.search - INFO - [summer][random_forest] trial 2 fold 1 PR_AUC_macro=0.2602 AUC=0.4425 F1_macro=0.2003 QWK=0.1113 | params={'n_estimators': 106, 'max_depth': 23, 'min_samples_leaf': 13, 'min_samples_split': 2, 'max_features': None}
+2026-08-16 19:59:55 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][random_forest] trial 2 fold 2: fitting on 33,588 rows...
+2026-08-16 20:00:01 - wildfire_susceptibility.modeling.training.search - INFO - [summer][random_forest] trial 2 fold 2 PR_AUC_macro=0.3314 AUC=0.5604 F1_macro=0.1787 QWK=-0.0137 | params={'n_estimators': 106, 'max_depth': 23, 'min_samples_leaf': 13, 'min_samples_split': 2, 'max_features': None}
+2026-08-16 20:00:01 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][random_forest] trial 2 fold 3: fitting on 83,420 rows...
+2026-08-16 20:00:22 - wildfire_susceptibility.modeling.training.search - INFO - [summer][random_forest] trial 2 fold 3 PR_AUC_macro=0.3281 AUC=0.6192 F1_macro=0.2361 QWK=-0.0620 | params={'n_estimators': 106, 'max_depth': 23, 'min_samples_leaf': 13, 'min_samples_split': 2, 'max_features': None}
+2026-08-16 20:00:22 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][random_forest] trial 2 fold 4: fitting on 29,806 rows...
+2026-08-16 20:00:28 - wildfire_susceptibility.modeling.training.search - INFO - [summer][random_forest] trial 2 fold 4 PR_AUC_macro=0.4285 AUC=0.5961 F1_macro=0.2654 QWK=0.2599 | params={'n_estimators': 106, 'max_depth': 23, 'min_samples_leaf': 13, 'min_samples_split': 2, 'max_features': None}
+2026-08-16 20:00:28 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][random_forest] trial 2 fold 5: fitting on 73,400 rows...
+2026-08-16 20:00:46 - wildfire_susceptibility.modeling.cv.base - WARNING - [summer][random_forest] trial 2 fold 5: AUC scoring failed even after restricting to observed classes [0.0, 1.0, 2.0, 3.0] (Input contains NaN.); scoring as NaN.
+2026-08-16 20:00:47 - wildfire_susceptibility.modeling.training.search - INFO - [summer][random_forest] trial 2 fold 5 PR_AUC_macro=0.2654 AUC=nan F1_macro=0.1798 QWK=-0.0460 | params={'n_estimators': 106, 'max_depth': 23, 'min_samples_leaf': 13, 'min_samples_split': 2, 'max_features': None}
+2026-08-16 20:00:47 - wildfire_susceptibility.modeling.training.trainer - INFO - [summer][random_forest] train shape=(192363, 18) | search shape=(192363, 18) (spatial CV) | class counts={0.0: 101564, 1.0: 53820, 2.0: 22232, 3.0: 10774, 4.0: 3973}
+2026-08-16 20:02:06 - wildfire_susceptibility.modeling.training.evaluation - INFO - [summer][random_forest] No ref_path supplied; skipping remaining post-training evaluation.
+2026-08-16 20:02:06 - wildfire_susceptibility - INFO - [stage_train] [summer][catboost] Search + refit...
+2026-08-16 20:02:06 - wildfire_susceptibility.modeling.training.search - INFO - [catboost] resolved subsample fraction 1.0 of 192,363 rows -> 192,363
+2026-08-16 20:02:06 - wildfire_susceptibility.modeling.cv.base - INFO - [spatial] spatial buffer (4000m, radius=1 block(s)): dropped 105,382/162,924 train rows within the buffer ring of this fold's test blocks
+2026-08-16 20:02:07 - wildfire_susceptibility.modeling.cv.base - INFO - [spatial] spatial buffer (4000m, radius=1 block(s)): dropped 111,339/144,927 train rows within the buffer ring of this fold's test blocks
+2026-08-16 20:02:07 - wildfire_susceptibility.modeling.cv.base - INFO - [spatial] spatial buffer (4000m, radius=1 block(s)): dropped 73,690/157,110 train rows within the buffer ring of this fold's test blocks
+2026-08-16 20:02:07 - wildfire_susceptibility.modeling.cv.base - INFO - [spatial] spatial buffer (4000m, radius=1 block(s)): dropped 124,448/154,254 train rows within the buffer ring of this fold's test blocks
+2026-08-16 20:02:08 - wildfire_susceptibility.modeling.cv.base - INFO - [spatial] spatial buffer (4000m, radius=1 block(s)): dropped 76,837/150,237 train rows within the buffer ring of this fold's test blocks
+2026-08-16 20:02:08 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] finished=0 target=3 remaining=3
+2026-08-16 20:02:08 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][catboost] trial 0 fold 1: fitting on 57,542 rows...
+2026-08-16 20:03:19 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 0 fold 1 PR_AUC_macro=0.3075 AUC=0.6677 F1_macro=0.2017 QWK=0.1091 | params={'iterations': 740, 'depth': 4, 'learning_rate': 0.0033481290169054346, 'l2_leaf_reg': 0.024762750413807686, 'bagging_temperature': 0.22254506618802228}
+2026-08-16 20:03:20 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][catboost] trial 0 fold 2: fitting on 33,588 rows...
+2026-08-16 20:03:57 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 0 fold 2 PR_AUC_macro=0.2425 AUC=0.4478 F1_macro=0.1662 QWK=-0.0324 | params={'iterations': 740, 'depth': 4, 'learning_rate': 0.0033481290169054346, 'l2_leaf_reg': 0.024762750413807686, 'bagging_temperature': 0.22254506618802228}
+2026-08-16 20:03:57 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][catboost] trial 0 fold 3: fitting on 83,420 rows...
+2026-08-16 20:05:18 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 0 fold 3 PR_AUC_macro=0.3416 AUC=0.7165 F1_macro=0.2756 QWK=0.1355 | params={'iterations': 740, 'depth': 4, 'learning_rate': 0.0033481290169054346, 'l2_leaf_reg': 0.024762750413807686, 'bagging_temperature': 0.22254506618802228}
+2026-08-16 20:05:18 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][catboost] trial 0 fold 4: fitting on 29,806 rows...
+2026-08-16 20:05:48 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 0 fold 4 PR_AUC_macro=0.4274 AUC=0.6089 F1_macro=0.2646 QWK=0.2531 | params={'iterations': 740, 'depth': 4, 'learning_rate': 0.0033481290169054346, 'l2_leaf_reg': 0.024762750413807686, 'bagging_temperature': 0.22254506618802228}
+2026-08-16 20:05:48 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][catboost] trial 0 fold 5: fitting on 73,400 rows...
+2026-08-16 20:07:09 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 0 fold 5 PR_AUC_macro=0.2841 AUC=0.4873 F1_macro=0.1979 QWK=-0.0696 | params={'iterations': 740, 'depth': 4, 'learning_rate': 0.0033481290169054346, 'l2_leaf_reg': 0.024762750413807686, 'bagging_temperature': 0.22254506618802228}
+2026-08-16 20:07:09 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][catboost] trial 1 fold 1: fitting on 57,542 rows...
+2026-08-16 20:09:08 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 1 fold 1 PR_AUC_macro=0.2977 AUC=0.6468 F1_macro=0.1697 QWK=-0.0085 | params={'iterations': 604, 'depth': 8, 'learning_rate': 0.04409030576992578, 'l2_leaf_reg': 1.617148584034528, 'bagging_temperature': 0.45774914031473624}
+2026-08-16 20:09:08 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][catboost] trial 1 fold 2: fitting on 33,588 rows...
+2026-08-16 20:10:21 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 1 fold 2 PR_AUC_macro=0.2506 AUC=0.4700 F1_macro=0.1884 QWK=-0.0336 | params={'iterations': 604, 'depth': 8, 'learning_rate': 0.04409030576992578, 'l2_leaf_reg': 1.617148584034528, 'bagging_temperature': 0.45774914031473624}
+2026-08-16 20:10:21 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][catboost] trial 1 fold 3: fitting on 83,420 rows...
+2026-08-16 20:12:58 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 1 fold 3 PR_AUC_macro=0.3342 AUC=0.7219 F1_macro=0.2074 QWK=-0.0283 | params={'iterations': 604, 'depth': 8, 'learning_rate': 0.04409030576992578, 'l2_leaf_reg': 1.617148584034528, 'bagging_temperature': 0.45774914031473624}
+2026-08-16 20:12:58 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][catboost] trial 1 fold 4: fitting on 29,806 rows...
+2026-08-16 20:14:07 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 1 fold 4 PR_AUC_macro=0.4167 AUC=0.5758 F1_macro=0.1743 QWK=-0.0157 | params={'iterations': 604, 'depth': 8, 'learning_rate': 0.04409030576992578, 'l2_leaf_reg': 1.617148584034528, 'bagging_temperature': 0.45774914031473624}
+2026-08-16 20:14:07 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][catboost] trial 1 fold 5: fitting on 73,400 rows...
+2026-08-16 20:17:25 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 1 fold 5 PR_AUC_macro=0.2930 AUC=0.4976 F1_macro=0.2096 QWK=-0.0018 | params={'iterations': 604, 'depth': 8, 'learning_rate': 0.04409030576992578, 'l2_leaf_reg': 1.617148584034528, 'bagging_temperature': 0.45774914031473624}
+2026-08-16 20:17:25 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][catboost] trial 2 fold 1: fitting on 57,542 rows...
+2026-08-16 20:23:05 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 2 fold 1 PR_AUC_macro=0.2866 AUC=0.6243 F1_macro=0.1782 QWK=-0.0091 | params={'iterations': 798, 'depth': 10, 'learning_rate': 0.10931768590912849, 'l2_leaf_reg': 0.1396905811090395, 'bagging_temperature': 0.03255881488241208}
+2026-08-16 20:23:05 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][catboost] trial 2 fold 2: fitting on 33,588 rows...
+2026-08-16 20:26:25 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 2 fold 2 PR_AUC_macro=0.2509 AUC=0.4798 F1_macro=0.1852 QWK=-0.0233 | params={'iterations': 798, 'depth': 10, 'learning_rate': 0.10931768590912849, 'l2_leaf_reg': 0.1396905811090395, 'bagging_temperature': 0.03255881488241208}
+2026-08-16 20:26:25 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][catboost] trial 2 fold 3: fitting on 83,420 rows...
+2026-08-16 20:31:50 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 2 fold 3 PR_AUC_macro=0.3201 AUC=0.7158 F1_macro=0.2055 QWK=-0.0291 | params={'iterations': 798, 'depth': 10, 'learning_rate': 0.10931768590912849, 'l2_leaf_reg': 0.1396905811090395, 'bagging_temperature': 0.03255881488241208}
+2026-08-16 20:31:50 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][catboost] trial 2 fold 4: fitting on 29,806 rows...
+2026-08-16 20:34:08 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 2 fold 4 PR_AUC_macro=0.4085 AUC=0.5473 F1_macro=0.1841 QWK=-0.0201 | params={'iterations': 798, 'depth': 10, 'learning_rate': 0.10931768590912849, 'l2_leaf_reg': 0.1396905811090395, 'bagging_temperature': 0.03255881488241208}
+2026-08-16 20:34:08 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][catboost] trial 2 fold 5: fitting on 73,400 rows...
+2026-08-16 20:39:48 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 2 fold 5 PR_AUC_macro=0.2860 AUC=0.4795 F1_macro=0.2080 QWK=-0.0103 | params={'iterations': 798, 'depth': 10, 'learning_rate': 0.10931768590912849, 'l2_leaf_reg': 0.1396905811090395, 'bagging_temperature': 0.03255881488241208}
+2026-08-16 20:39:48 - wildfire_susceptibility.modeling.training.trainer - INFO - [summer][catboost] train shape=(192363, 12) | search shape=(192363, 12) (spatial CV) | class counts={0.0: 101564, 1.0: 53820, 2.0: 22232, 3.0: 10774, 4.0: 3973}
+2026-08-16 20:42:45 - wildfire_susceptibility.modeling.training.evaluation - INFO - [summer][catboost] No ref_path supplied; skipping remaining post-training evaluation.
+2026-08-16 20:42:45 - wildfire_susceptibility - INFO - === Stage complete: train ===
+2026-08-16 20:42:45 - wildfire_susceptibility - INFO - === Running stage: evaluate ===
+2026-08-16 20:42:57 - wildfire_susceptibility - INFO - [stage_evaluate] [summer][ordinal_lr] Reloading + evaluating...
+2026-08-16 20:43:35 - wildfire_susceptibility.modeling.evaluate - INFO - [summer][ordinal_lr] SHAP summary + dependence plots written.
+2026-08-16 20:43:36 - wildfire_susceptibility.modeling.evaluate - INFO - [summer][ordinal_lr] Time-forward validation (3311 test fires): {'pct_very_low': 10.99, 'pct_low': 9.24, 'pct_medium': 7.37, 'pct_high': 11.14, 'pct_very_high': 61.25, 'pct_medium_plus': 89.01}
+2026-08-16 20:43:37 - wildfire_susceptibility.modeling.evaluate - INFO - [summer][ordinal_lr] Susceptibility raster written -> susceptibility_ordinal_lr_summer.tif
+2026-08-16 20:43:41 - wildfire_susceptibility - INFO - [stage_evaluate] [summer][ordinal_lr] Susceptibility map figure written.
+2026-08-16 20:43:41 - wildfire_susceptibility - INFO - [stage_evaluate] [summer][random_forest] Reloading + evaluating...
+2026-08-16 20:45:27 - wildfire_susceptibility.modeling.evaluate - INFO - [summer][random_forest] SHAP summary + dependence plots written.
+2026-08-16 20:45:28 - wildfire_susceptibility.modeling.evaluate - INFO - [summer][random_forest] Time-forward validation (3311 test fires): {'pct_very_low': 4.17, 'pct_low': 95.83, 'pct_medium': 0.0, 'pct_high': 0.0, 'pct_very_high': 0.0, 'pct_medium_plus': 95.83}
+2026-08-16 20:45:52 - wildfire_susceptibility.modeling.evaluate - INFO - [summer][random_forest] Susceptibility raster written -> susceptibility_random_forest_summer.tif
+2026-08-16 20:45:56 - wildfire_susceptibility - INFO - [stage_evaluate] [summer][random_forest] Susceptibility map figure written.
+2026-08-16 20:45:56 - wildfire_susceptibility - INFO - [stage_evaluate] [summer][catboost] Reloading + evaluating...
+2026-08-16 20:46:01 - wildfire_susceptibility.modeling.evaluate - INFO - [summer][catboost] SHAP summary + dependence plots written.
+2026-08-16 20:46:02 - wildfire_susceptibility.modeling.evaluate - INFO - [summer][catboost] Time-forward validation (3311 test fires): {'pct_very_low': 10.3, 'pct_low': 88.07, 'pct_medium': 1.63, 'pct_high': 0.0, 'pct_very_high': 0.0, 'pct_medium_plus': 89.7}
+2026-08-16 20:46:18 - wildfire_susceptibility.modeling.evaluate - INFO - [summer][catboost] Susceptibility raster written -> susceptibility_catboost_summer.tif
+2026-08-16 20:46:22 - wildfire_susceptibility - INFO - [stage_evaluate] [summer][catboost] Susceptibility map figure written.
+2026-08-16 20:46:24 - wildfire_susceptibility - INFO - [stage_evaluate] [summer] ROC comparison chart written (3 model(s)).
+2026-08-16 20:46:24 - wildfire_susceptibility - INFO - === Stage complete: evaluate ===
+2026-08-16 20:46:24 - wildfire_susceptibility - INFO - === Running stage: selection ===
+2026-08-16 20:46:24 - wildfire_susceptibility - INFO - [stage_selection] Comparison table -> model_comparison.csv
+2026-08-16 20:46:24 - wildfire_susceptibility - INFO - [stage_selection] Selection summary -> selection_summary.json
+2026-08-16 20:46:24 - wildfire_susceptibility - INFO - [stage_selection] Kruskal-Wallis results -> kruskal_wallis.csv
+2026-08-16 20:46:24 - wildfire_susceptibility - INFO - === Stage complete: selection ===
+2026-08-16 20:46:24 - wildfire_susceptibility - INFO - === Running stage: eda ===
+2026-08-16 20:46:49 - wildfire_susceptibility - INFO - [stage_eda] Rendered 7 static factor map(s): ['aspect', 'd_buildings', 'd_rivers', 'd_roads', 'elevation', 'landuse_class', 'slope']
+2026-08-16 20:46:49 - wildfire_susceptibility - INFO - [stage_eda] [summer] Generating EDA figures...
+2026-08-16 20:47:00 - wildfire_susceptibility.viz.charts - WARNING - [summer] VIF: 1 feature(s) exceed VIF>10.0
+2026-08-16 20:47:03 - wildfire_susceptibility - INFO - [stage_eda] [summer] Spearman significance export: 25 columns, 300 pairs -> figures\summer\eda\spearman_significance_full.csv
+2026-08-16 20:47:34 - wildfire_susceptibility - INFO - [stage_eda] [summer] Rendered 9 seasonal factor map(s): ['d_fires', 'diurnal_range', 'hurs', 'ndvi', 'rainfall', 'sfcWind', 'tas', 'tasmax', 'tasmin']
+2026-08-16 20:47:34 - wildfire_susceptibility - INFO - === Stage complete: eda ===
+2026-08-16 20:47:34 - wildfire_susceptibility - INFO - === Running stage: temporal_eda ===
+2026-08-16 20:47:34 - wildfire_susceptibility - INFO - [stage_temporal_eda] Analyzing tas...
+2026-08-16 20:47:48 - wildfire_susceptibility - INFO - [stage_temporal_eda] Analyzing tasmax...
+2026-08-16 20:48:00 - wildfire_susceptibility - INFO - [stage_temporal_eda] Analyzing tasmin...
+2026-08-16 20:48:14 - wildfire_susceptibility - INFO - [stage_temporal_eda] Analyzing rainfall...
+2026-08-16 20:48:26 - wildfire_susceptibility - INFO - [stage_temporal_eda] Analyzing sfcWind...
+2026-08-16 20:48:39 - wildfire_susceptibility - INFO - [stage_temporal_eda] Analyzing hurs...
+2026-08-16 20:48:51 - wildfire_susceptibility - INFO - [stage_temporal_eda] Stationarity summary -> stationarity_summary.csv
+2026-08-16 20:50:27 - wildfire_susceptibility - INFO - [stage_temporal_eda] Spatial correlogram -> spatial_correlogram.csv
+2026-08-16 20:50:27 - wildfire_susceptibility - INFO - === Stage complete: temporal_eda ===
+2026-08-16 20:56:31 - wildfire_susceptibility - INFO - Logger initialized: wildfire_susceptibility
+2026-08-16 20:56:31 - wildfire_susceptibility - INFO - === Running stage: static ===
+2026-08-16 20:56:31 - wildfire_susceptibility - INFO - [stage_static] Building static features...
+2026-08-16 20:56:31 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] BoundaryBuilder: outputs already exist, skipping computation
+2026-08-16 20:56:31 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] TopographyBuilder: outputs already exist, skipping computation
+2026-08-16 20:56:31 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] ProximityBuilder: outputs already exist, skipping computation
+2026-08-16 20:56:31 - wildfire_susceptibility - INFO - [stage_static] Complete — 9 output path(s).
+2026-08-16 20:56:31 - wildfire_susceptibility - INFO - === Stage complete: static ===
+2026-08-16 20:56:31 - wildfire_susceptibility - INFO - === Running stage: seasonal ===
+2026-08-16 20:56:31 - wildfire_susceptibility - INFO - [stage_seasonal] [summer] Building seasonal features...
+2026-08-16 20:56:31 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] ClimateBuilder[summer][train]: outputs already exist, skipping computation
+2026-08-16 20:56:31 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] VegetationBuilder[summer][train]: outputs already exist, skipping computation
+2026-08-16 20:56:31 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] ClimateBuilder[summer][test]: outputs already exist, skipping computation
+2026-08-16 20:56:31 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] VegetationBuilder[summer][test]: outputs already exist, skipping computation
+2026-08-16 20:56:31 - wildfire_susceptibility - INFO - === Stage complete: seasonal ===
+2026-08-16 20:56:31 - wildfire_susceptibility - INFO - === Running stage: labels ===
+2026-08-16 20:56:31 - wildfire_susceptibility - INFO - [stage_labels] [summer] Building fire labels...
+2026-08-16 20:56:31 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] FireBuilder[summer]: outputs already exist, skipping computation
+2026-08-16 20:56:31 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] FireProximityBuilder[summer]: outputs already exist, skipping computation
+2026-08-16 20:56:31 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[kde][summer_train]: outputs already exist, skipping computation
+2026-08-16 20:56:31 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[kde][jenks][summer_train]: outputs already exist, skipping computation
+2026-08-16 20:56:32 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[kde][summer_test]: outputs already exist, skipping computation
+2026-08-16 20:56:32 - wildfire_susceptibility.utils.checkpoint - INFO - [CACHED] KDClassifier[kde][jenks][summer_test]: outputs already exist, skipping computation
+2026-08-16 20:56:32 - wildfire_susceptibility - INFO - === Stage complete: labels ===
+2026-08-16 20:56:32 - wildfire_susceptibility - INFO - === Running stage: integration ===
+2026-08-16 20:56:32 - wildfire_susceptibility - INFO - [stage_integration] [CACHED] summer/train -> dataset_train_summer.csv
+2026-08-16 20:56:32 - wildfire_susceptibility - INFO - [stage_integration] [CACHED] summer/test -> dataset_test_summer.csv
+2026-08-16 20:56:32 - wildfire_susceptibility - INFO - === Stage complete: integration ===
+2026-08-16 20:56:32 - wildfire_susceptibility - INFO - === Running stage: preprocessing ===
+2026-08-16 20:56:32 - wildfire_susceptibility - INFO - [stage_preprocessing] [CACHED] summer -> dataset_train_summer_clean.csv, dataset_test_summer_clean.csv, dataset_full_summer_clean.csv
+2026-08-16 20:56:32 - wildfire_susceptibility - INFO - === Stage complete: preprocessing ===
+2026-08-16 20:56:32 - wildfire_susceptibility - INFO - === Running stage: train ===
+2026-08-16 20:56:33 - wildfire_susceptibility - INFO - [stage_train] [summer] Loading cleaned datasets...
+2026-08-16 20:56:35 - wildfire_susceptibility - INFO - Training with the following features: ['elevation', 'slope', 'aspect', 'd_roads', 'd_rivers', 'd_buildings', 'landuse_class', 'tasmax', 'rainfall', 'hurs', 'diurnal_range', 'ndvi']
+2026-08-16 20:56:35 - wildfire_susceptibility.modeling.dataset_prep - INFO - Assigned 192,363 rows to 70 spatial blocks (4 km grid)
+2026-08-16 20:56:35 - wildfire_susceptibility - INFO - [stage_train] [summer][ordinal_lr] Search + refit...
+2026-08-16 20:56:35 - wildfire_susceptibility.modeling.training.search - INFO - [ordinal_lr] resolved subsample fraction 1.0 of 192,363 rows -> 192,363
+2026-08-16 20:56:36 - wildfire_susceptibility.modeling.cv.base - INFO - [spatial] spatial buffer (4000m, radius=1 block(s)): dropped 105,382/162,924 train rows within the buffer ring of this fold's test blocks
+2026-08-16 20:56:36 - wildfire_susceptibility.modeling.cv.base - INFO - [spatial] spatial buffer (4000m, radius=1 block(s)): dropped 111,339/144,927 train rows within the buffer ring of this fold's test blocks
+2026-08-16 20:56:36 - wildfire_susceptibility.modeling.cv.base - INFO - [spatial] spatial buffer (4000m, radius=1 block(s)): dropped 73,690/157,110 train rows within the buffer ring of this fold's test blocks
+2026-08-16 20:56:37 - wildfire_susceptibility.modeling.cv.base - INFO - [spatial] spatial buffer (4000m, radius=1 block(s)): dropped 124,448/154,254 train rows within the buffer ring of this fold's test blocks
+2026-08-16 20:56:37 - wildfire_susceptibility.modeling.cv.base - INFO - [spatial] spatial buffer (4000m, radius=1 block(s)): dropped 76,837/150,237 train rows within the buffer ring of this fold's test blocks
+2026-08-16 20:56:38 - wildfire_susceptibility.modeling.training.search - INFO - [summer][ordinal_lr] finished=0 target=3 remaining=3
+2026-08-16 20:56:38 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][ordinal_lr] trial 0 fold 1: fitting on 57,542 rows...
+2026-08-16 20:56:41 - wildfire_susceptibility.modeling.training.search - INFO - [summer][ordinal_lr] trial 0 fold 1 PR_AUC_macro=0.2975 AUC=0.7137 F1_macro=0.2026 QWK=0.1364 | params={'alpha': 0.008684286649237436}
+2026-08-16 20:56:41 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][ordinal_lr] trial 0 fold 2: fitting on 33,588 rows...
+2026-08-16 20:56:42 - wildfire_susceptibility.modeling.training.search - INFO - [summer][ordinal_lr] trial 0 fold 2 PR_AUC_macro=0.3483 AUC=0.6463 F1_macro=0.2208 QWK=0.1732 | params={'alpha': 0.008684286649237436}
+2026-08-16 20:56:42 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][ordinal_lr] trial 0 fold 3: fitting on 83,420 rows...
+2026-08-16 20:56:45 - wildfire_susceptibility.modeling.training.search - INFO - [summer][ordinal_lr] trial 0 fold 3 PR_AUC_macro=0.3703 AUC=0.6856 F1_macro=0.3270 QWK=0.2737 | params={'alpha': 0.008684286649237436}
+2026-08-16 20:56:45 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][ordinal_lr] trial 0 fold 4: fitting on 29,806 rows...
+2026-08-16 20:56:46 - wildfire_susceptibility.modeling.training.search - INFO - [summer][ordinal_lr] trial 0 fold 4 PR_AUC_macro=0.4617 AUC=0.6596 F1_macro=0.3120 QWK=0.3874 | params={'alpha': 0.008684286649237436}
+2026-08-16 20:56:46 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][ordinal_lr] trial 0 fold 5: fitting on 73,400 rows...
+2026-08-16 20:56:50 - wildfire_susceptibility.modeling.training.search - INFO - [summer][ordinal_lr] trial 0 fold 5 PR_AUC_macro=0.2942 AUC=0.5807 F1_macro=0.1938 QWK=0.0841 | params={'alpha': 0.008684286649237436}
+2026-08-16 20:56:51 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][ordinal_lr] trial 1 fold 1: fitting on 57,542 rows...
+2026-08-16 20:56:53 - wildfire_susceptibility.modeling.training.search - INFO - [summer][ordinal_lr] trial 1 fold 1 PR_AUC_macro=0.2974 AUC=0.7136 F1_macro=0.2027 QWK=0.1363 | params={'alpha': 2.9839679672402997}
+2026-08-16 20:56:53 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][ordinal_lr] trial 1 fold 2: fitting on 33,588 rows...
+2026-08-16 20:56:53 - wildfire_susceptibility.modeling.training.search - INFO - [summer][ordinal_lr] trial 1 fold 2 PR_AUC_macro=0.3480 AUC=0.6462 F1_macro=0.2199 QWK=0.1725 | params={'alpha': 2.9839679672402997}
+2026-08-16 20:56:54 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][ordinal_lr] trial 1 fold 3: fitting on 83,420 rows...
+2026-08-16 20:56:56 - wildfire_susceptibility.modeling.training.search - INFO - [summer][ordinal_lr] trial 1 fold 3 PR_AUC_macro=0.3703 AUC=0.6856 F1_macro=0.3270 QWK=0.2736 | params={'alpha': 2.9839679672402997}
+2026-08-16 20:56:56 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][ordinal_lr] trial 1 fold 4: fitting on 29,806 rows...
+2026-08-16 20:56:57 - wildfire_susceptibility.modeling.training.search - INFO - [summer][ordinal_lr] trial 1 fold 4 PR_AUC_macro=0.4588 AUC=0.6575 F1_macro=0.3137 QWK=0.3924 | params={'alpha': 2.9839679672402997}
+2026-08-16 20:56:57 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][ordinal_lr] trial 1 fold 5: fitting on 73,400 rows...
+2026-08-16 20:57:00 - wildfire_susceptibility.modeling.training.search - INFO - [summer][ordinal_lr] trial 1 fold 5 PR_AUC_macro=0.2943 AUC=0.5805 F1_macro=0.1939 QWK=0.0839 | params={'alpha': 2.9839679672402997}
+2026-08-16 20:57:00 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][ordinal_lr] trial 2 fold 1: fitting on 57,542 rows...
+2026-08-16 20:57:03 - wildfire_susceptibility.modeling.training.search - INFO - [summer][ordinal_lr] trial 2 fold 1 PR_AUC_macro=0.2975 AUC=0.7137 F1_macro=0.2026 QWK=0.1364 | params={'alpha': 0.0952691473551001}
+2026-08-16 20:57:03 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][ordinal_lr] trial 2 fold 2: fitting on 33,588 rows...
+2026-08-16 20:57:04 - wildfire_susceptibility.modeling.training.search - INFO - [summer][ordinal_lr] trial 2 fold 2 PR_AUC_macro=0.3482 AUC=0.6463 F1_macro=0.2208 QWK=0.1732 | params={'alpha': 0.0952691473551001}
+2026-08-16 20:57:04 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][ordinal_lr] trial 2 fold 3: fitting on 83,420 rows...
+2026-08-16 20:57:07 - wildfire_susceptibility.modeling.training.search - INFO - [summer][ordinal_lr] trial 2 fold 3 PR_AUC_macro=0.3703 AUC=0.6856 F1_macro=0.3270 QWK=0.2737 | params={'alpha': 0.0952691473551001}
+2026-08-16 20:57:07 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][ordinal_lr] trial 2 fold 4: fitting on 29,806 rows...
+2026-08-16 20:57:08 - wildfire_susceptibility.modeling.training.search - INFO - [summer][ordinal_lr] trial 2 fold 4 PR_AUC_macro=0.4593 AUC=0.6580 F1_macro=0.3107 QWK=0.3907 | params={'alpha': 0.0952691473551001}
+2026-08-16 20:57:08 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][ordinal_lr] trial 2 fold 5: fitting on 73,400 rows...
+2026-08-16 20:57:13 - wildfire_susceptibility.modeling.training.search - INFO - [summer][ordinal_lr] trial 2 fold 5 PR_AUC_macro=0.2942 AUC=0.5807 F1_macro=0.1939 QWK=0.0841 | params={'alpha': 0.0952691473551001}
+2026-08-16 20:57:13 - wildfire_susceptibility.modeling.training.trainer - INFO - [summer][ordinal_lr] train shape=(192363, 18) | search shape=(192363, 18) (spatial CV) | class counts={0.0: 101564, 1.0: 53820, 2.0: 22232, 3.0: 10774, 4.0: 3973}
+2026-08-16 20:57:28 - wildfire_susceptibility.modeling.training.evaluation - INFO - [summer][ordinal_lr] No ref_path supplied; skipping remaining post-training evaluation.
+2026-08-16 20:57:28 - wildfire_susceptibility - INFO - [stage_train] [summer][random_forest] Search + refit...
+2026-08-16 20:57:28 - wildfire_susceptibility.modeling.training.search - INFO - [random_forest] resolved subsample fraction 1.0 of 192,363 rows -> 192,363
+2026-08-16 20:57:29 - wildfire_susceptibility.modeling.cv.base - INFO - [spatial] spatial buffer (4000m, radius=1 block(s)): dropped 105,382/162,924 train rows within the buffer ring of this fold's test blocks
+2026-08-16 20:57:29 - wildfire_susceptibility.modeling.cv.base - INFO - [spatial] spatial buffer (4000m, radius=1 block(s)): dropped 111,339/144,927 train rows within the buffer ring of this fold's test blocks
+2026-08-16 20:57:30 - wildfire_susceptibility.modeling.cv.base - INFO - [spatial] spatial buffer (4000m, radius=1 block(s)): dropped 73,690/157,110 train rows within the buffer ring of this fold's test blocks
+2026-08-16 20:57:30 - wildfire_susceptibility.modeling.cv.base - INFO - [spatial] spatial buffer (4000m, radius=1 block(s)): dropped 124,448/154,254 train rows within the buffer ring of this fold's test blocks
+2026-08-16 20:57:30 - wildfire_susceptibility.modeling.cv.base - INFO - [spatial] spatial buffer (4000m, radius=1 block(s)): dropped 76,837/150,237 train rows within the buffer ring of this fold's test blocks
+2026-08-16 20:57:31 - wildfire_susceptibility.modeling.training.search - INFO - [summer][random_forest] finished=0 target=3 remaining=3
+2026-08-16 20:57:31 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][random_forest] trial 0 fold 1: fitting on 57,542 rows...
+2026-08-16 20:57:34 - wildfire_susceptibility.modeling.training.search - INFO - [summer][random_forest] trial 0 fold 1 PR_AUC_macro=0.3051 AUC=0.6193 F1_macro=0.2063 QWK=0.0091 | params={'n_estimators': 170, 'max_depth': 11, 'min_samples_leaf': 27, 'min_samples_split': 37, 'max_features': 'sqrt', 'max_samples': 0.6754711142902515}
+2026-08-16 20:57:34 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][random_forest] trial 0 fold 2: fitting on 33,588 rows...
+2026-08-16 20:57:36 - wildfire_susceptibility.modeling.training.search - INFO - [summer][random_forest] trial 0 fold 2 PR_AUC_macro=0.2419 AUC=0.4613 F1_macro=0.1610 QWK=-0.0031 | params={'n_estimators': 170, 'max_depth': 11, 'min_samples_leaf': 27, 'min_samples_split': 37, 'max_features': 'sqrt', 'max_samples': 0.6754711142902515}
+2026-08-16 20:57:36 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][random_forest] trial 0 fold 3: fitting on 83,420 rows...
+2026-08-16 20:57:41 - wildfire_susceptibility.modeling.training.search - INFO - [summer][random_forest] trial 0 fold 3 PR_AUC_macro=0.3632 AUC=0.7228 F1_macro=0.1877 QWK=-0.0233 | params={'n_estimators': 170, 'max_depth': 11, 'min_samples_leaf': 27, 'min_samples_split': 37, 'max_features': 'sqrt', 'max_samples': 0.6754711142902515}
+2026-08-16 20:57:41 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][random_forest] trial 0 fold 4: fitting on 29,806 rows...
+2026-08-16 20:57:43 - wildfire_susceptibility.modeling.training.search - INFO - [summer][random_forest] trial 0 fold 4 PR_AUC_macro=0.4275 AUC=0.5954 F1_macro=0.2838 QWK=0.2165 | params={'n_estimators': 170, 'max_depth': 11, 'min_samples_leaf': 27, 'min_samples_split': 37, 'max_features': 'sqrt', 'max_samples': 0.6754711142902515}
+2026-08-16 20:57:43 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][random_forest] trial 0 fold 5: fitting on 73,400 rows...
+2026-08-16 20:57:47 - wildfire_susceptibility.modeling.training.search - INFO - [summer][random_forest] trial 0 fold 5 PR_AUC_macro=0.2504 AUC=0.4085 F1_macro=0.1654 QWK=-0.0198 | params={'n_estimators': 170, 'max_depth': 11, 'min_samples_leaf': 27, 'min_samples_split': 37, 'max_features': 'sqrt', 'max_samples': 0.6754711142902515}
+2026-08-16 20:57:47 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][random_forest] trial 1 fold 1: fitting on 57,542 rows...
+2026-08-16 20:57:51 - wildfire_susceptibility.modeling.training.search - INFO - [summer][random_forest] trial 1 fold 1 PR_AUC_macro=0.2949 AUC=0.4081 F1_macro=0.2893 QWK=-0.0045 | params={'n_estimators': 129, 'max_depth': 4, 'min_samples_leaf': 22, 'min_samples_split': 23, 'max_features': None, 'max_samples': 0.6624554486241214}
+2026-08-16 20:57:51 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][random_forest] trial 1 fold 2: fitting on 33,588 rows...
+2026-08-16 20:57:54 - wildfire_susceptibility.modeling.training.search - INFO - [summer][random_forest] trial 1 fold 2 PR_AUC_macro=0.3282 AUC=0.5732 F1_macro=0.1634 QWK=-0.0331 | params={'n_estimators': 129, 'max_depth': 4, 'min_samples_leaf': 22, 'min_samples_split': 23, 'max_features': None, 'max_samples': 0.6624554486241214}
+2026-08-16 20:57:54 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][random_forest] trial 1 fold 3: fitting on 83,420 rows...
+2026-08-16 20:58:00 - wildfire_susceptibility.modeling.training.search - INFO - [summer][random_forest] trial 1 fold 3 PR_AUC_macro=0.3101 AUC=0.6584 F1_macro=0.2305 QWK=0.0837 | params={'n_estimators': 129, 'max_depth': 4, 'min_samples_leaf': 22, 'min_samples_split': 23, 'max_features': None, 'max_samples': 0.6624554486241214}
+2026-08-16 20:58:00 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][random_forest] trial 1 fold 4: fitting on 29,806 rows...
+2026-08-16 20:58:02 - wildfire_susceptibility.modeling.training.search - INFO - [summer][random_forest] trial 1 fold 4 PR_AUC_macro=0.3990 AUC=0.5715 F1_macro=0.2737 QWK=0.1879 | params={'n_estimators': 129, 'max_depth': 4, 'min_samples_leaf': 22, 'min_samples_split': 23, 'max_features': None, 'max_samples': 0.6624554486241214}
+2026-08-16 20:58:02 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][random_forest] trial 1 fold 5: fitting on 73,400 rows...
+2026-08-16 20:58:08 - wildfire_susceptibility.modeling.training.search - INFO - [summer][random_forest] trial 1 fold 5 PR_AUC_macro=0.2699 AUC=0.4638 F1_macro=0.1885 QWK=-0.0978 | params={'n_estimators': 129, 'max_depth': 4, 'min_samples_leaf': 22, 'min_samples_split': 23, 'max_features': None, 'max_samples': 0.6624554486241214}
+2026-08-16 20:58:09 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][random_forest] trial 2 fold 1: fitting on 57,542 rows...
+2026-08-16 20:58:12 - wildfire_susceptibility.modeling.training.search - INFO - [summer][random_forest] trial 2 fold 1 PR_AUC_macro=0.3121 AUC=0.6425 F1_macro=0.2015 QWK=0.0115 | params={'n_estimators': 217, 'max_depth': 7, 'min_samples_leaf': 8, 'min_samples_split': 30, 'max_features': 'sqrt', 'max_samples': 0.5039526708699547}
+2026-08-16 20:58:12 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][random_forest] trial 2 fold 2: fitting on 33,588 rows...
+2026-08-16 20:58:14 - wildfire_susceptibility.modeling.training.search - INFO - [summer][random_forest] trial 2 fold 2 PR_AUC_macro=0.2447 AUC=0.4577 F1_macro=0.1606 QWK=-0.0022 | params={'n_estimators': 217, 'max_depth': 7, 'min_samples_leaf': 8, 'min_samples_split': 30, 'max_features': 'sqrt', 'max_samples': 0.5039526708699547}
+2026-08-16 20:58:14 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][random_forest] trial 2 fold 3: fitting on 83,420 rows...
+2026-08-16 20:58:18 - wildfire_susceptibility.modeling.training.search - INFO - [summer][random_forest] trial 2 fold 3 PR_AUC_macro=0.3579 AUC=0.7350 F1_macro=0.1957 QWK=-0.0261 | params={'n_estimators': 217, 'max_depth': 7, 'min_samples_leaf': 8, 'min_samples_split': 30, 'max_features': 'sqrt', 'max_samples': 0.5039526708699547}
+2026-08-16 20:58:18 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][random_forest] trial 2 fold 4: fitting on 29,806 rows...
+2026-08-16 20:58:20 - wildfire_susceptibility.modeling.training.search - INFO - [summer][random_forest] trial 2 fold 4 PR_AUC_macro=0.4543 AUC=0.6239 F1_macro=0.2378 QWK=0.1731 | params={'n_estimators': 217, 'max_depth': 7, 'min_samples_leaf': 8, 'min_samples_split': 30, 'max_features': 'sqrt', 'max_samples': 0.5039526708699547}
+2026-08-16 20:58:20 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][random_forest] trial 2 fold 5: fitting on 73,400 rows...
+2026-08-16 20:58:24 - wildfire_susceptibility.modeling.training.search - INFO - [summer][random_forest] trial 2 fold 5 PR_AUC_macro=0.2523 AUC=0.4038 F1_macro=0.1778 QWK=-0.0300 | params={'n_estimators': 217, 'max_depth': 7, 'min_samples_leaf': 8, 'min_samples_split': 30, 'max_features': 'sqrt', 'max_samples': 0.5039526708699547}
+2026-08-16 20:58:24 - wildfire_susceptibility.modeling.training.trainer - INFO - [summer][random_forest] train shape=(192363, 18) | search shape=(192363, 18) (spatial CV) | class counts={0.0: 101564, 1.0: 53820, 2.0: 22232, 3.0: 10774, 4.0: 3973}
+2026-08-16 20:59:08 - wildfire_susceptibility.modeling.training.evaluation - INFO - [summer][random_forest] No ref_path supplied; skipping remaining post-training evaluation.
+2026-08-16 20:59:08 - wildfire_susceptibility - INFO - [stage_train] [summer][catboost] Search + refit...
+2026-08-16 20:59:08 - wildfire_susceptibility.modeling.training.search - INFO - [catboost] resolved subsample fraction 1.0 of 192,363 rows -> 192,363
+2026-08-16 20:59:08 - wildfire_susceptibility.modeling.cv.base - INFO - [spatial] spatial buffer (4000m, radius=1 block(s)): dropped 105,382/162,924 train rows within the buffer ring of this fold's test blocks
+2026-08-16 20:59:09 - wildfire_susceptibility.modeling.cv.base - INFO - [spatial] spatial buffer (4000m, radius=1 block(s)): dropped 111,339/144,927 train rows within the buffer ring of this fold's test blocks
+2026-08-16 20:59:09 - wildfire_susceptibility.modeling.cv.base - INFO - [spatial] spatial buffer (4000m, radius=1 block(s)): dropped 73,690/157,110 train rows within the buffer ring of this fold's test blocks
+2026-08-16 20:59:09 - wildfire_susceptibility.modeling.cv.base - INFO - [spatial] spatial buffer (4000m, radius=1 block(s)): dropped 124,448/154,254 train rows within the buffer ring of this fold's test blocks
+2026-08-16 20:59:09 - wildfire_susceptibility.modeling.cv.base - INFO - [spatial] spatial buffer (4000m, radius=1 block(s)): dropped 76,837/150,237 train rows within the buffer ring of this fold's test blocks
+2026-08-16 20:59:10 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] finished=0 target=3 remaining=3
+2026-08-16 20:59:10 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][catboost] trial 0 fold 1: fitting on 57,542 rows...
+2026-08-16 21:00:13 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 0 fold 1 PR_AUC_macro=0.3017 AUC=0.6675 F1_macro=0.1632 QWK=-0.0263 | params={'iterations': 548, 'depth': 7, 'learning_rate': 0.0060481277456344035, 'l2_leaf_reg': 6.398353069637169, 'bagging_temperature': 0.8443960148886719, 'min_data_in_leaf': 5, 'random_strength': 7.4857732621356305}
+2026-08-16 21:00:13 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][catboost] trial 0 fold 2: fitting on 33,588 rows...
+2026-08-16 21:00:45 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 0 fold 2 PR_AUC_macro=0.2494 AUC=0.4536 F1_macro=0.1529 QWK=-0.0280 | params={'iterations': 548, 'depth': 7, 'learning_rate': 0.0060481277456344035, 'l2_leaf_reg': 6.398353069637169, 'bagging_temperature': 0.8443960148886719, 'min_data_in_leaf': 5, 'random_strength': 7.4857732621356305}
+2026-08-16 21:00:45 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][catboost] trial 0 fold 3: fitting on 83,420 rows...
+2026-08-16 21:01:56 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 0 fold 3 PR_AUC_macro=0.3680 AUC=0.7523 F1_macro=0.2592 QWK=-0.0102 | params={'iterations': 548, 'depth': 7, 'learning_rate': 0.0060481277456344035, 'l2_leaf_reg': 6.398353069637169, 'bagging_temperature': 0.8443960148886719, 'min_data_in_leaf': 5, 'random_strength': 7.4857732621356305}
+2026-08-16 21:01:56 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][catboost] trial 0 fold 4: fitting on 29,806 rows...
+2026-08-16 21:02:24 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 0 fold 4 PR_AUC_macro=0.4463 AUC=0.5969 F1_macro=0.2824 QWK=0.2418 | params={'iterations': 548, 'depth': 7, 'learning_rate': 0.0060481277456344035, 'l2_leaf_reg': 6.398353069637169, 'bagging_temperature': 0.8443960148886719, 'min_data_in_leaf': 5, 'random_strength': 7.4857732621356305}
+2026-08-16 21:02:24 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][catboost] trial 0 fold 5: fitting on 73,400 rows...
+2026-08-16 21:03:50 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 0 fold 5 PR_AUC_macro=0.3094 AUC=0.5482 F1_macro=0.1994 QWK=-0.0490 | params={'iterations': 548, 'depth': 7, 'learning_rate': 0.0060481277456344035, 'l2_leaf_reg': 6.398353069637169, 'bagging_temperature': 0.8443960148886719, 'min_data_in_leaf': 5, 'random_strength': 7.4857732621356305}
+2026-08-16 21:03:50 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][catboost] trial 1 fold 1: fitting on 57,542 rows...
+2026-08-16 21:05:51 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 1 fold 1 PR_AUC_macro=0.2807 AUC=0.6078 F1_macro=0.1749 QWK=-0.0274 | params={'iterations': 677, 'depth': 8, 'learning_rate': 0.25771647664422254, 'l2_leaf_reg': 7.099528746001285, 'bagging_temperature': 0.7796185772874187, 'min_data_in_leaf': 32, 'random_strength': 1.9851456200501938}
+2026-08-16 21:05:51 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][catboost] trial 1 fold 2: fitting on 33,588 rows...
+2026-08-16 21:07:04 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 1 fold 2 PR_AUC_macro=0.2510 AUC=0.4665 F1_macro=0.1871 QWK=-0.0277 | params={'iterations': 677, 'depth': 8, 'learning_rate': 0.25771647664422254, 'l2_leaf_reg': 7.099528746001285, 'bagging_temperature': 0.7796185772874187, 'min_data_in_leaf': 32, 'random_strength': 1.9851456200501938}
+2026-08-16 21:07:04 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][catboost] trial 1 fold 3: fitting on 83,420 rows...
+2026-08-16 21:09:17 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 1 fold 3 PR_AUC_macro=0.3367 AUC=0.7217 F1_macro=0.2113 QWK=-0.0383 | params={'iterations': 677, 'depth': 8, 'learning_rate': 0.25771647664422254, 'l2_leaf_reg': 7.099528746001285, 'bagging_temperature': 0.7796185772874187, 'min_data_in_leaf': 32, 'random_strength': 1.9851456200501938}
+2026-08-16 21:09:17 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][catboost] trial 1 fold 4: fitting on 29,806 rows...
+2026-08-16 21:10:11 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 1 fold 4 PR_AUC_macro=0.4105 AUC=0.5535 F1_macro=0.2066 QWK=0.0577 | params={'iterations': 677, 'depth': 8, 'learning_rate': 0.25771647664422254, 'l2_leaf_reg': 7.099528746001285, 'bagging_temperature': 0.7796185772874187, 'min_data_in_leaf': 32, 'random_strength': 1.9851456200501938}
+2026-08-16 21:10:11 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][catboost] trial 1 fold 5: fitting on 73,400 rows...
+2026-08-16 21:12:58 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 1 fold 5 PR_AUC_macro=0.2809 AUC=0.4963 F1_macro=0.2005 QWK=-0.0087 | params={'iterations': 677, 'depth': 8, 'learning_rate': 0.25771647664422254, 'l2_leaf_reg': 7.099528746001285, 'bagging_temperature': 0.7796185772874187, 'min_data_in_leaf': 32, 'random_strength': 1.9851456200501938}
+2026-08-16 21:12:59 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][catboost] trial 2 fold 1: fitting on 57,542 rows...
+2026-08-16 21:13:28 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 2 fold 1 PR_AUC_macro=0.3105 AUC=0.6590 F1_macro=0.1510 QWK=0.1020 | params={'iterations': 477, 'depth': 3, 'learning_rate': 0.0012209110449561105, 'l2_leaf_reg': 5.118941988267205, 'bagging_temperature': 0.29715027384711423, 'min_data_in_leaf': 42, 'random_strength': 1.516392959376739}
+2026-08-16 21:13:28 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][catboost] trial 2 fold 2: fitting on 33,588 rows...
+2026-08-16 21:13:45 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 2 fold 2 PR_AUC_macro=0.2452 AUC=0.4381 F1_macro=0.1179 QWK=-0.0002 | params={'iterations': 477, 'depth': 3, 'learning_rate': 0.0012209110449561105, 'l2_leaf_reg': 5.118941988267205, 'bagging_temperature': 0.29715027384711423, 'min_data_in_leaf': 42, 'random_strength': 1.516392959376739}
+2026-08-16 21:13:45 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][catboost] trial 2 fold 3: fitting on 83,420 rows...
+2026-08-16 21:14:19 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 2 fold 3 PR_AUC_macro=0.3786 AUC=0.7417 F1_macro=0.2922 QWK=0.1925 | params={'iterations': 477, 'depth': 3, 'learning_rate': 0.0012209110449561105, 'l2_leaf_reg': 5.118941988267205, 'bagging_temperature': 0.29715027384711423, 'min_data_in_leaf': 42, 'random_strength': 1.516392959376739}
+2026-08-16 21:14:19 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][catboost] trial 2 fold 4: fitting on 29,806 rows...
+2026-08-16 21:14:32 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 2 fold 4 PR_AUC_macro=0.4574 AUC=0.6163 F1_macro=0.2553 QWK=0.2656 | params={'iterations': 477, 'depth': 3, 'learning_rate': 0.0012209110449561105, 'l2_leaf_reg': 5.118941988267205, 'bagging_temperature': 0.29715027384711423, 'min_data_in_leaf': 42, 'random_strength': 1.516392959376739}
+2026-08-16 21:14:32 - wildfire_susceptibility.modeling.cv.base - INFO - [summer][catboost] trial 2 fold 5: fitting on 73,400 rows...
+2026-08-16 21:15:08 - wildfire_susceptibility.modeling.training.search - INFO - [summer][catboost] trial 2 fold 5 PR_AUC_macro=0.2744 AUC=0.5244 F1_macro=0.1778 QWK=-0.0291 | params={'iterations': 477, 'depth': 3, 'learning_rate': 0.0012209110449561105, 'l2_leaf_reg': 5.118941988267205, 'bagging_temperature': 0.29715027384711423, 'min_data_in_leaf': 42, 'random_strength': 1.516392959376739}
+2026-08-16 21:15:08 - wildfire_susceptibility.modeling.training.trainer - INFO - [summer][catboost] train shape=(192363, 12) | search shape=(192363, 12) (spatial CV) | class counts={0.0: 101564, 1.0: 53820, 2.0: 22232, 3.0: 10774, 4.0: 3973}
+2026-08-16 21:18:56 - wildfire_susceptibility.modeling.training.evaluation - INFO - [summer][catboost] No ref_path supplied; skipping remaining post-training evaluation.
+2026-08-16 21:18:56 - wildfire_susceptibility - INFO - === Stage complete: train ===
+2026-08-16 21:18:56 - wildfire_susceptibility - INFO - === Running stage: evaluate ===
+2026-08-16 21:19:08 - wildfire_susceptibility - INFO - [stage_evaluate] [summer][ordinal_lr] Reloading + evaluating...
+2026-08-16 21:19:45 - wildfire_susceptibility.modeling.evaluate - INFO - [summer][ordinal_lr] SHAP summary + dependence plots written.
+2026-08-16 21:19:45 - wildfire_susceptibility.modeling.evaluate - INFO - [summer][ordinal_lr] Time-forward validation (3311 test fires): {'pct_very_low': 10.99, 'pct_low': 9.21, 'pct_medium': 7.4, 'pct_high': 11.11, 'pct_very_high': 61.28, 'pct_medium_plus': 89.01}
+2026-08-16 21:19:47 - wildfire_susceptibility.modeling.evaluate - INFO - [summer][ordinal_lr] Susceptibility raster written -> susceptibility_ordinal_lr_summer.tif
+2026-08-16 21:19:51 - wildfire_susceptibility - INFO - [stage_evaluate] [summer][ordinal_lr] Susceptibility map figure written.
+2026-08-16 21:19:51 - wildfire_susceptibility - INFO - [stage_evaluate] [summer][random_forest] Reloading + evaluating...
+2026-08-16 21:20:13 - wildfire_susceptibility.modeling.evaluate - INFO - [summer][random_forest] SHAP summary + dependence plots written.
+2026-08-16 21:20:14 - wildfire_susceptibility.modeling.evaluate - INFO - [summer][random_forest] Time-forward validation (3311 test fires): {'pct_very_low': 4.23, 'pct_low': 95.68, 'pct_medium': 0.09, 'pct_high': 0.0, 'pct_very_high': 0.0, 'pct_medium_plus': 95.77}
+2026-08-16 21:20:29 - wildfire_susceptibility.modeling.evaluate - INFO - [summer][random_forest] Susceptibility raster written -> susceptibility_random_forest_summer.tif
+2026-08-16 21:20:32 - wildfire_susceptibility - INFO - [stage_evaluate] [summer][random_forest] Susceptibility map figure written.
+2026-08-16 21:20:32 - wildfire_susceptibility - INFO - [stage_evaluate] [summer][catboost] Reloading + evaluating...
+2026-08-16 21:20:39 - wildfire_susceptibility.modeling.evaluate - INFO - [summer][catboost] SHAP summary + dependence plots written.
+2026-08-16 21:20:39 - wildfire_susceptibility.modeling.evaluate - INFO - [summer][catboost] Time-forward validation (3311 test fires): {'pct_very_low': 14.23, 'pct_low': 85.23, 'pct_medium': 0.54, 'pct_high': 0.0, 'pct_very_high': 0.0, 'pct_medium_plus': 85.77}
+2026-08-16 21:20:53 - wildfire_susceptibility.modeling.evaluate - INFO - [summer][catboost] Susceptibility raster written -> susceptibility_catboost_summer.tif
+2026-08-16 21:20:57 - wildfire_susceptibility - INFO - [stage_evaluate] [summer][catboost] Susceptibility map figure written.
+2026-08-16 21:20:59 - wildfire_susceptibility - INFO - [stage_evaluate] [summer] ROC comparison chart written (3 model(s)).
+2026-08-16 21:20:59 - wildfire_susceptibility - INFO - === Stage complete: evaluate ===
+2026-08-16 21:20:59 - wildfire_susceptibility - INFO - === Running stage: selection ===
+2026-08-16 21:20:59 - wildfire_susceptibility - INFO - [stage_selection] Comparison table -> model_comparison.csv
+2026-08-16 21:20:59 - wildfire_susceptibility - INFO - [stage_selection] Selection summary -> selection_summary.json
+2026-08-16 21:20:59 - wildfire_susceptibility - INFO - [stage_selection] Kruskal-Wallis results -> kruskal_wallis.csv
+2026-08-16 21:20:59 - wildfire_susceptibility - INFO - === Stage complete: selection ===
+2026-08-16 21:20:59 - wildfire_susceptibility - INFO - === Running stage: eda ===
+2026-08-16 21:21:25 - wildfire_susceptibility - INFO - [stage_eda] Rendered 7 static factor map(s): ['aspect', 'd_buildings', 'd_rivers', 'd_roads', 'elevation', 'landuse_class', 'slope']
+2026-08-16 21:21:25 - wildfire_susceptibility - INFO - [stage_eda] [summer] Generating EDA figures...
+2026-08-16 21:21:37 - wildfire_susceptibility.viz.charts - WARNING - [summer] VIF: 1 feature(s) exceed VIF>10.0
+2026-08-16 21:21:39 - wildfire_susceptibility - INFO - [stage_eda] [summer] Spearman significance export: 25 columns, 300 pairs -> figures\summer\eda\spearman_significance_full.csv
+2026-08-16 21:22:17 - wildfire_susceptibility - INFO - [stage_eda] [summer] Rendered 9 seasonal factor map(s): ['d_fires', 'diurnal_range', 'hurs', 'ndvi', 'rainfall', 'sfcWind', 'tas', 'tasmax', 'tasmin']
+2026-08-16 21:22:17 - wildfire_susceptibility - INFO - === Stage complete: eda ===
+2026-08-16 21:22:17 - wildfire_susceptibility - INFO - === Running stage: temporal_eda ===
+2026-08-16 21:22:17 - wildfire_susceptibility - INFO - [stage_temporal_eda] Analyzing tas...
+2026-08-16 21:22:32 - wildfire_susceptibility - INFO - [stage_temporal_eda] Analyzing tasmax...
+2026-08-16 21:22:44 - wildfire_susceptibility - INFO - [stage_temporal_eda] Analyzing tasmin...
+2026-08-16 21:22:57 - wildfire_susceptibility - INFO - [stage_temporal_eda] Analyzing rainfall...
+2026-08-16 21:23:09 - wildfire_susceptibility - INFO - [stage_temporal_eda] Analyzing sfcWind...
+2026-08-16 21:23:22 - wildfire_susceptibility - INFO - [stage_temporal_eda] Analyzing hurs...
+2026-08-16 21:23:34 - wildfire_susceptibility - INFO - [stage_temporal_eda] Stationarity summary -> stationarity_summary.csv
+2026-08-16 21:25:06 - wildfire_susceptibility - INFO - [stage_temporal_eda] Spatial correlogram -> spatial_correlogram.csv
+2026-08-16 21:25:06 - wildfire_susceptibility - INFO - === Stage complete: temporal_eda ===

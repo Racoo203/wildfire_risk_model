@@ -63,9 +63,9 @@
   },
   "train": {
     "summer": {
-      "ordinal_lr": "models\\summer\\ordinal_lr\\3bd21225",
-      "random_forest": "models\\summer\\random_forest\\3bd21225",
-      "catboost": "models\\summer\\catboost\\3bd21225"
+      "ordinal_lr": "models\\summer\\ordinal_lr\\8e64229c",
+      "random_forest": "models\\summer\\random_forest\\8e64229c",
+      "catboost": "models\\summer\\catboost\\8e64229c"
     }
   },
   "evaluate": {
@@ -77,14 +77,14 @@
           "n_fires": 3311,
           "counts": {
             "Very Low": 364,
-            "Low": 306,
-            "Medium": 244,
+            "Low": 305,
+            "Medium": 245,
             "High": 368,
             "Very High": 2029
           },
           "pct_very_low": 10.993657505285412,
-          "pct_low": 9.241920869827847,
-          "pct_medium": 7.369374811235276,
+          "pct_low": 9.211718514044096,
+          "pct_medium": 7.399577167019028,
           "pct_high": 11.114466928420416,
           "pct_very_high": 61.28057988523105,
           "pct_medium_plus": 89.00634249471459
@@ -98,21 +98,43 @@
         "time_forward_validation": {
           "n_fires": 3311,
           "counts": {
-            "Very Low": 400,
-            "Low": 2911,
-            "Medium": 0,
+            "Very Low": 140,
+            "Low": 3168,
+            "Medium": 3,
             "High": 0,
             "Very High": 0
           },
-          "pct_very_low": 12.080942313500453,
-          "pct_low": 87.91905768649954,
-          "pct_medium": 0.0,
+          "pct_very_low": 4.2283298097251585,
+          "pct_low": 95.68106312292359,
+          "pct_medium": 0.0906070673512534,
           "pct_high": 0.0,
           "pct_very_high": 0.0,
-          "pct_medium_plus": 87.91905768649954
+          "pct_medium_plus": 95.77167019027485
         },
         "susceptibility_map_path": "data\\silver\\layers\\susceptibility_random_forest_summer.tif",
         "full_metrics_path": "figures\\summer\\models\\metrics_random_forest.json"
+      },
+      "catboost": {
+        "shap_path": "figures\\summer\\models\\shap_summary_catboost.png",
+        "shap_dependence_path": "figures\\summer\\models\\shap_dependence_catboost.png",
+        "time_forward_validation": {
+          "n_fires": 3311,
+          "counts": {
+            "Very Low": 471,
+            "Low": 2822,
+            "Medium": 18,
+            "High": 0,
+            "Very High": 0
+          },
+          "pct_very_low": 14.225309574146783,
+          "pct_low": 85.23104802174569,
+          "pct_medium": 0.5436424041075204,
+          "pct_high": 0.0,
+          "pct_very_high": 0.0,
+          "pct_medium_plus": 85.77469042585322
+        },
+        "susceptibility_map_path": "data\\silver\\layers\\susceptibility_catboost_summer.tif",
+        "full_metrics_path": "figures\\summer\\models\\metrics_catboost.json"
       }
     }
   },
