@@ -13,6 +13,7 @@ from wildfire_susceptibility.pipeline.stage_temporal_eda import (
     variance_decomposition,
     _discover_feature_rasters,
     _run_spatial_correlogram,
+    _run_semivariogram,
 )
 import wildfire_susceptibility.pipeline.stage_temporal_eda as stage_temporal_eda_module
 
@@ -104,6 +105,40 @@ def test_run_spatial_correlogram_writes_csv_and_png(tmp_path, reference_transfor
     assert (figures_dir / "summer" / "eda" / "spatial_correlogram.png").exists()
 
 
+def test_run_semivariogram_writes_csvs_and_png_using_same_sample_as_correlogram(tmp_path, reference_transform):
+    layers_dir = tmp_path / "layers"
+    layers_dir.mkdir()
+    figures_dir = tmp_path / "figures"
+    _write_dummy_raster(layers_dir / "topo_elevation.tif", reference_transform, np.random.default_rng(0))
+
+    config = {
+        "base": {"output_dir": str(layers_dir)},
+        "data_sources": {"haduk": {"sources": []}},
+        "seasons": {"active": ["summer"]},
+    }
+
+    correlogram_paths = _run_spatial_correlogram(config, figures_dir)
+    semivariogram_paths = _run_semivariogram(config, figures_dir)
+
+    assert set(semivariogram_paths.keys()) == {"summer"}
+    band_path = semivariogram_paths["summer"]["semivariogram"]
+    range_path = semivariogram_paths["summer"]["variogram_range_summary"]
+    assert band_path == figures_dir / "summer" / "eda" / "semivariogram.csv"
+    assert range_path == figures_dir / "summer" / "eda" / "variogram_range_summary.csv"
+    assert (figures_dir / "summer" / "eda" / "semivariogram.png").exists()
+
+    band_df = pd.read_csv(band_path)
+    range_df = pd.read_csv(range_path)
+    assert (band_df["layer"] == "elevation").any()
+    assert (range_df["layer"] == "elevation").any()
+    assert {"nugget", "sill", "range_m", "r_squared"} <= set(range_df.columns)
+
+    # both diagnostics share a seeded rng and the same layer iteration order,
+    # so they must have sampled the identical points -> identical band edges/n
+    correlogram_df = pd.read_csv(correlogram_paths["summer"])
+    assert list(band_df["lag_lo_m"]) == list(correlogram_df["lag_lo_m"])
+
+
 def test_stage_temporal_eda_end_to_end(tmp_path, monkeypatch, reference_transform):
     series = _make_synthetic_monthly_series()
     monkeypatch.setattr(
@@ -128,6 +163,8 @@ def test_stage_temporal_eda_end_to_end(tmp_path, monkeypatch, reference_transfor
     assert out["stationarity_summary"].exists()
     assert out["spatial_correlogram"]["summer"].exists()
     assert out["spatial_correlogram"]["summer"] == figures_dir / "summer" / "eda" / "spatial_correlogram.csv"
+    assert out["semivariogram"]["summer"]["semivariogram"].exists()
+    assert out["semivariogram"]["summer"]["variogram_range_summary"].exists()
 
     summary_df = pd.read_csv(out["stationarity_summary"])
     assert list(summary_df["feature"]) == ["tasmax"]

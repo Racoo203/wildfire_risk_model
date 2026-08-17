@@ -129,6 +129,14 @@ class ModelTrainer:
         )
         X_tr, X_va, scaler, scaling_meta = self._scale_features(model_cls, X_train, X_val)
 
+        # Both bindings below must land in a SINGLE functools.partial call,
+        # not two nested ones — cat_features_of() (modeling/categorical.py)
+        # reads model_cls.keywords directly, which only exposes the
+        # outermost partial layer's own kwargs, not an inner partial's.
+        # Nesting would silently make CatBoost's cat_features invisible to
+        # every caller of cat_features_of() the moment native_balanced is
+        # also active.
+        extra_kwargs = {}
         if cat_feature_names:
             # landuse_class (or any future native-categorical column) must
             # reach this model as an actual categorical column, not a
@@ -140,8 +148,25 @@ class ModelTrainer:
             # Optuna trials, the diagnostic/primary full-metrics CV
             # passes, and the final refit below — picks it up automatically
             # with no signature changes required at any of those call sites.
-            cat_positions = [X_tr.columns.get_loc(c) for c in cat_feature_names]
-            model_cls = functools.partial(model_cls, cat_features=cat_positions)
+            extra_kwargs["cat_features"] = [X_tr.columns.get_loc(c) for c in cat_feature_names]
+
+        if self._imbalance.resolve(model_name) == "native_balanced":
+            # Same binding rationale as cat_features above: native_balanced
+            # must be in effect for every downstream model_cls(**params)
+            # call, including Optuna's search trials themselves — the
+            # imbalance mechanism changes the fitted model's behavior
+            # enough that what counts as a good hyperparameter under
+            # cost_weighted isn't necessarily good under native_balanced
+            # (e.g. BalancedRandomForestClassifier's per-tree effective
+            # sample size is much smaller), so search must see it too, not
+            # just the final refit. Each model wrapper's fit() pops this
+            # back out before constructing its underlying estimator (see
+            # modeling/models/random_forest.py, catboost_model.py) — it is
+            # never a real constructor kwarg.
+            extra_kwargs["native_balanced"] = True
+
+        if extra_kwargs:
+            model_cls = functools.partial(model_cls, **extra_kwargs)
 
         # --- Hyperparameter search: subsampling, fold building, and the
         # Optuna study itself all live inside HyperparamSearch now. ---

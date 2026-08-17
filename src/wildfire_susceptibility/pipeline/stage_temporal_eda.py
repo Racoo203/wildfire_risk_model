@@ -4,19 +4,26 @@ Reproduces eda.ipynb's temporal-EDA section (STL decomposition, ADF
 stationarity, ACF/PACF per HadUK climate variable, between/within-season
 variance decomposition) and its spatial correlogram section (distance-band
 Moran's I) as a pipeline stage, with both result tables exported as CSV
-rather than notebook-display-only.
+rather than notebook-display-only. Also runs an empirical semivariogram
+(with a fitted spherical range) on the identical point sample per layer, as
+a second, independent way of sizing spatial CV block/buffer distances —
+Moran's I is a bounded, per-band significance test, while the semivariogram
+fits a continuous range parameter, and the two need not agree (see
+utils/spatial_autocorr.py's module docstring).
 
-The correlogram was originally scoped narrowly to empirically justify
+Both diagnostics were originally scoped narrowly to empirically justify
 spatial_block_size_m/spatial_buffer_m (configs/modeling.yaml) against just
-4 sample layers; here it runs across every discoverable feature raster per
-active season, since the underlying spatial_correlogram() function is
-generic over any point sample. Each season's result table/plot is saved
-under its own {season}/eda/ directory (not pooled into a single top-level
-eda/), matching every other per-season figure's layout.
+4 sample layers; here they run across every discoverable feature raster per
+active season, since the underlying spatial_correlogram()/semivariogram()
+functions are generic over any point sample. Each season's result
+tables/plots are saved under their own {season}/eda/ directory (not pooled
+into a single top-level eda/), matching every other per-season figure's
+layout.
 
     stage_temporal_eda(config) -> {
-        "stationarity_summary": Path,           # csv
-        "spatial_correlogram": Dict[str, Path],  # csv per season
+        "stationarity_summary": Path,                 # csv
+        "spatial_correlogram": Dict[str, Path],        # csv per season
+        "semivariogram": Dict[str, Dict[str, Path]],   # {season: {"semivariogram": csv, "variogram_range_summary": csv}}
     }
 
 Reads raw HadUK NetCDF directly (climate time series) and sampled feature
@@ -33,7 +40,12 @@ import xarray as xr
 
 from .. import viz
 from ..utils.logger import setup_logger
-from ..utils.spatial_autocorr import spatial_correlogram, sample_raster_points
+from ..utils.spatial_autocorr import (
+    spatial_correlogram,
+    sample_raster_points,
+    semivariogram,
+    fit_spherical_variogram,
+)
 
 CORRELOGRAM_BAND_EDGES = [
     0, 150, 300, 500, 750, 1000,
@@ -149,6 +161,46 @@ def _run_spatial_correlogram(config: dict, figures_dir) -> Dict[str, Path]:
     return out_paths
 
 
+def _run_semivariogram(config: dict, figures_dir) -> Dict[str, Path]:
+    """Empirical semivariogram + fitted spherical range for every
+    discoverable feature raster, per active season — the semivariance-
+    based counterpart to _run_spatial_correlogram's Moran's I, sized to
+    the same question (how far does spatial dependence reach, to justify
+    spatial_block_size_m/spatial_buffer_m). Uses a fresh rng with the
+    same seed and iterates layers in the same order as
+    _run_spatial_correlogram, so both diagnostics are computed on the
+    identical point sample per layer and are directly comparable."""
+    rng = np.random.default_rng(42)
+
+    band_out_paths = {}
+    for season in config["seasons"]["active"]:
+        band_frames, range_rows = [], []
+        for layer_name, path in _discover_feature_rasters(config, season).items():
+            coords, values = sample_raster_points(path, CORRELOGRAM_N_SAMPLE, rng)
+            df = semivariogram(coords, values, CORRELOGRAM_BAND_EDGES)
+            df["season"], df["layer"] = season, layer_name
+            band_frames.append(df)
+
+            fit = fit_spherical_variogram(df)
+            range_rows.append({"season": season, "layer": layer_name, **fit})
+
+        band_df = pd.concat(band_frames, ignore_index=True) if band_frames else pd.DataFrame()
+        range_df = pd.DataFrame(range_rows)
+
+        band_path = Path(figures_dir) / season / "eda" / "semivariogram.csv"
+        range_path = Path(figures_dir) / season / "eda" / "variogram_range_summary.csv"
+        band_path.parent.mkdir(parents=True, exist_ok=True)
+        band_df.to_csv(band_path, index=False)
+        range_df.to_csv(range_path, index=False)
+
+        if not band_df.empty:
+            viz.plot_semivariogram(band_df, range_df, figures_dir, season=season)
+
+        band_out_paths[season] = {"semivariogram": band_path, "variogram_range_summary": range_path}
+
+    return band_out_paths
+
+
 def stage_temporal_eda(config: dict) -> Dict[str, Path]:
     logger = setup_logger()
     figures_dir = Path(config["base"]["figures_dir"])
@@ -174,4 +226,12 @@ def stage_temporal_eda(config: dict) -> Dict[str, Path]:
     for season, path in correlogram_paths.items():
         logger.info(f"[stage_temporal_eda] Spatial correlogram [{season}] -> {path}")
 
-    return {"stationarity_summary": stationarity_path, "spatial_correlogram": correlogram_paths}
+    semivariogram_paths = _run_semivariogram(config, figures_dir)
+    for season, paths in semivariogram_paths.items():
+        logger.info(f"[stage_temporal_eda] Semivariogram [{season}] -> {paths['variogram_range_summary']}")
+
+    return {
+        "stationarity_summary": stationarity_path,
+        "spatial_correlogram": correlogram_paths,
+        "semivariogram": semivariogram_paths,
+    }

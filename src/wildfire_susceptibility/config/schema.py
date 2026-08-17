@@ -175,7 +175,7 @@ class ModelingConfig(BaseModel):
                      "always logged regardless of this flag — that pass "
                      "already existed before this flag was introduced.",
     )
-    imbalance_strategy: Literal["none", "smote", "cost_weighted"] = Field(
+    imbalance_strategy: Literal["none", "smote", "cost_weighted", "native_balanced"] = Field(
         default="smote",
         description="Primary imbalance-handling switch, resolved per model "
                      "via imbalance_strategy_by_model (falls back to this "
@@ -189,9 +189,21 @@ class ModelingConfig(BaseModel):
                      "model's native fit(sample_weight=...); SMOTE is "
                      "force-disabled for that model regardless of "
                      "use_smote, to avoid double-correcting for the same "
-                     "imbalance. 'none' does neither.",
+                     "imbalance. 'native_balanced' uses each model's own "
+                     "best-available native imbalance mechanism instead of "
+                     "an externally-computed sample_weight — for "
+                     "random_forest this is imbalanced-learn's "
+                     "BalancedRandomForestClassifier (each tree bootstraps a "
+                     "class-balanced sample, fixing sklearn's RF sample_weight "
+                     "not being bootstrap-aware — see "
+                     "scripts/experiment_imbalance_native_vs_costweighted.py); "
+                     "for catboost this is auto_class_weights='Balanced' (see "
+                     "scripts/experiment_catboost_weighting_variants.py). No "
+                     "other model currently implements 'native_balanced'; SMOTE "
+                     "is force-disabled the same as under 'cost_weighted'. "
+                     "'none' does neither.",
     )
-    imbalance_strategy_by_model: Dict[str, Literal["none", "smote", "cost_weighted"]] = Field(
+    imbalance_strategy_by_model: Dict[str, Literal["none", "smote", "cost_weighted", "native_balanced"]] = Field(
         default_factory=dict,
         description="Per-model override of imbalance_strategy, same "
                      "fallback-to-default convention as "

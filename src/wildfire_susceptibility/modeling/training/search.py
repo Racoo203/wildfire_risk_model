@@ -35,8 +35,15 @@ FINISHED_STATES = {optuna.trial.TrialState.COMPLETE, optuna.trial.TrialState.PRU
 # score restricted to observed classes, or NaN if genuinely degenerate),
 # so old v3 trials for spatial/stratified_spatial_block searches (which
 # hit this path whenever a fold's training split was missing a class) are
-# not comparable to post-fix trials.
-OBJECTIVE_VERSION = "objv4-classscorefix"
+# not comparable to post-fix trials. v5: forces fresh studies for models
+# switched to imbalance_strategy="native_balanced" (random_forest,
+# catboost) — the imbalance mechanism is now bound onto model_cls and
+# active DURING search itself (trainer.py), not just at final refit, so
+# what counts as a good hyperparameter genuinely changed (e.g.
+# BalancedRandomForestClassifier's much smaller effective per-tree
+# sample); old v4 trials were scored under cost_weighted and are not
+# comparable. Old v4 studies are orphaned, not deleted.
+OBJECTIVE_VERSION = "objv5-nativebalanced"
 
 
 class HyperparamSearch:

@@ -11,14 +11,34 @@ class CatBoostModel:
         self.model: CatBoostClassifier | None = None
 
     def fit(self, X: np.ndarray, y: np.ndarray, sample_weight: np.ndarray | None = None) -> "CatBoostModel":
-        self.model = CatBoostClassifier(
+        params = dict(self.params)
+        # native_balanced is bound onto model_cls via functools.partial in
+        # trainer.py (same mechanism as cat_features), not an Optuna-tuned
+        # hyperparameter — pop it before it reaches CatBoostClassifier,
+        # which has no such constructor kwarg.
+        native_balanced = params.pop("native_balanced", False)
+
+        ctor_kwargs = dict(
             random_state=42,
             verbose=False,
             thread_count=-1,
             loss_function="MultiClass",
             allow_writing_files=False,  # skip catboost_info/ training-log dir — unused here
-            **self.params,
+            **params,
         )
+        if native_balanced:
+            # imbalance_strategy="native_balanced" (modeling/imbalance.py):
+            # CatBoost's own undamped auto_class_weights="Balanced" scheme.
+            # Empirically engaged the rare classes more than the external
+            # cost_weighted sample_weight without the collapse seen from
+            # the dampened SqrtBalanced or manual extra-weighted variants
+            # (scripts/experiment_catboost_weighting_variants.py).
+            # ImbalanceStrategy.sample_weight_for() never returns a weight
+            # for 'native_balanced', so sample_weight is expected to be
+            # None here — no double-correction risk to guard against.
+            ctor_kwargs["auto_class_weights"] = "Balanced"
+
+        self.model = CatBoostClassifier(**ctor_kwargs)
         self.model.fit(X, y, sample_weight=sample_weight)
         return self
 
