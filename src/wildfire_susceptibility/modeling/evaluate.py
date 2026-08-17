@@ -19,6 +19,7 @@ import rasterio
 import mlflow
 import logging
 
+from .categorical import cat_features_of
 from .class_labels import class_names_for
 
 logger = logging.getLogger(__name__)
@@ -64,7 +65,6 @@ def evaluate_on_test(
 
 def _try_shap_plots(final_model, X_test, feature_names, season, model_name, config) -> Optional[Dict[str, Path]]:
     try:
-        import shap
         from ..viz.charts import plot_shap_summary, plot_shap_dependence
 
         # Tree models: TreeExplainer (fast, exact). SVM/ordinal_lr/NN:
@@ -77,15 +77,42 @@ def _try_shap_plots(final_model, X_test, feature_names, season, model_name, conf
             np.random.default_rng(42).choice(len(X_test), 2000, replace=False)
         ]
 
-        if model_name in ("random_forest", "xgboost", "catboost"):
+        if model_name == "catboost":
+            # shap.TreeExplainer(underlying) segfaults (access violation
+            # inside shap's compiled _cext extension, confirmed against
+            # shap==0.52.0 / catboost==1.2.10) as soon as it's *constructed*
+            # against a CatBoost model that carries a native categorical
+            # feature (landuse_class here) — its tree-parsing internals
+            # don't correctly represent CatBoost's oblivious/CTR-based
+            # categorical splits, and the malformed arrays it builds crash
+            # the C extension before .shap_values() is ever called. This
+            # bypasses shap entirely and calls CatBoost's own SHAP
+            # computation directly — the same thing shap.TreeExplainer
+            # itself delegates to for CatBoost when it isn't crashing
+            # first, so the numbers are unaffected, just the code path.
+            import catboost
+
+            cat_positions = cat_features_of(final_model)
+            pool = catboost.Pool(sample, cat_features=cat_positions)
+            raw = underlying.get_feature_importance(data=pool, type="ShapValues")
+            # raw: (n_samples, n_classes, n_features + 1) — the trailing
+            # column is each class's base/expected value, not a per-feature
+            # contribution, so it's dropped here.
+            shap_values = [raw[:, k, :-1] for k in range(raw.shape[1])]
+            shap_X = sample
+        elif model_name in ("random_forest", "xgboost"):
+            import shap
+
             explainer = shap.TreeExplainer(underlying)
             shap_X = sample
+            shap_values = explainer.shap_values(shap_X)
         else:
+            import shap
+
             background = sample[: min(100, len(sample))]
             explainer = shap.KernelExplainer(final_model.predict_proba, background)
             shap_X = sample[: min(200, len(sample))]
-
-        shap_values = explainer.shap_values(shap_X)
+            shap_values = explainer.shap_values(shap_X)
 
         figures_dir = Path(config["base"]["figures_dir"])
         summary_path = plot_shap_summary(
