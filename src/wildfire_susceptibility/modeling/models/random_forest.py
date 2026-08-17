@@ -40,12 +40,23 @@ class RandomForestModel:
         # class weighting on top of SMOTE-resampled training data with
         # nothing preventing it (the fit()-level guard below only fires for
         # the "cost_weighted" sample_weight path).
+        # Range tightened 08/16/2026: deployed models were consistently
+        # landing at/near the old max_depth=25 ceiling and min_samples_leaf=1
+        # floor (e.g. depth=23/leaf=2), with standard-CV AUC ~0.99 collapsing
+        # to ~0.5-0.55 on spatial CV and true validation — a severe
+        # overfitting signature the old range let Optuna reach even though
+        # search is spatial-CV-scored. max_samples added as a new tunable
+        # (bootstrap row-subsample fraction, default was unset ->
+        # RandomForestClassifier's full-bootstrap default) since row
+        # subsampling decorrelates trees more effectively than depth/leaf
+        # constraints alone on spatially autocorrelated features.
         return {
             "n_estimators": trial.suggest_int("n_estimators", 100, 400),
-            "max_depth": trial.suggest_int("max_depth", 4, 25),
-            "min_samples_leaf": trial.suggest_int("min_samples_leaf", 1, 15),
-            "min_samples_split": trial.suggest_int("min_samples_split", 2, 20),
+            "max_depth": trial.suggest_int("max_depth", 3, 12),
+            "min_samples_leaf": trial.suggest_int("min_samples_leaf", 5, 30),
+            "min_samples_split": trial.suggest_int("min_samples_split", 10, 40),
             "max_features": trial.suggest_categorical("max_features", ["sqrt", "log2", None]),
+            "max_samples": trial.suggest_float("max_samples", 0.3, 0.8),
         }
 
     def needs_scaling(self) -> bool:
