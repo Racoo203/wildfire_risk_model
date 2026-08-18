@@ -6,7 +6,7 @@ seasons:
 labels:
   density_method: "convolution"
   classify_method: "gmm"
-  n_classes: 3                             # see flag below — align with class_labels.py's 4-class "Very High" scheme
+  n_classes: 4                            # see flag below — align with class_labels.py's 4-class "Very High" scheme
   compare_classify_methods: []
   clean_labels: false
   auto_find_k: false
@@ -18,6 +18,6 @@ modeling:
   cv_folds: 3                              # trimmed from schema default 5 — deliberate cost control, see note below
   models: ["ordinal_lr", "random_forest"]  # see flag below re: neural_net
   imbalance_strategy: "cost_weighted"
-  optuna_n_trials: 40                      # bumped 20->40: random_forest's param_space (models/random_forest.py) was widened 08/17/2026 (max_depth 12->20, min_samples_leaf/min_samples_split floors lowered) to test whether the near-zero optimism gap under this label config holds under more capacity — a bigger search space needs more trials to explore meaningfully. cv_folds left at 3 (unchanged) per explicit request.
+  optuna_n_trials: 20                      # bumped 20->40: random_forest's param_space (models/random_forest.py) was widened 08/17/2026 (max_depth 12->20, min_samples_leaf/min_samples_split floors lowered) to test whether the near-zero optimism gap under this label config holds under more capacity — a bigger search space needs more trials to explore meaningfully. cv_folds left at 3 (unchanged) per explicit request.
   excluded_features: ["tas", "tasmin", "d_fires"]
   optuna_search_subsample: 0.8
