@@ -9,3 +9,4 @@ mlflow.db
 __pycache__/
 *.pyc
 .envcatboost_info/
+.env

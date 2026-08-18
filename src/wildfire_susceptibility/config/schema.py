@@ -251,6 +251,20 @@ class LoggingConfig(BaseModel):
     level: str = "INFO"
     log_path: Path = Path("./data/logs/pipeline.log")
 
+class EdaConfig(BaseModel):
+    spearman_scope: Literal["model_features", "all_features"] = Field(
+        default="model_features",
+        description="Which columns the Spearman correlation heatmap covers. "
+                     "'model_features' restricts it to the same feature_cols "
+                     "the VIF chart and the models actually train on "
+                     "(modeling.excluded_features already removed). "
+                     "'all_features' is the broader diagnostic view -- every "
+                     "column in the cleaned dataframe, including label/_x/_y/ "
+                     "excluded features. Does not affect "
+                     "spearman_significance_full, which always covers every "
+                     "column regardless of this setting.",
+    )
+
 class WildfireConfig(BaseModel):
     base: BaseConfig = Field(default_factory=BaseConfig)
     processing: ProcessingConfig = Field(default_factory=ProcessingConfig)
@@ -258,4 +272,5 @@ class WildfireConfig(BaseModel):
     data_sources: DataSourceConfig = Field(default_factory=DataSourceConfig)
     labels: LabelsConfig = Field(default_factory=LabelsConfig)
     modeling: ModelingConfig = Field(default_factory=ModelingConfig)
+    eda: EdaConfig = Field(default_factory=EdaConfig)
     logging: LoggingConfig = Field(default_factory=LoggingConfig)

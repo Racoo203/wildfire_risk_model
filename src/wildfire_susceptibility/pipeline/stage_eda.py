@@ -139,10 +139,14 @@ def stage_eda(config: dict, input_paths: dict) -> Dict[str, dict]:
         excluded = set(config.get("modeling", {}).get("excluded_features", []))
         feature_cols = [c for c in df_clean.columns if not c.startswith("_") and c != "label" and c not in excluded]
 
-        # Spearman heatmap is a broader diagnostic view -- every column,
-        # including label/_x/_y/excluded features, not just the trained
-        # feature set (plot_vif_correlation one-hot expands landuse_class).
-        spearman_cols = list(df_clean.columns)
+        # Spearman heatmap scope is config-controlled (eda.spearman_scope):
+        # "model_features" (default) matches feature_cols exactly -- the
+        # same set VIF and the models actually train on. "all_features" is
+        # the broader diagnostic view -- every column, including label/_x/_y/
+        # excluded features (plot_vif_correlation one-hot expands
+        # landuse_class either way).
+        spearman_scope = config.get("eda", {}).get("spearman_scope", "model_features")
+        spearman_cols = list(df_clean.columns) if spearman_scope == "all_features" else feature_cols
 
         nan_arrays = {c: df_raw[c].to_numpy() for c in df_raw.columns if c != "label"}
         nan_path = viz.plot_nan_coverage(nan_arrays, figures_dir, season=season)
