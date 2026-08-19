@@ -114,7 +114,7 @@ def build_table(all_metrics: dict, metric_keys: list, out_path: Path):
         for k in metric_keys:
             row[k] = metrics.get(k, float("nan"))
         rows.append(row)
-    df = pd.DataFrame(rows).set_index("model")
+    df = pd.DataFrame(rows).set_index("model").round(2)
     df.to_csv(out_path)
     return df
 
