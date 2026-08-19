@@ -21,11 +21,27 @@ class SMOTEResampler:
         config: dict,
         target_size: Optional[float] = None,
         is_final: bool = False,
+        force_disable: bool = False,
     ):
         modeling_cfg = config["modeling"]
         self.k_neighbors = modeling_cfg.get("smote_k_neighbors", 5)
-        self.sampling_strategy = modeling_cfg.get("smote_sampling_strategy", "auto")
+        # NOT modeling_cfg.get("smote_sampling_strategy", "auto") — same bug
+        # shape the imbalance_strategy fix above addresses: once config has
+        # been through WildfireConfig.model_dump(), the key is always
+        # present (as None, the schema default) rather than absent, so a
+        # dict.get(key, "auto") default never actually fires in real runs.
+        # Before the imbalance_strategy fix this was fully latent (SMOTE
+        # never ran to reach it); it would otherwise now crash the first
+        # real SMOTE run on SMOTE(sampling_strategy=None, ...).
+        self.sampling_strategy = modeling_cfg.get("smote_sampling_strategy") or "auto"
         self.is_final = is_final
+        # Callers (trainer.py) use this to force resampling off regardless
+        # of imbalance_strategy/use_smote — e.g. "don't resample during
+        # search unless smote_during_search is set" is a decision about
+        # *when* resampling happens, orthogonal to *whether* SMOTE is the
+        # configured mechanism at all, so it must override even an
+        # explicit imbalance_strategy: "smote".
+        self.force_disable = force_disable
         self._imbalance = ImbalanceStrategy(config)
 
         # Final refit NEVER inherits search_resample_target_size, regardless
@@ -47,6 +63,13 @@ class SMOTEResampler:
         ) or (
             is_final and use_smote_explicit is None and modeling_cfg.get("smote_sampling_strategy") is not None
         )
+        # Legacy/back-compat gate: governs configs that never mention
+        # imbalance_strategy at all (it defaults to "smote"), where
+        # use_smote/search_resample_target_size/smote_sampling_strategy
+        # keep behaving exactly as they did before imbalance_strategy
+        # existed. A config that explicitly writes imbalance_strategy:
+        # "smote" doesn't need any of this — see smote_explicitly_enabled
+        # below, checked per-model in resample().
         self.enabled = bool(use_smote_explicit) or implicit_enable
 
         if self.enabled and not use_smote_explicit and self.target_size is not None:
@@ -57,6 +80,10 @@ class SMOTEResampler:
             )
 
     def resample(self, X, y, context="", model_name: Optional[str] = None):
+        if self.force_disable:
+            log_class_balance(logger, context, y, note="SMOTE disabled — force_disable set by caller", level=logging.DEBUG)
+            return X, y
+
         if model_name is not None and not self._imbalance.smote_allowed(model_name):
             log_class_balance(
                 logger, context, y,
@@ -65,7 +92,8 @@ class SMOTEResampler:
             )
             return X, y
 
-        if not self.enabled:
+        explicitly_enabled = model_name is not None and self._imbalance.smote_explicitly_enabled(model_name)
+        if not (self.enabled or explicitly_enabled):
             log_class_balance(logger, context, y, note="SMOTE disabled — distribution unchanged", level=logging.DEBUG)
             return X, y
 

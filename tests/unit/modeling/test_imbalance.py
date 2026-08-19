@@ -59,6 +59,36 @@ def test_none_strategy_disables_both_mechanisms(minimal_modeling_config):
     assert strategy.sample_weight_for("random_forest", np.array([0, 1, 2, 3])) is None
 
 
+def test_smote_explicitly_enabled_true_only_when_someone_wrote_it(minimal_modeling_config):
+    """The bug this guards against: configs/experiment/dissertation.yaml
+    sets imbalance_strategy: "smote" but never touches use_smote (still
+    False, inherited from configs/modeling.yaml) — under the old
+    schema-level default="smote", ImbalanceStrategy couldn't tell that
+    apart from a config that never mentions imbalance_strategy at all, so
+    SMOTEResampler stayed gated behind use_smote regardless and silently
+    never resampled. schema.py now leaves the pydantic default at None so
+    this distinction survives model_dump(); smote_explicitly_enabled()
+    is what SMOTEResampler.resample() consults to let an explicit setting
+    activate resampling on its own, no use_smote needed."""
+    config = minimal_modeling_config
+    assert config["modeling"]["imbalance_strategy"] is None  # nobody set it yet
+
+    strategy_unset = ImbalanceStrategy(config)
+    assert strategy_unset.resolve("random_forest") == "smote"  # still falls back to "smote"
+    assert strategy_unset.smote_explicitly_enabled("random_forest") is False  # but not explicitly
+
+    config["modeling"]["imbalance_strategy"] = "smote"
+    strategy_explicit = ImbalanceStrategy(config)
+    assert strategy_explicit.smote_explicitly_enabled("random_forest") is True
+
+    # Per-model override follows the same rule, independent of the default.
+    config["modeling"]["imbalance_strategy"] = None
+    config["modeling"]["imbalance_strategy_by_model"] = {"catboost": "smote"}
+    strategy_override = ImbalanceStrategy(config)
+    assert strategy_override.smote_explicitly_enabled("catboost") is True
+    assert strategy_override.smote_explicitly_enabled("random_forest") is False
+
+
 def test_native_balanced_produces_no_sample_weight_and_disables_smote(minimal_modeling_config):
     """'native_balanced' (modeling/models/random_forest.py's
     BalancedRandomForestClassifier, modeling/models/catboost_model.py's

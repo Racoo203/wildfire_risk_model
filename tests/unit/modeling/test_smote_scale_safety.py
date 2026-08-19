@@ -47,5 +47,13 @@ def test_trainer_disables_smote_for_search_but_not_final_refit(tmp_path, monkeyp
     config["modeling"]["smote_during_search"] = False
     trainer = ModelTrainer(config)
 
-    assert trainer.cv_strategy.resampler.enabled is False     # search/CV: SMOTE off
-    assert trainer.final_resampler.enabled is True            # final refit: SMOTE on
+    # trainer.py now suppresses search-time resampling via force_disable
+    # (checked first in SMOTEResampler.resample(), independent of the
+    # mechanism that would otherwise enable it) rather than by handing the
+    # search resampler a use_smote:False copy of the config — so .enabled
+    # on its own no longer tells you whether resample() will actually fire;
+    # it reflects the real config (True here, since use_smote=True), while
+    # force_disable is what actually blocks it during search.
+    assert trainer.cv_strategy.resampler.force_disable is True    # search/CV: SMOTE off
+    assert trainer.final_resampler.force_disable is False
+    assert trainer.final_resampler.enabled is True                # final refit: SMOTE on

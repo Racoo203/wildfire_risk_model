@@ -6,7 +6,7 @@ seasons:
 labels:
   density_method: "convolution"
   classify_method: "gmm"
-  n_classes: 4                            # see flag below — align with class_labels.py's 4-class "Very High" scheme
+  n_classes: 3                            # GMM+3-class: reverted from 4 to match phase3_*.py's assumed label config for the SMOTE-vs-cost_weighted sweet-spot search
   compare_classify_methods: []
   clean_labels: false
   auto_find_k: false

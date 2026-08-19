@@ -175,15 +175,31 @@ class ModelingConfig(BaseModel):
                      "always logged regardless of this flag — that pass "
                      "already existed before this flag was introduced.",
     )
-    imbalance_strategy: Literal["none", "smote", "cost_weighted", "native_balanced"] = Field(
-        default="smote",
+    imbalance_strategy: Optional[Literal["none", "smote", "cost_weighted", "native_balanced"]] = Field(
+        default=None,
         description="Primary imbalance-handling switch, resolved per model "
                      "via imbalance_strategy_by_model (falls back to this "
-                     "default). 'smote' defers entirely to the existing "
+                     "default). Left unset (None) — not defaulted to "
+                     "'smote' here in the schema — specifically so "
+                     "ImbalanceStrategy can tell 'nobody wrote this key in "
+                     "any config file' apart from 'somebody explicitly "
+                     "wrote imbalance_strategy: smote': pydantic bakes a "
+                     "schema-level default into every config dict at "
+                     "model_dump() time, so a Field(default='smote') here "
+                     "would make that distinction unrecoverable downstream "
+                     "and silently re-break the use_smote gating fix this "
+                     "field exists for (see modeling/imbalance.py). "
+                     "ImbalanceStrategy.default falls back to 'smote' in "
+                     "code when this is None, so the resolved behavior for "
+                     "unset configs is unchanged — only the "
+                     "explicitly-set-vs-defaulted distinction is new. "
+                     "When explicitly 'smote', it defers to the existing "
                      "use_smote/smote_during_search/search_resample_target_"
-                     "size/smote_sampling_strategy fields below (unchanged "
-                     "legacy behavior — this is the default specifically so "
-                     "existing configs are unaffected). 'cost_weighted' "
+                     "size/smote_sampling_strategy fields below only for "
+                     "*how* to resample, not *whether* — an explicit "
+                     "'smote' is sufficient on its own to enable "
+                     "resampling, same as 'cost_weighted' needs no second "
+                     "flag. 'cost_weighted' "
                      "computes balanced (inverse-frequency) sample_weight "
                      "from each fit's own training y and passes it into the "
                      "model's native fit(sample_weight=...); SMOTE is "

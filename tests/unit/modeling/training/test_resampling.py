@@ -55,6 +55,58 @@ def test_cost_weighted_forces_smote_off_even_when_use_smote_true(minimal_modelin
     assert not (X_out2 is X and y_out2 is y), "expected SMOTE to actually run for the non-overridden model"
 
 
+def test_explicit_imbalance_strategy_smote_enables_without_use_smote(minimal_modeling_config):
+    """Reproduces the real dissertation.yaml bug: imbalance_strategy: "smote"
+    set explicitly, use_smote left at its config default (False) and never
+    touched. Before this fix, SMOTEResampler.enabled was driven purely by
+    use_smote/search_resample_target_size/smote_sampling_strategy, so this
+    combination silently resampled nothing — the dissertation run's "SMOTE"
+    condition was actually running with zero imbalance handling, identical
+    to imbalance_strategy="none". An explicit imbalance_strategy: "smote"
+    must be sufficient on its own now, exactly like "cost_weighted" needs
+    no second flag."""
+    from wildfire_susceptibility.modeling.resampling import SMOTEResampler
+    config = minimal_modeling_config
+    config["modeling"]["use_smote"] = False  # exactly dissertation.yaml's real inherited value
+    config["modeling"]["smote_sampling_strategy"] = "auto"  # see note in other tests re: None being rejected by imblearn
+    config["modeling"]["imbalance_strategy"] = "smote"
+    resampler = SMOTEResampler(config)
+
+    X = np.zeros((300, 3))
+    y = np.array([0] * 250 + [1] * 30 + [2] * 15 + [3] * 5)
+
+    X_out, y_out = resampler.resample(X, y, context="test", model_name="random_forest")
+    assert len(y_out) != len(y), "expected explicit imbalance_strategy='smote' to actually resample"
+
+    # Same config but truly unset (nobody wrote imbalance_strategy at all)
+    # must still be governed by use_smote — legacy back-compat preserved.
+    config_unset = minimal_modeling_config
+    config_unset["modeling"]["use_smote"] = False
+    config_unset["modeling"]["imbalance_strategy"] = None
+    resampler_unset = SMOTEResampler(config_unset)
+    X_out2, y_out2 = resampler_unset.resample(X, y, context="test", model_name="random_forest")
+    assert X_out2 is X and y_out2 is y, "unset imbalance_strategy must still defer to use_smote=False"
+
+
+def test_force_disable_overrides_explicit_imbalance_strategy_smote(minimal_modeling_config):
+    """trainer.py uses force_disable to keep search-time resampling off
+    unless smote_during_search/stratified_spatial_block opts in — that
+    suppression must hold even when imbalance_strategy explicitly requests
+    "smote", since it's a decision about *when* to resample, not *whether*
+    SMOTE is the configured mechanism."""
+    from wildfire_susceptibility.modeling.resampling import SMOTEResampler
+    config = minimal_modeling_config
+    config["modeling"]["use_smote"] = True
+    config["modeling"]["smote_sampling_strategy"] = "auto"
+    config["modeling"]["imbalance_strategy"] = "smote"
+    resampler = SMOTEResampler(config, force_disable=True)
+
+    X = np.zeros((10, 3))
+    y = np.array([0] * 6 + [1] * 2 + [2] * 2)
+    X_out, y_out = resampler.resample(X, y, context="test", model_name="random_forest")
+    assert X_out is X and y_out is y
+
+
 def test_model_name_none_preserves_legacy_behavior(minimal_modeling_config):
     """Ad-hoc/legacy callers that don't pass model_name (e.g. this file's
     other tests, or any code calling SMOTEResampler directly) must be

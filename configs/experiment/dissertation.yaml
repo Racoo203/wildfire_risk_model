@@ -16,8 +16,20 @@ modeling:
   cv_strategy: "both"                      # mandatory for RQ1 — you need both sides to report the optimism gap
   log_full_cv_diagnostics: true            # this IS the reported run, per the flag's own docstring
   cv_folds: 3                              # trimmed from schema default 5 — deliberate cost control, see note below
-  models: ["ordinal_lr", "random_forest", "catboost"]   # see flag below re: neural_net
-  imbalance_strategy: "smote"
-  optuna_n_trials: 20                      
+  # Final roster for this run: ordinal_lr, xgboost, catboost — random_forest
+  # dropped (see the SMOTE-vs-cost_weighted/native_balanced investigation:
+  # tied with cost_weighted at ~13% High recall, and native_balanced's
+  # bootstrap-starvation fix doesn't bind at GMM+3-class's ~9.8% High
+  # prevalence — not worth its own arm right now). xgboost reinstated
+  # (registered but out of the default roster per CLAUDE.md) specifically
+  # for this cost-weighted comparison; it's one-hot encoded like ordinal_lr
+  # (native_categorical_support() == False in models/xgboost.py), so no
+  # categorical-corruption risk the way SMOTE+CatBoost had.
+  models: ["ordinal_lr", "xgboost", "catboost"]
+  # All three models get cost-weighted sample_weight uniformly — no SMOTE
+  # in this run, so no per-model imbalance_strategy_by_model override is
+  # needed (that override existed only to keep CatBoost off SMOTE).
+  imbalance_strategy: "cost_weighted"
+  optuna_n_trials: 20
   excluded_features: ["tas", "tasmin", "d_fires"]
   # optuna_search_subsample: 0.5

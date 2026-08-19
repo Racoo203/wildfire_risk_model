@@ -55,7 +55,6 @@ class ModelTrainer:
 
         smote_during_search = config["modeling"].get("smote_during_search", False)
         search_target_size = config["modeling"].get("search_resample_target_size")
-        no_smote_config = {**config, "modeling": {**config["modeling"], "use_smote": False}}
 
         # stratified_spatial_block always resamples in-fold by design; other
         # strategies only resample during search if smote_during_search is
@@ -64,10 +63,14 @@ class ModelTrainer:
         # classes rather than majority-relative auto/dict targets — this is
         # the knob that controls "how big/balanced is the fold the model
         # actually gets fit on during HPO", independent of the final refit.
+        # force_disable=True (rather than mutating a use_smote:False copy of
+        # the config) so this suppression holds even when imbalance_strategy
+        # explicitly requests "smote" — this knob is about *when* resampling
+        # happens, not *whether* SMOTE is the configured mechanism.
         if primary_strategy_name == "stratified_spatial_block" or smote_during_search:
             search_resampler = SMOTEResampler(config, target_size=search_target_size)
         else:
-            search_resampler = SMOTEResampler(no_smote_config)
+            search_resampler = SMOTEResampler(config, force_disable=True)
 
         # Final refit is untouched by target_size — it keeps using whatever
         # smote_sampling_strategy/auto behavior was configured for the
