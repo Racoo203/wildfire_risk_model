@@ -6,6 +6,7 @@ docs/*
 mlruns/*
 wildfire_susceptibility.egg-info/*
 mlflow.db
+results/*
 __pycache__/
 *.pyc
 .envcatboost_info/
