@@ -117,7 +117,7 @@ def test_kruskal_wallis_detects_no_difference_between_identical_groups():
             "svm": _manifest(0.8, 0.8, 0.75, folds=[0.75, 0.76, 0.74, 0.75, 0.75]),
         }
     }
-    result = _kruskal_wallis_per_season(manifests)
+    result = _kruskal_wallis_per_season(manifests, fold_field="cv_pr_auc_macro_spatial_folds")
     assert result["summer"]["p_value"] > 0.99
     assert result["summer"]["significant_at_0.05"] is False
 
@@ -129,7 +129,7 @@ def test_kruskal_wallis_detects_clear_difference_between_separated_groups():
             "svm": _manifest(0.5, 0.5, 0.5, folds=[0.50, 0.51, 0.49, 0.50, 0.48]),
         }
     }
-    result = _kruskal_wallis_per_season(manifests)
+    result = _kruskal_wallis_per_season(manifests, fold_field="cv_pr_auc_macro_spatial_folds")
     assert result["summer"]["significant_at_0.05"] is True
     assert result["summer"]["p_value"] < 0.05
 
@@ -141,7 +141,7 @@ def test_kruskal_wallis_skips_season_with_fewer_than_two_scored_models():
             "svm": _manifest(0.8, 0.8, 0.75, folds=None),  # no spatial CV run
         }
     }
-    result = _kruskal_wallis_per_season(manifests)
+    result = _kruskal_wallis_per_season(manifests, fold_field="cv_pr_auc_macro_spatial_folds")
     assert "skipped" in result["summer"]
 
 
@@ -155,7 +155,7 @@ def test_kruskal_wallis_handles_unequal_fold_counts_across_models():
             "svm": _manifest(0.8, 0.8, 0.75, folds=[0.60, 0.61, 0.59, 0.62, 0.58]),  # 5 folds
         }
     }
-    result = _kruskal_wallis_per_season(manifests)
+    result = _kruskal_wallis_per_season(manifests, fold_field="cv_pr_auc_macro_spatial_folds")
     assert "p_value" in result["summer"]
     assert "skipped" not in result["summer"]
 
@@ -170,7 +170,7 @@ def test_kruskal_results_to_csv_has_one_row_per_season_with_expected_columns():
             "svm": _manifest(0.5, 0.5, 0.5, folds=[0.50, 0.51, 0.49]),
         }
     }
-    kruskal_results = _kruskal_wallis_per_season(manifests)
+    kruskal_results = _kruskal_wallis_per_season(manifests, fold_field="cv_pr_auc_macro_spatial_folds")
     df = _kruskal_results_to_csv(kruskal_results)
 
     assert list(df.columns) == [
@@ -199,7 +199,7 @@ def test_kruskal_wallis_drops_nan_fold_scores_before_scoring():
             "svm": _manifest(0.5, 0.5, 0.5, folds=[0.50, 0.51, 0.49]),
         }
     }
-    result = _kruskal_wallis_per_season(manifests)
+    result = _kruskal_wallis_per_season(manifests, fold_field="cv_pr_auc_macro_spatial_folds")
     assert "skipped" not in result["summer"]
     assert not math.isnan(result["summer"]["statistic"])
     assert not math.isnan(result["summer"]["p_value"])
@@ -219,7 +219,7 @@ def test_kruskal_wallis_drops_a_model_whose_every_fold_is_nan():
             "svm": _manifest(0.8, 0.8, 0.75, folds=[float("nan"), float("nan")]),
         }
     }
-    result = _kruskal_wallis_per_season(manifests)
+    result = _kruskal_wallis_per_season(manifests, fold_field="cv_pr_auc_macro_spatial_folds")
     assert "skipped" in result["summer"]
     assert result["summer"]["skipped"] == "fewer than 2 models with fold-level scores"
 
@@ -234,10 +234,38 @@ def test_kruskal_wallis_keeps_a_model_with_some_real_folds_alongside_some_nan_on
             "svm": _manifest(0.5, 0.5, 0.5, folds=[float("nan"), 0.50, 0.51, float("nan"), 0.49]),
         }
     }
-    result = _kruskal_wallis_per_season(manifests)
+    result = _kruskal_wallis_per_season(manifests, fold_field="cv_pr_auc_macro_spatial_folds")
     assert "skipped" not in result["summer"]
     assert set(result["summer"]["models_compared"]) == {"rf", "svm"}
     assert result["summer"]["significant_at_0.05"] is True
+
+
+def test_kruskal_wallis_fold_field_is_respected_not_hardcoded():
+    """_kruskal_wallis_per_season is called twice in stage_selection.py —
+    once for PR-AUC-macro, once for QWK — from the same manifests. Confirms
+    fold_field actually selects which per-fold list is read (not just an
+    unused parameter that happens to still work because both calls used
+    the same hardcoded key), by giving the two fields contradictory
+    separation: PR-AUC-macro folds are near-identical (not significant),
+    QWK folds are clearly separated (significant) — the two calls on the
+    same manifests must disagree."""
+    manifests = {
+        "summer": {
+            "rf": {
+                "cv_pr_auc_macro_spatial_folds": [0.70, 0.71, 0.69],
+                "cv_qwk_spatial_folds": [0.90, 0.91, 0.89],
+            },
+            "svm": {
+                "cv_pr_auc_macro_spatial_folds": [0.70, 0.71, 0.69],
+                "cv_qwk_spatial_folds": [0.30, 0.31, 0.29],
+            },
+        }
+    }
+    pr_auc_result = _kruskal_wallis_per_season(manifests, fold_field="cv_pr_auc_macro_spatial_folds")
+    qwk_result = _kruskal_wallis_per_season(manifests, fold_field="cv_qwk_spatial_folds")
+
+    assert pr_auc_result["summer"]["significant_at_0.05"] is False
+    assert qwk_result["summer"]["significant_at_0.05"] is True
 
 
 def test_kruskal_results_to_csv_represents_skipped_season_as_a_row_not_a_dropped_one():
@@ -247,7 +275,7 @@ def test_kruskal_results_to_csv_represents_skipped_season_as_a_row_not_a_dropped
             "svm": _manifest(0.8, 0.8, 0.75, folds=None),
         }
     }
-    kruskal_results = _kruskal_wallis_per_season(manifests)
+    kruskal_results = _kruskal_wallis_per_season(manifests, fold_field="cv_pr_auc_macro_spatial_folds")
     df = _kruskal_results_to_csv(kruskal_results)
 
     assert len(df) == 1

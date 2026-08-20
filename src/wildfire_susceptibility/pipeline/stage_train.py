@@ -104,6 +104,7 @@ def _write_artifact(config: dict, season: str, model_name: str, result: dict) ->
         "cv_pr_auc_macro_spatial_folds": result.get("cv_pr_auc_macro_spatial_folds"),
         "cv_qwk_standard": result.get("cv_qwk_standard"),
         "cv_qwk_spatial": result.get("cv_qwk_spatial"),
+        "cv_qwk_spatial_folds": result.get("cv_qwk_spatial_folds"),
         "cv_optimism_gap": result.get("cv_optimism_gap"),
         "val_auc": result.get("val_auc"),
         "val_f1": result.get("val_f1"),

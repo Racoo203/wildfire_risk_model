@@ -220,7 +220,7 @@ def plot_vif_correlation(
     heatmap_side = max(8, 0.5 * len(corr_spearman.columns))
     fig2, ax2 = plt.subplots(figsize=(heatmap_side, heatmap_side))
     sns.heatmap(corr_spearman, cmap="coolwarm", center=0, vmin=-1, vmax=1, ax=ax2, square=True,
-                annot=True, fmt=".3f", annot_kws={"size": 8})
+                annot=True, fmt=".2f", annot_kws={"size": 8})
     ax2.set_title("Spearman correlation" + (f" — {season}" if season else ""))
     spearman_path = _save_and_log(
         fig2, Path(figures_dir) / (season or "static") / "eda" / "correlation_spearman.png",

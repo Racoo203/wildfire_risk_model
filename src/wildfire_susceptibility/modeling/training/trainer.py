@@ -197,6 +197,7 @@ class ModelTrainer:
 
             cv_auc_spatial, cv_auc_standard, cv_auc_spatial_folds = None, None, None
             cv_pr_auc_macro_spatial_folds = None
+            cv_qwk_spatial_folds = None
             cv_f1_macro_standard, cv_f1_macro_spatial = None, None
             cv_pr_auc_macro_standard, cv_pr_auc_macro_spatial = None, None
             cv_qwk_standard, cv_qwk_spatial = None, None
@@ -249,10 +250,11 @@ class ModelTrainer:
                 # modeling.log_full_cv_diagnostics (default False) so
                 # routine iteration runs don't pay it; the dissertation's
                 # baseline.yaml sets it True. Only with this on can
-                # AUC/F1-macro/QWK gaps and cv_auc_spatial_folds (needed by
-                # stage_selection's Kruskal-Wallis) be computed on the
-                # primary side's full training set rather than its search
-                # subsample.
+                # AUC/F1-macro/QWK gaps and cv_auc_spatial_folds/
+                # cv_pr_auc_macro_spatial_folds/cv_qwk_spatial_folds (needed
+                # by stage_selection's Kruskal-Wallis tests) be computed on
+                # the primary side's full training set rather than its
+                # search subsample.
                 if self.config["modeling"].get("log_full_cv_diagnostics", False):
                     primary_mean, primary_folds = self._run_full_metrics_pass(
                         self.cv_strategy, model_cls, best_params, X_tr, y_train, groups_train,
@@ -269,12 +271,14 @@ class ModelTrainer:
                         # subsample-based user_attrs fallback.
                         cv_auc_spatial_folds = [f["auc"] for f in primary_folds]
                         cv_pr_auc_macro_spatial_folds = [f["pr_auc_macro"] for f in primary_folds]
+                        cv_qwk_spatial_folds = [f["qwk"] for f in primary_folds]
                         standard_metrics = dict(diagnostic_mean)
                         spatial_metrics = {**primary_mean, "pr_auc_macro": cv_pr_auc_macro_spatial}
                         standard_folds, spatial_folds = diagnostic_folds, primary_folds
                     else:
                         cv_auc_spatial_folds = [f["auc"] for f in diagnostic_folds]
                         cv_pr_auc_macro_spatial_folds = [f["pr_auc_macro"] for f in diagnostic_folds]
+                        cv_qwk_spatial_folds = [f["qwk"] for f in diagnostic_folds]
                         standard_metrics = {**primary_mean, "pr_auc_macro": cv_pr_auc_macro_standard}
                         spatial_metrics = dict(diagnostic_mean)
                         standard_folds, spatial_folds = primary_folds, diagnostic_folds
@@ -348,6 +352,7 @@ class ModelTrainer:
             "cv_pr_auc_macro_spatial_folds": cv_pr_auc_macro_spatial_folds,
             "cv_qwk_standard": cv_qwk_standard,
             "cv_qwk_spatial": cv_qwk_spatial,
+            "cv_qwk_spatial_folds": cv_qwk_spatial_folds,
             "cv_optimism_gap": cv_optimism_gap,
             "val_auc": val_auc,
             "val_f1": val_f1,
