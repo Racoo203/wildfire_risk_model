@@ -1,8 +1,7 @@
 # wildfire_susceptibility
 
-A wildfire susceptibility mapping pipeline for Essex, UK — an MSc dissertation
-(MA981, University of Essex) done in partnership with the Essex Centre for Data
-Analytics, and an operational deliverable for Essex County Council.
+A wildfire susceptibility mapping pipeline for Essex, UK. An MSc dissertation
+done in partnership with the an operational deliverable for Essex County Council.
 
 Adapts the 14-feature, 4-model ML susceptibility pipeline from
 [Bouzeraa et al. (2025), *Applied Sciences* 15, 12188](https://doi.org/10.3390/app152212188)
