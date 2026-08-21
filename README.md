@@ -4,9 +4,8 @@ A wildfire susceptibility mapping pipeline for Essex, UK. An MSc dissertation
 done in partnership with the an operational deliverable for Essex County Council.
 
 Adapts the 14-feature, 4-model ML susceptibility pipeline from
-[Bouzeraa et al. (2025), *Applied Sciences* 15, 12188](https://doi.org/10.3390/app152212188)
-— originally applied to a Mediterranean context — to a temperate UK county,
-adding seasonal stratification (spring/summer/fall models), spatially-aware
+[Bouzeraa et al. (2025), *Applied Sciences* 15, 12188](https://doi.org/10.3390/app152212188), originally applied to a Mediterranean context, to a temperate UK county,
+adding seasonal stratification (spring/summer/fall/winter models), spatially-aware
 cross-validation, and literature-informed feature engineering.
 
 ## Architecture
@@ -21,13 +20,12 @@ cross-validation, and literature-informed feature engineering.
   ([`config/schema.py`](src/wildfire_susceptibility/config/schema.py)), YAML-driven,
   base files in [`configs/`](configs) with per-run overrides in
   [`configs/experiment/`](configs/experiment).
-- **Models**: Random Forest, CatBoost, Ordinal Logistic Regression
-  (proportional odds, `mord.LogisticAT`), and a feed-forward neural network
-  (PyTorch), trained per season. SVM/XGBoost remain registered for
+- **Models**: Random Forest, XGBoost, CatBoost, Ordinal Logistic Regression
+  (proportional odds, `mord.LogisticAT`), trained per season. SVM/MLP remain registered for
   reproducing earlier results but aren't in the default roster.
 - **Labels**: susceptibility classes come from crossing a fire-density
   estimate (KDE or convolution) with a classification method (percentile,
-  Jenks natural breaks, or GMM) — all combinations are supported as a
+  Jenks natural breaks, or GMM). All combinations are supported as a
   documented methodological comparison.
 - **Experiment tracking**: MLflow (SQLite backend) for runs, Optuna (SQLite
   backend) for hyperparameter search.
@@ -47,6 +45,7 @@ pip install -e .
 ```bash
 python -m wildfire_susceptibility.pipeline.run_pipeline --stage all
 python -m wildfire_susceptibility.pipeline.run_pipeline --stage train --config-file configs/experiment/dissertation.yaml
+python -m wildfire_susceptibility.pipeline.run_pipeline --stage train --experiment dissertation
 ```
 
 Individual stages (`static`, `seasonal`, `labels`, `integration`,
@@ -61,8 +60,3 @@ recomputing.
 pytest                    # full suite
 pytest -m "not slow"      # skip tests that hit MLflow/Optuna/real model fits
 ```
-
-## Project status
-
-Bug-fixing-before-final-results phase: correctness of the reported numbers
-matters more than feature completeness right now.
