@@ -1,3 +1,7 @@
+"""SVM wrapper (legacy — kept registered for reproducing prior results, not in
+the current default model roster). Wraps SVC in a CalibratedClassifierCV
+since SVC's own probability outputs are unreliable.
+"""
 from sklearn.svm import SVC
 from sklearn.calibration import CalibratedClassifierCV
 import numpy as np

@@ -1,4 +1,9 @@
 # wildfire_susceptibility/core/registry.py
+"""Generic name -> class registry, used as a decorator so feature builders
+and model wrappers register themselves at import time (@FEATURE_BUILDERS
+.register("boundary"), @MODELS.register("catboost")) instead of being
+listed by hand anywhere else.
+"""
 from typing import Callable, TypeVar
 
 T = TypeVar("T")

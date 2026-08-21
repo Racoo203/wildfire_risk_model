@@ -1,3 +1,5 @@
+"""Boundary feature: clips the UK historic-counties shapefile down to Essex."""
+
 from pathlib import Path
 from typing import Dict
 import numpy as np

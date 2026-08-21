@@ -1,3 +1,6 @@
+"""XGBoost wrapper (legacy — kept registered for reproducing prior results,
+replaced by CatBoost in the current default model roster).
+"""
 import xgboost as xgb
 import numpy as np
 

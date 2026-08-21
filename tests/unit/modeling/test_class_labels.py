@@ -1,7 +1,7 @@
 """Regression coverage for the class-name-scheme lookup: this replaces
 four independent hardcoded 4-name lists (metrics.py, evaluate.py,
 evaluation.py, charts.py) that silently truncated once n_classes stopped
-being fixed at 4 -- see CLAUDE.md's retracted "K fixed at 4" decision."""
+being fixed at 4."""
 
 import pytest
 

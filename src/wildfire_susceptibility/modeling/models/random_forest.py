@@ -1,3 +1,9 @@
+"""Random Forest wrapper. Under imbalance_strategy="native_balanced", swaps
+sklearn's RandomForestClassifier for imbalanced-learn's
+BalancedRandomForestClassifier — plain sample_weight only reweights the
+split criterion, not which rows get bootstrapped per tree, so it can't fix
+severe imbalance on its own.
+"""
 from sklearn.ensemble import RandomForestClassifier
 from imblearn.ensemble import BalancedRandomForestClassifier
 import numpy as np

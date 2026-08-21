@@ -1,13 +1,14 @@
 """Pipeline orchestration entry point.
 
-Chains the five stage functions together, persisting each stage's output
-path-dict to a JSON state file on disk between invocations — so
-`--stage train` run tomorrow can pick up exactly where
-`--stage dataset_assembly` left off today, without recomputing anything
+Chains the ten stages in STAGE_ORDER (static, seasonal, labels, integration,
+preprocessing, eda, temporal_eda, train, evaluate, selection) together,
+persisting each stage's output path-dict to a JSON state file on disk
+between invocations — so `--stage train` run tomorrow can pick up exactly
+where `--stage preprocessing` left off today, without recomputing anything
 or holding results in memory across process boundaries.
 
 Usage:
-    python -m wildfire_susceptibility.pipeline.run_pipeline --stage preprocess
+    python -m wildfire_susceptibility.pipeline.run_pipeline --stage preprocessing
     python -m wildfire_susceptibility.pipeline.run_pipeline --stage all
     python -m wildfire_susceptibility.pipeline.run_pipeline --stage train --config-file _working.yaml
 """

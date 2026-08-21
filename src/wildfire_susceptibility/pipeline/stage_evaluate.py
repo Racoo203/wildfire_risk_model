@@ -1,3 +1,18 @@
+"""Stage: reload each trained model, score it on held-out data, write metrics
++ susceptibility outputs.
+
+Per (season, model) artifact: re-applies the categorical encoding / scaler
+persisted at training time (test data is reloaded raw from CSV, so it must
+be replayed through the same fit-on-train transforms before scoring —
+see modeling/dataset_prep.py), then delegates to
+PostTrainingEvaluator.evaluate() for metrics, SHAP, the confusion matrix,
+and the full-domain susceptibility raster + terrain-backdrop PNG.
+
+    stage_evaluate(config, input_paths) -> {
+        "<season>": {"<model_name>": <evaluator.evaluate() result dict>, ...},
+        ...
+    }
+"""
 import json
 from pathlib import Path
 from typing import Dict

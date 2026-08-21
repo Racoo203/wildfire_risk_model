@@ -1,3 +1,7 @@
+"""CatBoost wrapper: native categorical-feature support (landuse_class needs
+no one-hot encoding) and, under imbalance_strategy="native_balanced",
+auto_class_weights="Balanced" instead of an external sample_weight.
+"""
 from catboost import CatBoostClassifier
 import numpy as np
 

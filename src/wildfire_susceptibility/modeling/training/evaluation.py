@@ -1,3 +1,9 @@
+"""PostTrainingEvaluator: scores one trained model on held-out data and
+produces every downstream artifact for it in one pass — metrics (+ MLflow
+logging), SHAP plots, confusion matrix, and the full-domain susceptibility
+raster/PNG. Shared by stage_train's own post-fit check and stage_evaluate's
+reload-and-score pass, so both go through identical scoring logic.
+"""
 from pathlib import Path
 from typing import Dict, Optional
 import logging

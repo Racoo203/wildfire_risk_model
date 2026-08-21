@@ -1,3 +1,10 @@
+"""Optuna hyperparameter search: HyperparamSearch builds/reuses a study per
+(season, model, param-space signature, OBJECTIVE_VERSION) — the signature and
+version together mean a genuine change to the search space or the objective's
+scoring logic gets a fresh study automatically, rather than silently mixing
+old and new trials. Runs on cv_strategy's folds, optionally subsampled
+(optuna_search_subsample(_by_model)) for speed.
+"""
 from pathlib import Path
 from typing import Callable, Optional, Tuple
 import logging

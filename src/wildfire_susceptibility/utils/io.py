@@ -1,3 +1,4 @@
+"""Small GeoJSON/CSV read-write helpers shared across pipeline stages."""
 import json
 import geopandas as gpd
 import pandas as pd

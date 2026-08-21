@@ -1,8 +1,18 @@
+"""Pydantic v2 schema for the pipeline's YAML config, root model WildfireConfig.
+
+One class per pipeline concern (base paths, raw-data processing, seasonal
+definitions, bronze-tier data sources, label construction, model training,
+EDA, logging) — each is read by the pipeline stage(s) whose name matches it
+most closely. Loaded/merged by config/loader.py, not instantiated directly
+by stage code (stages receive a plain dict, config["modeling"] etc.).
+"""
 from pydantic import BaseModel, ConfigDict, Field
 from pathlib import Path
 from typing import Literal, List, Dict, Tuple, Optional
 
 class BaseConfig(BaseModel):
+    """Region identity and the top-level data/output directories every stage resolves paths from."""
+
     region: str = Field(default="Essex")
     boundary_shapefile: Path = Field(default=Path("./data/silver/layers/boundary.shp"))
     output_dir: Path = Field(default=Path("./data/silver/layers"))
@@ -11,6 +21,8 @@ class BaseConfig(BaseModel):
     figures_dir: Path = Field(default=Path("./figures"))
 
 class ProcessingConfig(BaseModel):
+    """Raster resolution/CRS and the train/test time split used across stage_static and stage_preprocessing."""
+
     cell_size_m: float = Field(default=30.0)
     crs: str = Field(default="EPSG:27700")
     training_years: Tuple[int, int] = Field(default=(2009, 2022), description="[start, end)")
@@ -18,6 +30,8 @@ class ProcessingConfig(BaseModel):
     force_recompute: bool = Field(default=False)
 
 class SeasonsConfig(BaseModel):
+    """Which seasons get their own stratified model and which calendar months define each."""
+
     active: List[Literal["spring", "summer", "fall", "winter"]] = Field(
         default_factory=lambda: ["spring", "summer", "fall"],
         description="Seasons to process this run",
@@ -36,6 +50,8 @@ class SeasonsConfig(BaseModel):
     )
 
 class DataSourceConfig(BaseModel):
+    """Bronze-tier input locations, one nested block per raw dataset (boundary, SRTM, HadUK climate, MODIS NDVI, OS proximity layers, fire incidents)."""
+
     class Cua(BaseModel):
         data_dir: Path = Path("./data/bronze/boundary")
 
@@ -78,6 +94,12 @@ class DataSourceConfig(BaseModel):
     incidents: Incidents = Incidents()
 
 class LabelsConfig(BaseModel):
+    """Fire-density -> susceptibility-class labeling: density estimation (KDE/convolution) crossed with classification (percentile/Jenks/GMM), plus k-means label cleaning.
+
+    extra="forbid" is deliberate: a misspelled key here should fail loudly
+    at load time, not silently fall back to a default.
+    """
+
     model_config = ConfigDict(extra="forbid")
 
     density_method: Literal["convolution", "kde"] = "convolution"
@@ -105,8 +127,7 @@ class LabelsConfig(BaseModel):
         default=False,
         description="If true, KernelDensityClassifier.find_optimal_k() picks n_classes "
                      "via silhouette score over k_search_range instead of using the "
-                     "fixed n_classes value. K-selection behavior itself is out of scope "
-                     "for this change -- see CLAUDE.md known bug #2.",
+                     "fixed n_classes value.",
     )
     k_search_range: Tuple[int, int] = (2, 6)
 
@@ -133,6 +154,8 @@ class LabelsConfig(BaseModel):
 # wildfire_susceptibility/config/schema.py — ModelingConfig
 
 class ModelingConfig(BaseModel):
+    """Model roster, CV strategy, imbalance handling, and hyperparameter search — read by modeling/training/trainer.py and stage_selection.py."""
+
     models: List[Literal[
         "random_forest", "svm", "xgboost", "neural_net", "catboost", "ordinal_lr"
     ]] = Field(
@@ -264,10 +287,14 @@ class ModelingConfig(BaseModel):
     )
 
 class LoggingConfig(BaseModel):
+    """Global log level and file path, set up via utils/logger.py::setup_logger()."""
+
     level: str = "INFO"
     log_path: Path = Path("./data/logs/pipeline.log")
 
 class EdaConfig(BaseModel):
+    """Scope controls for stage_eda's diagnostic plots (VIF, Spearman correlation)."""
+
     spearman_scope: Literal["model_features", "all_features"] = Field(
         default="model_features",
         description="Which columns the Spearman correlation heatmap covers. "
@@ -282,6 +309,8 @@ class EdaConfig(BaseModel):
     )
 
 class WildfireConfig(BaseModel):
+    """Root config model — one field per section above, assembled by config/loader.py from the base YAML + experiment overrides."""
+
     base: BaseConfig = Field(default_factory=BaseConfig)
     processing: ProcessingConfig = Field(default_factory=ProcessingConfig)
     seasons: SeasonsConfig = Field(default_factory=SeasonsConfig)
